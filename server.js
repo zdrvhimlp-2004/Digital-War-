@@ -922,11 +922,11 @@ const LANDING_HTML = String.raw`<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Digital War</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 10%,#0d2347,#03060c 65%);color:#f2f8ff;font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 10%,#0d2347,#03060c 65%);color:#f2f8ff;font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
 .card{width:min(94vw,420px);background:rgba(5,10,22,.95);border:2px solid #4db8ff44;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4db8ff22}
 h1{margin:0;font-size:46px;letter-spacing:3px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
 p{opacity:.75;font-size:14px;line-height:1.55}
@@ -960,12 +960,12 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Digital War · Admin</title>
 <style>
 :root{--bg:#05070d;--card:#0a1424;--line:#1c3a66;--tx:#f2f8ff;--mut:#8fb4e0;--ac:#4db8ff;--ok:#1fa05a;--bad:#d63a4a}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at 50% 0,#0d2347,var(--bg) 60%);color:var(--tx);font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+body{margin:0;background:radial-gradient(ellipse at 50% 0,#0d2347,var(--bg) 60%);color:var(--tx);font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
 h1{margin:0;font-size:28px;letter-spacing:2px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
 h1 small{font-size:14px;color:#4db8ff;text-shadow:none;letter-spacing:1px;margin-left:6px;font-weight:600}
 .wrap{max-width:860px;margin:0 auto;padding:16px}
@@ -1200,10 +1200,10 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Digital War</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--s:clamp(46px,8vh,60px)}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;color:#fff;font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;color:#fff;font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 canvas#c{display:block;width:100%;height:100%;touch-action:none;outline:none}
 .hud{display:none!important}
 body.playing .hud{display:block!important}
