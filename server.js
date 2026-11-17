@@ -1010,6 +1010,15 @@ button:disabled{opacity:.5}
 .hint{font-size:12px;color:var(--mut);margin:0 0 10px;line-height:1.5}
 #login{max-width:360px;margin:12vh auto 0}
 .hidden{display:none!important}
+#rcreate,#pgo{display:block;margin-left:auto}
+#techAdd,#techSave,#techReset{flex:1 1 auto}
+@media (max-width:520px){
+.room .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.room .row>*{min-width:0;width:100%}
+.room .row>input{grid-column:1 / -1}
+.wrap{padding:14px}
+}
+}
 </style>
 </head>
 <body>
@@ -1049,7 +1058,7 @@ button:disabled{opacity:.5}
     <div class="card">
       <h2>Buku teknik digital</h2>
       <p class="hint">Setiap teknik punya kode angka (hanya 1-9, 2-12 digit). Pemain menulis kode itu di tombol teknik untuk memasangnya. Kalau "Tampilkan buku di dalam game" dimatikan, pemain harus menghafal kode dari bukumu sendiri. Perubahan langsung berlaku ke semua room.</p>
-      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--tx)"><input type="checkbox" id="showBook" style="width:auto"> Tampilkan buku di dalam game (tombol 📖 dan ketuk minimap)</label>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--tx)"><input type="checkbox" id="showBook" style="width:auto"> Tampilkan buku di dalam game (tombol buku dan ketuk minimap)</label>
       <div id="techList"></div>
       <div class="row" style="margin-top:8px"><button id="techAdd">+ Tambah teknik</button><button class="pri" id="techSave">Simpan buku</button><button id="techReset" class="bad">Kembalikan default</button></div>
       <div id="tmsg"></div>
