@@ -1200,6 +1200,8 @@ body.playing button.btn.hud{display:flex!important}
 body.playing #btnDive.hud:not(.on),body.playing #btnAct.hud:not(.on){display:none!important}
 body.playing #board.hud:not(.show){display:none!important}
 body.playing .hud.off{display:none!important}
+body.playing #sbBtn.hud,body.playing #fsBtn.hud,body.playing #bookBtn.hud{display:flex!important}
+body.playing #fsBtn.hud.off,body.playing #bookBtn.hud.off{display:none!important}
 body.playing .hudf{display:flex}
 .pill{position:fixed;background:rgba(10,16,32,.55);color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px;box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:none;z-index:3}
 #hpBox{position:fixed;left:max(10px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));width:190px;z-index:3;pointer-events:none}
@@ -1252,6 +1254,19 @@ body.playing .hudf{display:flex}
 #btnDive{width:46px;height:46px;right:calc(var(--s) + 26px);bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);display:none;background:rgba(30,120,200,.6);font-size:18px}
 #btnDive.on{display:flex}
 .btn small{font-size:9px}
+.btn i{display:block;width:26px;height:26px;font-style:normal}
+.btn.big i{width:30px;height:30px}
+.svgi{width:100%;height:100%;display:block}
+.inl{display:inline-block;width:18px;height:18px;vertical-align:-3px;margin-left:6px}
+#fsBtn,#bookBtn,#sbBtn{display:flex;align-items:center;justify-content:center}
+#fsBtn svg,#bookBtn svg,#sbBtn svg{width:20px;height:20px}
+.slot .ic{display:flex;align-items:center;justify-content:center}
+.slot .ic svg{width:calc(var(--s)*.46);height:calc(var(--s)*.46)}
+.te .ic svg{width:26px;height:26px}
+.bkb svg{width:18px;height:18px}
+#bkX svg{width:16px;height:16px}
+.kdi{width:13px;height:13px;vertical-align:-2px}
+.clki{width:14px;height:14px;vertical-align:-2px}
 @media (orientation:portrait){
 #btnJump{right:12px;bottom:max(22px,env(safe-area-inset-bottom))}
 #btnAtk{right:82px;bottom:max(26px,env(safe-area-inset-bottom))}
@@ -1342,14 +1357,14 @@ body.playing #slots{display:flex}
 <div id="uw"></div>
 <div id="hurt"></div>
 
-<div id="hpBox" class="hud"><div id="hpName"><span id="myName"></span><span id="kd">0 ⚔ 0 ☠</span></div><div class="bar"><i id="hpFill"></i></div></div>
+<div id="hpBox" class="hud"><div id="hpName"><span id="myName"></span><span id="kd"></span></div><div class="bar"><i id="hpFill"></i></div></div>
 <div id="oxyBox" class="hud"><small>🫧 Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
 <canvas id="mini" class="hud" width="192" height="192"></canvas>
 <div id="roomTag" class="pill hud"></div>
 <div id="clock" class="pill hud">☀️ 09:00</div>
-<button id="bookBtn" class="hud off" aria-label="Buku teknik" title="Buku teknik (B)">📖</button>
-<button id="fsBtn" class="hud" aria-label="Layar penuh" title="Layar penuh">⛶</button>
-<button id="sbBtn" class="hud" aria-label="Papan skor">🏆</button>
+<button id="bookBtn" class="hud off" aria-label="Buku teknik" title="Buku teknik (B)" data-ico="book"></button>
+<button id="fsBtn" class="hud" aria-label="Layar penuh" title="Layar penuh" data-ico="fs"></button>
+<button id="sbBtn" class="hud" aria-label="Papan skor" data-ico="trophy"></button>
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
@@ -1359,17 +1374,17 @@ body.playing #slots{display:flex}
 <div id="ko"><h2>KO!</h2><p id="koTxt"></p></div>
 
 <div id="slots">
-  <button class="slot empty" data-i="0"><span class="k">1</span><span class="ic">＋</span><span class="nm"></span><i class="cd"></i></button>
-  <button class="slot empty" data-i="1"><span class="k">2</span><span class="ic">＋</span><span class="nm"></span><i class="cd"></i></button>
-  <button class="slot empty" data-i="2"><span class="k">3</span><span class="ic">＋</span><span class="nm"></span><i class="cd"></i></button>
-  <button class="slot empty" data-i="3"><span class="k">4</span><span class="ic">＋</span><span class="nm"></span><i class="cd"></i></button>
-  <button class="slot empty" data-i="4"><span class="k">5</span><span class="ic">＋</span><span class="nm"></span><i class="cd"></i></button>
+  <button class="slot empty" data-i="0"><span class="k">1</span><span class="ic" data-ico="plus"></span><span class="nm"></span><i class="cd"></i></button>
+  <button class="slot empty" data-i="1"><span class="k">2</span><span class="ic" data-ico="plus"></span><span class="nm"></span><i class="cd"></i></button>
+  <button class="slot empty" data-i="2"><span class="k">3</span><span class="ic" data-ico="plus"></span><span class="nm"></span><i class="cd"></i></button>
+  <button class="slot empty" data-i="3"><span class="k">4</span><span class="ic" data-ico="plus"></span><span class="nm"></span><i class="cd"></i></button>
+  <button class="slot empty" data-i="4"><span class="k">5</span><span class="ic" data-ico="plus"></span><span class="nm"></span><i class="cd"></i></button>
 </div>
-<button id="btnAtk" class="btn hud">⚔️<small>Serang</small></button>
-<button id="btnGuard" class="btn hud">🛡️<small>Tahan</small></button>
-<button id="btnJump" class="btn hud">⤒<small>Lompat</small></button>
-<button id="btnAct" class="btn hud">✋<small>Aksi</small></button>
-<button id="btnDive" class="btn hud">⤓<small>Selam</small></button>
+<button id="btnAtk" class="btn hud"><i data-ico="sword"></i><small>Serang</small></button>
+<button id="btnGuard" class="btn hud"><i data-ico="shield"></i><small>Tahan</small></button>
+<button id="btnJump" class="btn hud"><i data-ico="jump"></i><small>Lompat</small></button>
+<button id="btnAct" class="btn hud"><i data-ico="hand"></i><small>Aksi</small></button>
+<button id="btnDive" class="btn hud"><i data-ico="dive"></i><small>Selam</small></button>
 
 <div id="modal"><div id="mcard">
   <h3 id="mTitle">TEKNIK DIGITAL</h3>
@@ -1386,9 +1401,9 @@ body.playing #slots{display:flex}
 </div></div>
 
 <div id="book"><div id="bk">
-  <button id="bkX" aria-label="Tutup">✕</button>
+  <button id="bkX" aria-label="Tutup" data-ico="close"></button>
   <div id="bkPages"><div class="pg left" id="pgL"></div><div class="spine"></div><div class="pg right" id="pgR"></div></div>
-  <button class="bkb" id="bkPrev">◀</button><button class="bkb" id="bkNext">▶</button>
+  <button class="bkb" id="bkPrev" data-ico="chevl"></button><button class="bkb" id="bkNext" data-ico="chevr"></button>
 </div></div>
 
 <div id="dc"><h2 id="dcT">Terputus</h2><p id="dcP"></p><button class="cbtn" onclick="location.reload()">Muat ulang</button></div>
@@ -1398,7 +1413,7 @@ body.playing #slots{display:flex}
   <div class="sub">Pertarungan di dunia kode</div>
   <div id="step1">
     <div id="lore"></div>
-    <button class="cbtn" id="loreGo">Lanjut ▶</button>
+    <button class="cbtn" id="loreGo">Lanjut<i class="inl" data-ico="chevr"></i></button>
   </div>
   <div id="form">
     <div id="roomInfo">Memuat room…</div>
@@ -1407,7 +1422,7 @@ body.playing #slots{display:flex}
     <label>Pilih karakter</label>
     <div id="chars"></div>
     <div id="ferr"></div>
-    <button class="cbtn" id="go">Masuk ⚔️</button>
+    <button class="cbtn" id="go">Masuk<i class="inl" data-ico="sword"></i></button>
   </div>
 </div></div>
 
@@ -1423,6 +1438,41 @@ const damp=(k,dt)=>1-Math.exp(-k*dt);
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const ROOM=(location.pathname.split('/')[2]||'').toUpperCase();
 const MAXHP=100;
+/* ---------- ikon SVG buatan sendiri ---------- */
+const ICO={
+ book:'<path d="M2.5 5.5c3.2-1.6 6.3-1.4 9.5 1v13c-3.200-2.400-6.300-2.600-9.500-1z"/><path d="M21.500 5.500c-3.200-1.600-6.300-1.400-9.500 1v13c3.200-2.400 6.300-2.600 9.500-1z"/>',
+ fs:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+ fsx:'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+ trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
+ sword:'<path d="M20 4L9 15M6.5 12.5l5 5M9 15l-4.5 4.5M4 4l11 11M12.5 17.5l5-5M15 15l4.500 4.500"/><circle cx="4" cy="20" r="1" fill="currentColor"/><circle cx="20" cy="20" r="1" fill="currentColor"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2.200 2.200L15.500 10"/>',
+ jump:'<path d="M12 19V6M6 12l6-6 6 6M6 21.500h12"/>',
+ dive:'<path d="M12 3.500v11M6.500 9.500l5.500 5.500 5.500-5.500M3 20c2-1.500 4-1.500 6 0s4 1.500 6 0 4-1.500 6 0"/>',
+ hand:'<path d="M8 13V6.500a1.500 1.500 0 0 1 3 0V11M11 11V4.500a1.500 1.500 0 0 1 3 0V11M14 11V6.500a1.500 1.500 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-4a1.500 1.500 0 0 1 2.500-1.500L8 15"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ close:'<path d="M6 6l12 12M18 6L6 18"/>',
+ chevl:'<path d="M15 5l-7 7 7 7"/>',
+ chevr:'<path d="M9 5l7 7-7 7"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.500v2.500M12 19v2.500M2.500 12H5M19 12h2.500M5.300 5.300l1.800 1.800M16.900 16.900l1.800 1.800M18.700 5.300l-1.800 1.800M7.100 16.900l-1.800 1.800"/>',
+ moon:'<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/>',
+ skull:'<path d="M12 3a8 8 0 0 0-5 14.200V20h10v-2.800A8 8 0 0 0 12 3z"/><circle cx="9" cy="12" r="1.200" fill="currentColor"/><circle cx="15" cy="12" r="1.200" fill="currentColor"/><path d="M10.500 20v-2.500M13.500 20v-2.500"/>',
+ /* jenis teknik */
+ bolt:'<path d="M2.500 8h7M1.500 12h8M2.500 16h7"/><circle cx="16.500" cy="12" r="4.500" fill="currentColor" fill-opacity=".25"/>',
+ nova:'<circle cx="12" cy="12" r="3.200" fill="currentColor" fill-opacity=".25"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.800 2.800M16.200 16.200L19 19M19 5l-2.800 2.800M7.800 16.200L5 19"/>',
+ beam:'<path d="M2.500 12h19M6.500 7.500L4 12l2.500 4.500M19.500 8.500v7"/>',
+ slam:'<path d="M13.500 3.500l7 7-4 4-7-7z"/><path d="M11.500 12.500L3.500 20.500"/>',
+ trap:'<circle cx="12" cy="12" r="5" fill="currentColor" fill-opacity=".25"/><path d="M12 2.500v3M12 18.500v3M2.500 12h3M18.500 12h3M5.300 5.300l2 2M16.700 16.700l2 2M18.700 5.300l-2 2M7.300 16.700l-2 2"/>',
+ summon:'<path d="M1.500 9.500c4-1.200 7.500 0 10.500 4.500 3-4.500 6.500-5.700 10.500-4.500-2 3.200-4.200 4.500-6.500 4.500L12 20.500l-4-6c-2.300 0-4.500-1.300-6.500-5z"/>',
+ ride:'<path d="M1.500 12.500c4-1.200 7.500 0 10.500 4.500 3-4.500 6.500-5.700 10.500-4.500-2 3.200-4.200 4.500-6.500 4.500L12 23l-4-6c-2.300 0-4.500-1.300-6.500-4.500z"/><circle cx="12" cy="6" r="2.500"/><path d="M12 8.500v3"/>',
+ heal:'<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="currentColor" fill-opacity=".2"/>',
+ regen:'<path d="M20 12a8 8 0 1 1-2.700-6"/><path d="M20 3.500v4.500h-4.500"/><path d="M12 9v6M9 12h6"/>',
+ haste:'<path d="M4.500 5l7 7-7 7M12.500 5l7 7-7 7"/>',
+ dash:'<path d="M13.500 2L4.500 14h7l-1 8 9-12h-7z" fill="currentColor" fill-opacity=".2"/>',
+ spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
+};
+function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO.spark)+'</svg>';}
+function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('skull',null,'kdi')+' '+d;}
+
 
 /* ---------- renderer / scene ---------- */
 const canvas=$('c');
@@ -1875,7 +1925,7 @@ function doAttack(){
 function updSlotUI(i){
   const el=document.querySelector('.slot[data-i="'+i+'"]'),s=slots[i];
   el.classList.toggle('empty',!s);el.classList.toggle('filled',!!s);
-  el.querySelector('.ic').textContent=s?s.emoji:'＋';
+  el.querySelector('.ic').innerHTML=s?svg(s.kind,s.color):svg('plus');
   el.querySelector('.nm').textContent=s?s.name:'';
   if(s)el.style.setProperty('--c',s.color);else el.style.removeProperty('--c');
 }
@@ -1992,7 +2042,7 @@ bindBtn($('btnGuard'),()=>setGuard(true),()=>setGuard(false));
   const req=el.requestFullscreen||el.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
   if(!req){btn.classList.add('off');return;}
   const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
-  const sync=()=>{btn.textContent=isFs()?'✕':'⛶';setTimeout(resize,150);};
+  const sync=()=>{btn.innerHTML=svg(isFs()?'fsx':'fs');setTimeout(resize,150);};
   document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync);
   btn.addEventListener('pointerdown',e=>e.stopPropagation());
   btn.addEventListener('click',()=>{
@@ -2023,7 +2073,7 @@ function renderBook(){
   const fill=(el,items,no,title)=>{
     el.innerHTML='';const h=document.createElement('h3');h.textContent=title;el.appendChild(h);
     items.forEach(t=>{const d=document.createElement('div');d.className='te';
-      const ic=document.createElement('div');ic.className='ic';ic.textContent=t.emoji;
+      const ic=document.createElement('div');ic.className='ic';ic.innerHTML=svg(t.kind,'#7a3a14');
       const bx=document.createElement('div');const b=document.createElement('b');b.textContent=t.name;
       const cd=document.createElement('div');cd.className='cd';cd.textContent=t.code;
       const sm=document.createElement('small');sm.textContent=t.desc+' · CD '+t.cd+'s';
@@ -2261,8 +2311,8 @@ function renderBoard(){
   const rows=[{id:me.id,name:me.name,k:me.k,d:me.d,me:true}].concat([...others.values()].map(o=>({id:o.id,name:o.name,k:o.k,d:o.d})));
   rows.sort((a,b)=>b.k-a.k||a.d-b.d);
   const bd=$('board');bd.innerHTML='<h4>PAPAN SKOR</h4>';
-  rows.forEach((r,i)=>{const d=document.createElement('div');if(r.me)d.className='me';const b=document.createElement('b');b.textContent=(i+1)+'. '+r.name;const s=document.createElement('span');s.textContent=r.k+' ⚔  '+r.d+' ☠';d.appendChild(b);d.appendChild(s);bd.appendChild(d);});
-  $('kd').textContent=me.k+' ⚔ '+me.d+' ☠';
+  rows.forEach((r,i)=>{const d=document.createElement('div');if(r.me)d.className='me';const b=document.createElement('b');b.textContent=(i+1)+'. '+r.name;const s=document.createElement('span');s.innerHTML=kdHtml(r.k,r.d);d.appendChild(b);d.appendChild(s);bd.appendChild(d);});
+  $('kd').innerHTML=kdHtml(me.k,me.d);
   $('roomTag').textContent=(roomInfo.name||'Room')+' · '+rows.length+'/'+(roomInfo.max||'?');
 }
 let roomInfo={name:'',max:0};
@@ -2686,7 +2736,7 @@ function update(dt){
   updParts(dt);
 
   /* clock + minimap */
-  if(((tAll*1.25)|0)!==(((tAll-dt)*1.25)|0)){const h=Math.floor(gameHour),mm=Math.floor((gameHour-h)*6)*10;$('clock').textContent=(envC.nf>0.5?'🌙 ':'☀️ ')+String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+  if(((tAll*1.25)|0)!==(((tAll-dt)*1.25)|0)){const h=Math.floor(gameHour),mm=Math.floor((gameHour-h)*6)*10;$('clock').innerHTML=svg(envC.nf>0.5?'moon':'sun',null,'clki')+' '+String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
   miniT++;if(started&&miniT%5===0)drawMini();
 
   /* camera */
@@ -2715,6 +2765,7 @@ function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
 }
+document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
 window.__dw={eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
