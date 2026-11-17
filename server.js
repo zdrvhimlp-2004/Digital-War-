@@ -77,10 +77,10 @@ const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "42
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
 const DEFAULT_TECHS = [
-  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 0.6, speed: 24, life: 1.4, count: 1, spread: 0 },
-  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 2,   speed: 22, life: 1.2, count: 3, spread: 0.22 },
-  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 2.5, speed: 38, life: 1.1, count: 1, spread: 0 },
-  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 3,   speed: 26, life: 1.2, count: 5, spread: 0.16 },
+  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 0.6, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
+  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 2,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
+  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 2.5, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
+  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 3,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
   { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 3,  cd: 2,   speed: 11, life: 4, radius: 5.5 },
   { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 3,   radius: 6 },
   { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 5,   radius: 5.5, stun: 2 },
@@ -97,6 +97,27 @@ const DEFAULT_TECHS = [
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb'];
+
+/* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
+function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
+function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+const LAKE = { x: 0, z: -48, R: 11 };
+const TERRAIN_FLATS = [{ x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
+  { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
+  { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
+  { x: 88, z: 0, r: 16, b: 8 }, { x: -90, z: 0, r: 16, b: 8 }, { x: 0, z: -92, r: 16, b: 8 }];
+function terrainH(x, z) {
+  if (x > 1000) return 0;
+  let m = 1;
+  for (const f of TERRAIN_FLATS) { const d = Math.hypot(x - f.x, z - f.z); if (d < f.r + f.b) { const t = d <= f.r ? 0 : (d - f.r) / f.b; const s2 = t * t * (3 - 2 * t); if (s2 < m) m = s2; } }
+  const hills = (fbm(x * 0.018, z * 0.018) - 0.5) * 22 + (fbm(x * 0.06 + 50, z * 0.06 + 50) - 0.5) * 3;
+  const e = clampN((Math.hypot(x, z) - 100) / 42, 0, 1);
+  const ld = 5.5 * (1 - sstep(LAKE.R - 5, LAKE.R + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z)));
+  return hills * m + e * e * (3 - 2 * e) * 38 - ld;
+}
+const BOLT_GRAVITY = 2.6;
 
 /* ====================================================================
  *  PENYIMPANAN
@@ -193,6 +214,7 @@ function sanitizeTech(t) {
   if (kind === 'bolt') {
     out.damage = num(t.damage, 0, 100, 20); out.speed = num(t.speed, 5, 80, 24); out.life = num(t.life, 0.3, 4, 1.4);
     out.count = Math.round(num(t.count, 1, 7, 1)); out.spread = num(t.spread, 0, 1, 0);
+    out.size = num(t.size, 0.5, 4, 1.6); out.boom = num(t.boom, 0, 10, 3);
   } else if (kind === 'nova') {
     out.damage = num(t.damage, 0, 100, 30); out.radius = num(t.radius, 2, 15, 6);
   } else if (kind === 'heal') {
@@ -226,7 +248,7 @@ function techDesc(t) {
   if (t.desc) return t.desc;
   const st = t.stun ? ', beku ' + t.stun + ' dtk' : '';
   switch (t.kind) {
-    case 'bolt': return 'Peluru ' + t.damage + ' dmg' + (t.count > 1 ? ' x' + t.count : '') + st;
+    case 'bolt': return 'Bola lempar ' + t.damage + ' dmg' + (t.count > 1 ? ' x' + t.count : '') + ', meledak saat kena tanah' + st;
     case 'nova': return 'Ledakan radius ' + t.radius + ', ' + t.damage + ' dmg' + st;
     case 'heal': return 'Pulihkan ' + t.damage + ' HP';
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
@@ -446,9 +468,10 @@ function doCast(room, p, slot, ax, ay, az) {
       for (let i = 0; i < n; i++) {
         const ang = (i - (n - 1) / 2) * (tech.spread || 0), cs = Math.cos(ang), sn = Math.sin(ang);
         const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs;
-        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 0.9, y: p.y + 1.0 + by * 0.9, z: p.z + dz * 0.9, dx, dy: by, dz, sp: tech.speed, life: tech.life, dmg: tech.damage, stun: tech.stun || 0, c: tech.color };
+        const size = tech.size || 1.6, boom = tech.boom == null ? 3 : tech.boom;
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.1 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by, dz, sp: tech.speed, life: tech.life, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
         room.projs.push(pr);
-        broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(by), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: 1 });
+        broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(by), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
       }
       break;
     }
@@ -728,21 +751,35 @@ function stepForts(room, dt, t) {
 }
 
 function stepRoom(room, dt, t) {
-  /* peluru / anak panah */
+  /* peluru / bola / anak panah */
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
+    if (pr.grav) pr.dy -= pr.grav / Math.max(1, pr.sp) * dt;
     pr.x += pr.dx * pr.sp * dt; pr.y += (pr.dy || 0) * pr.sp * dt; pr.z += pr.dz * pr.sp * dt; pr.life -= dt;
     let hit = null;
+    const hr = pr.hr || 1.35;
     for (const v of victims(room)) {
       if (friendly(pr.o, v)) continue;
-      if (Math.hypot(v.x - pr.x, v.z - pr.z) < 1.35 && Math.abs((v.y + 0.9) - pr.y) < 1.4) { hit = v; break; }
+      if (Math.hypot(v.x - pr.x, v.z - pr.z) < hr && Math.abs((v.y + 0.9) - pr.y) < hr + 0.05) { hit = v; break; }
     }
-    if (hit) {
+    const ground = pr.y <= terrainH(pr.x, pr.z) + 0.15;
+    if (hit || ground) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
-      hurt(room, hit, pr.dmg, owner, pr.dx * 6, pr.dz * 6, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun });
-      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z) });
+      if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * 6, pr.dz * 6, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun });
+      const bm = pr.boom || 0;
+      if (bm > 0) {
+        for (const v of victims(room)) {
+          if (v === hit || friendly(pr.o, v)) continue;
+          const dx = v.x - pr.x, dy = v.y + 0.9 - pr.y, dz = v.z - pr.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (d > bm) continue;
+          const f = 1 - d / bm * 0.6, hl = Math.hypot(dx, dz) || 1;
+          hurt(room, v, pr.dmg * 0.6 * f, owner, dx / hl * 8, dz / hl * 8, { area: true, stun: pr.stun });
+        }
+      }
+      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(Math.max(pr.y, terrainH(pr.x, pr.z) + 0.2)), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0 });
       room.projs.splice(i, 1);
     } else if (pr.life <= 0) {
+      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1 });
       room.projs.splice(i, 1);
     }
   }
@@ -1476,9 +1513,9 @@ button:disabled{opacity:.5}
 const $=id=>document.getElementById(id);
 let token=null;try{token=localStorage.getItem('dw_admin')}catch(e){}
 let techs=[],pollT=null;
-const KINDS={bolt:'Peluru (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
+const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
 const FIELDS={ // kind -> [field,label]
-  bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Jarak (dtk terbang)'],['count','Jumlah peluru'],['spread','Sebaran (rad)'],['stun','Beku (dtk)']],
+  bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
   orb:[['damage','Damage per sentuhan'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
   beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
@@ -2591,6 +2628,7 @@ const sfx={
   twang(){tone(rnd(320,430),rnd(140,190),0.16,'triangle',0.09);noiseHit(0.1,0.08,3500,0.02,'highpass');},
   arrowHit(){noiseHit(0.05,0.2,1500,0);tone(rnd(500,700),300,0.07,'square',0.05);},
   /* teknik */
+  throw(){tone(rnd(160,220),rnd(420,520),0.28,'sawtooth',0.08);noiseHit(0.3,0.14,rnd(900,1400),0,'bandpass',0.8);tone(rnd(700,900),rnd(250,320),0.2,'triangle',0.05,0.05);},
   zap(){pick([()=>{tone(900,300,0.18,'square',0.06);tone(1400,500,0.14,'sawtooth',0.03);},()=>{tone(1200,400,0.2,'sawtooth',0.05);noiseHit(0.1,0.06,5000,0,'highpass');},()=>{tone(700,1500,0.12,'triangle',0.07);tone(1500,300,0.16,'square',0.04,0.1);}])();},
   beam(){tone(200,2200,0.35,'sawtooth',0.07);tone(2200,600,0.3,'square',0.04,0.1);noiseHit(0.4,0.1,5000,0,'highpass');},
   boom(){noiseHit(0.5,0.35,500,0);tone(120,40,0.4,'sine',0.25);noiseHit(0.8,0.12,200,0.1);},
@@ -3362,24 +3400,46 @@ function updOthers(dt,rgt,fwd){
   }
 }
 /* projectiles */
+const BOLT_G=2.6;
 function addProj(m){
-  const g=new THREE.Group();
-  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:m.c,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false,opacity:0.9}));glow.scale.setScalar(1.8*(m.sz||1));g.add(glow);
-  const core=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xffffff,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false}));core.scale.setScalar(0.8*(m.sz||1));g.add(core);
+  const g=new THREE.Group(),big=(m.sz||1)>=0.8,sz=m.sz||1;
+  if(big){
+    const r=0.45*sz;
+    const ball=new THREE.Mesh(new THREE.IcosahedronGeometry(r,1),new THREE.MeshBasicMaterial({color:m.c,transparent:true,opacity:0.92,fog:false}));
+    const shell=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.35,1),new THREE.MeshBasicMaterial({color:m.c,wireframe:true,transparent:true,opacity:0.55,fog:false}));
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(r*0.55,0),new THREE.MeshBasicMaterial({color:0xffffff,fog:false}));
+    const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:m.c,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false,opacity:0.85}));glow.scale.setScalar(r*7);
+    g.add(ball,shell,core,glow);g.userData={ball,shell,core};
+  }else{
+    const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:m.c,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false,opacity:0.9}));glow.scale.setScalar(1.8*sz);g.add(glow);
+    const core=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xffffff,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false}));core.scale.setScalar(0.8*sz);g.add(core);
+  }
   g.position.set(m.x,m.y,m.z);scene.add(g);
-  projs.push({sm:m.sz===0.55,id:m.id,g,x:m.x,y:m.y,z:m.z,dx:m.dx,dy:m.dy||0,dz:m.dz,sp:m.sp,life:m.life,c:m.c,tr:0});
+  projs.push({sm:!big,big,sz,id:m.id,g,x:m.x,y:m.y,z:m.z,dx:m.dx,dy:m.dy||0,dz:m.dz,sp:m.sp,life:m.life,c:m.c,tr:0});
 }
+function disposeProj(p){scene.remove(p.g);p.g.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}
 function removeProj(id,hit){
   const i=projs.findIndex(p=>p.id===id);if(i<0)return;
-  const p=projs[i];if(hit)burst(hit.x,hit.y,hit.z,p.c,12,5);
-  scene.remove(p.g);p.g.children.forEach(c=>c.material.dispose());projs.splice(i,1);
+  const p=projs[i];projs.splice(i,1);disposeProj(p);
+  if(hit&&hit.boom>0)explodeFx(hit.x,hit.y,hit.z,hit.boom,p.c,hit.g);
+  else if(hit&&!hit.fizz)burst(hit.x,hit.y,hit.z,p.c,12,5);
+  else if(hit)burst(hit.x,hit.y,hit.z,p.c,6,3);
+}
+function explodeFx(x,y,z,r,col,ground){
+  ringFx(x,y+0.15,z,r*1.15,col);ringFx(x,y+0.25,z,r*0.7,'#ffffff');
+  burst(x,y+0.5,z,col,26,r*2.6);burst(x,y+0.4,z,'#fff6a0',12,r*1.6);
+  for(let i=0;i<10;i++){const a=Math.random()*6.28;emit(x+Math.cos(a)*r*0.4,y+0.2,z+Math.sin(a)*r*0.4,Math.cos(a)*r*0.8,1.2+Math.random()*1.8,Math.sin(a)*r*0.8,0.9,r*0.55,'#d9cfae',-0.6,0.55,1.6);}
+  sfxAt('boom',x,z);
+  const d=Math.hypot(x-pos.x,z-pos.z);if(d<22)shake=Math.max(shake,0.35*(1-d/22)+0.05);
 }
 function updProjs(dt){
   for(let i=projs.length-1;i>=0;i--){
     const p=projs[i];p.life-=dt;
-    if(p.life<=0){scene.remove(p.g);p.g.children.forEach(c=>c.material.dispose());projs.splice(i,1);continue;}
+    if(p.life<=0){projs.splice(i,1);disposeProj(p);continue;}
+    if(p.big)p.dy-=BOLT_G/Math.max(1,p.sp)*dt;
     p.x+=p.dx*p.sp*dt;p.y+=p.dy*p.sp*dt;p.z+=p.dz*p.sp*dt;p.g.position.set(p.x,p.y,p.z);
-    p.tr-=dt;if(p.tr<=0){p.tr=0.025;emit(p.x,p.y,p.z,(Math.random()-0.5)*0.6,(Math.random()-0.5)*0.6,(Math.random()-0.5)*0.6,0.35,0.5,p.c,0,0.7,-0.6);}
+    if(p.big){const u=p.g.userData;u.shell.rotation.x+=dt*7;u.shell.rotation.y+=dt*9;u.ball.rotation.y-=dt*5;}
+    p.tr-=dt;if(p.tr<=0){p.tr=p.big?0.018:0.025;const k=p.big?p.sz*0.45:0.5;emit(p.x+(Math.random()-0.5)*k*0.8,p.y+(Math.random()-0.5)*k*0.8,p.z+(Math.random()-0.5)*k*0.8,(Math.random()-0.5)*0.8,(Math.random()-0.5)*0.8,(Math.random()-0.5)*0.8,p.big?0.5:0.35,p.big?0.9*p.sz:0.5,p.c,0,0.7,-0.6);}
   }
 }
 
@@ -3434,7 +3494,7 @@ function onMsg(m){
       const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
     case 'learnerr':modalErr(m.msg||'Kode salah');break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
-    case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('zap',m.x,m.z);break;
+    case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'hit':onHit(m);break;
