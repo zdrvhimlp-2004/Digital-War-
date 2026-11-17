@@ -282,7 +282,7 @@ function newRoomCode() {
 function makeRuntime(r) {
   return {
     code: r.code, name: r.name, max: r.max, created: r.created,
-    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false,
+    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false, pick: r.pick === true,
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
@@ -933,7 +933,7 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice }, hour: roomHour(room), hp: p.hp,
+    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick }, hour: roomHour(room), hp: p.hp,
     forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
     players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
@@ -987,6 +987,11 @@ function onMessage(ws, text) {
     case 'clear': {
       const slot = m.slot | 0;
       if (slot >= 0 && slot < MAX_TECH_SLOTS) p.slots[slot] = null;
+      break;
+    }
+    case 'techs': {
+      if (!room.pick) break;
+      send(ws, { t: 'techs', list: DB.techniques.map(t => Object.assign(techPublic(t), { desc: techDesc(t) })) });
       break;
     }
     case 'sleep': {
@@ -1190,7 +1195,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, voice: r.voice !== false, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1235,7 +1240,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1247,8 +1252,9 @@ async function handleAdmin(req, res, pathname) {
       const b = await readBody(req);
       if (b.name !== undefined) r.name = cleanName(b.name, 30) || r.name;
       if (b.voice !== undefined) r.voice = !!b.voice;
+      if (b.pick !== undefined) r.pick = !!b.pick;
       if (b.max !== undefined) { const mx = Math.round(Number(b.max)); if (!isFinite(mx) || mx < 2 || mx > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT }); r.max = mx; }
-      const rt = rooms.get(r.code); if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; }
+      const rt = rooms.get(r.code); if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; }
       saveDBNow();
       return json(res, 200, { room: roomView(r) });
     }
@@ -1299,7 +1305,7 @@ const server = http.createServer(async (req, res) => {
       const r = DB.rooms.find(x => x.code === mm[1].toUpperCase());
       if (!r) return json(res, 404, { error: 'Room tidak ditemukan' });
       const v = roomView(r);
-      return json(res, 200, { name: v.name, max: v.max, count: v.count, voice: v.voice });
+      return json(res, 200, { name: v.name, max: v.max, count: v.count, voice: v.voice, pick: v.pick });
     }
     if (pathname === '/api/book') {
       if (!DB.settings.showBook) return json(res, 200, { enabled: false, techniques: [] });
@@ -1478,6 +1484,7 @@ button:disabled{opacity:.5}
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
+      <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
       <div id="rmsg"></div>
       <button class="pri" id="rcreate" style="margin-top:12px">Buat room</button>
     </div>
@@ -1561,7 +1568,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -1574,7 +1581,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.voice!==false?' · voice aktif':' · voice mati')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -1584,11 +1591,12 @@ async function loadRooms(){
     const nm=document.createElement('input');nm.value=r.name;nm.maxLength=30;nm.dataset.edit=1;
     const mx=document.createElement('input');mx.type='number';mx.min=2;mx.max=100;mx.value=r.max;mx.dataset.edit=1;mx.style.maxWidth='110px';
     const vl=document.createElement('label');vl.className='chk';vl.style.gridColumn='1 / -1';vl.style.margin='0';const vc=document.createElement('input');vc.type='checkbox';vc.checked=r.voice!==false;vc.dataset.edit=1;vl.appendChild(vc);vl.appendChild(document.createTextNode('Voice chat aktif'));
+    const pl2=document.createElement('label');pl2.className='chk';pl2.style.gridColumn='1 / -1';pl2.style.margin='0';const pc=document.createElement('input');pc.type='checkbox';pc.checked=r.pick===true;pc.dataset.edit=1;pl2.appendChild(pc);pl2.appendChild(document.createTextNode('Mode pilih teknik (tanpa ketik kode)'));
     const sv=document.createElement('button');sv.textContent='Ubah';
-    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked}});sv.textContent='Tersimpan ✓';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
+    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked}});sv.textContent='Tersimpan ✓';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
     const dl=document.createElement('button');dl.className='bad';dl.textContent='Hapus';
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
-    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
+    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
     if(r.players.length){const p=document.createElement('div');p.className='pl';p.appendChild(document.createTextNode('Online: '));r.players.forEach(n=>{const b=document.createElement('b');b.textContent=n;p.appendChild(b);});d.appendChild(p);}
     box.appendChild(d);
   });
@@ -1802,6 +1810,15 @@ body.playing #chatFeed.hud{display:flex!important}
 #capBox small{display:block;font-size:12px;font-weight:600;text-shadow:0 1px 3px #000;margin-bottom:2px}
 #capBox .bar i{background:linear-gradient(#ffe27a,#f0a020)}
 .slot.aiming{border-color:#ff5d5d;box-shadow:0 0 14px #ff5d5d,inset 0 0 12px #ff5d5d}
+#pickBox{display:none;grid-template-columns:1fr 1fr;gap:8px;max-height:min(56vh,360px);overflow-y:auto;padding:2px;text-align:left;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.pk{border:2px solid #1c3a66;border-radius:12px;background:#0a1424;color:#fff;padding:8px;cursor:pointer;font-family:inherit;text-align:left;display:flex;gap:8px;align-items:center;touch-action:manipulation}
+.pk:active{background:#12408a}
+.pk svg{width:26px;height:26px;flex:0 0 26px}
+.pk b{display:block;font-size:13px}.pk small{display:block;font-size:10px;opacity:.7;line-height:1.25}
+.pk.has{opacity:.45}
+body.pickmode #pad,body.pickmode #codeBox,body.pickmode #codeErr,body.pickmode #mOk,body.pickmode #mBack{display:none!important}
+body.pickmode #pickBox{display:grid}
+body.pickmode #mrow{grid-template-columns:1fr}
 #modal{position:fixed;inset:0;background:rgba(0,0,10,.6);display:none;align-items:center;justify-content:center;z-index:20;touch-action:manipulation}
 #modal.show{display:flex}
 #mcard{width:min(92vw,320px);background:#141b34;border:2px solid #4de1ff55;border-radius:22px;padding:16px;box-shadow:0 12px 50px rgba(0,0,0,.6),0 0 40px #4de1ff33;text-align:center}
@@ -1902,6 +1919,7 @@ body.playing #chatFeed.hud{display:flex!important}
   <p id="mSub">Masukkan kode angka 1-9 dari buku</p>
   <div id="codeBox"></div>
   <div id="codeErr"></div>
+  <div id="pickBox"></div>
   <div id="pad">
     <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
     <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
@@ -2811,11 +2829,19 @@ function castSlot(i){
 
 /* ---------- code modal ---------- */
 function renderCode(){$('codeBox').textContent=typed||'· · · · · ·';$('mOk').disabled=typed.length<2||pendingLearn;}
+function renderPick(list){
+  const box=$('pickBox');box.innerHTML='';
+  list.forEach(t=>{const b=document.createElement('button');b.className='pk'+(slots.some((s,j)=>s&&s.code===t.code&&j!==modalSlot)?' has':'');
+    b.innerHTML=svg(t.kind,t.color);const w=document.createElement('div');const n=document.createElement('b');n.textContent=t.name;const d=document.createElement('small');d.textContent=t.desc+'. CD '+t.cd+' dtk';w.appendChild(n);w.appendChild(d);b.appendChild(w);
+    b.addEventListener('click',()=>{if(pendingLearn)return;pendingLearn=true;sfx.click();netSend({t:'learn',slot:modalSlot,code:t.code});});box.appendChild(b);});
+}
 function openModal(i){
   modalSlot=i;typed='';modalOpen=true;pendingLearn=false;$('codeErr').textContent='';$('codeBox').classList.remove('err');
   $('mTitle').textContent='TEKNIK DIGITAL, SLOT '+(i+1);
   $('mSub').textContent=slots[i]?'Slot ini berisi: '+slots[i].name+'. Ketik kode baru untuk mengganti.':'Masukkan kode angka 1-9 dari buku';
   $('mrow2').style.display=slots[i]?'block':'none';
+  const pm=!!(roomInfo&&roomInfo.pick);document.body.classList.toggle('pickmode',pm);
+  if(pm){$('mSub').textContent='Pilih teknik untuk slot ini';$('pickBox').innerHTML='<small>Memuat...</small>';netSend({t:'techs'});}
   $('modal').classList.add('show');renderCode();
   keys.clear();jumpBtnHeld=false;diveBtnHeld=false;
 }
@@ -3492,7 +3518,8 @@ function onMsg(m){
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
       const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
-    case 'learnerr':modalErr(m.msg||'Kode salah');break;
+    case 'learnerr':if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
+    case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
     case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);removeProj(m.id,m);break;}

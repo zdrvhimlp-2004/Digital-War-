@@ -34,7 +34,7 @@ Pemain butuh internet untuk memuat Three.js (cdnjs) dan font Poppins (Google Fon
 
 Login awal: **`admin` / `admin`**. Segera ganti di tab **Akun** (ada peringatan selama masih default).
 
-- **Room**: buat room (nama, maksimal pemain 2 sampai 100, dan opsi **voice chat** aktif/mati), salin link, ubah nama atau kapasitas, hapus room, lihat siapa yang online.
+- **Room**: buat room (nama, maksimal pemain 2 sampai 100, opsi **voice chat** aktif/mati, dan opsi **mode pilih teknik**), salin link, ubah nama atau kapasitas, hapus room, lihat siapa yang online.
 - **Buku Teknik**: tambah, ubah, hapus teknik digital (kode, jenis, damage, cooldown, dst.). Berlaku langsung ke semua room. Ada pengaturan untuk menampilkan buku di dalam game atau tidak.
 - **Akun**: ganti password.
 
@@ -66,7 +66,7 @@ Password disimpan sebagai hash (scrypt) di file data. Login dibatasi 6 percobaan
 
 ### Teknik digital
 
-Tekan slot kosong, ketik kode angka 1-9 di popup, tekan Pasang. Slot langsung menjadi tombol teknik. Ada 5 slot; tahan lama slot terisi untuk mengganti atau mengosongkan. Kode dicek oleh server.
+Tekan slot kosong, ketik kode angka 1-9 di popup, tekan Pasang. Kalau admin mengaktifkan **mode pilih teknik** pada room, popup menampilkan daftar teknik beserta deskripsinya dan pemain tinggal memilih tanpa mengetik angka (kode tidak ditampilkan). Slot langsung menjadi tombol teknik. Ada 5 slot; tahan lama slot terisi untuk mengganti atau mengosongkan. Kode dicek oleh server.
 
 **Bola lempar**: teknik peluru berbentuk bola besar bercahaya yang melengkung jatuh seperti dilempar. Bola meledak saat mengenai tanah atau musuh: yang kena langsung menerima damage penuh, dan pemain atau musuh di sekitar ledakan menerima percikan sekitar 60% (makin jauh makin kecil). Ukuran bola dan radius ledakan bisa diatur per teknik di admin.
 
