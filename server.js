@@ -3107,7 +3107,7 @@ function updMobs(dt,rgt,fwd){
 /* tunggangan elang */
 function mountMake(){const tex=eagleTex();const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);return {mesh,tex};}
 /* penunggang duduk di punggung elang; posisi dihitung per arah hadap (ruang layar) */
-const RIDE_OFF={0:[0.4,0.05,0.5],1:[0,0.5,-0.8],3:[0.1,0.12,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
+const RIDE_OFF={0:[-0.12,0.05,0.5],1:[0,0.5,-0.8],3:[0.1,0.12,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
 function mountPlace(m,x,y,z,fx,fz,rgt,fwd,id){
   const fl=eagleSet(m,fx,fz,rgt,fwd,Math.floor(tAll*7+id)%2);
   const rw=ROWMAP[m.vk],t=RIDE_OFF[rw]||RIDE_OFF[0],tail=fl?1:-1;
