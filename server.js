@@ -37,25 +37,26 @@ const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
 const CHAR_COUNT = 8;
 
-const TECH_VERSION = 3;
+const TECH_VERSION = 4;
+const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 const DEFAULT_TECHS = [
-  { code: '6373828', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 1.0, speed: 24, life: 1.4, count: 1, spread: 0 },
-  { code: '3141592', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 4,   speed: 22, life: 1.2, count: 3, spread: 0.22 },
-  { code: '8472916', name: 'Null Pointer',   kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 5,   speed: 38, life: 1.1, count: 1, spread: 0 },
-  { code: '4242424', name: 'Fork Bomb',      kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 7,   speed: 26, life: 1.2, count: 5, spread: 0.16 },
-  { code: '5192837', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 6,   radius: 6 },
-  { code: '5551234', name: 'Freeze Frame',   kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 11,  radius: 5.5, stun: 2 },
-  { code: '3735928', name: 'Laser Beam',     kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 7,   range: 28 },
-  { code: '2718281', name: 'Stack Overflow', kind: 'slam',   emoji: '🔨', color: '#ffb84d', damage: 40, cd: 9,   radius: 5 },
-  { code: '1618339', name: 'Landmine',       kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 8,   radius: 2.2, dur: 25, stun: 0.6 },
-  { code: '4815162', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 16,  count: 1, dur: 12, speed: 12 },
-  { code: '1928374', name: 'Elang Kembar',   kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 24,  count: 2, dur: 10, speed: 13 },
-  { code: '7294816', name: 'Elang Tunggangan', kind: 'ride',  emoji: '🦅', color: '#ffe0b0', dur: 10, speed: 13, cd: 25 },
-  { code: '9182736', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 10 },
-  { code: '9876543', name: 'Auto Backup',    kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 14,  dur: 6 },
-  { code: '2468135', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 12 },
-  { code: '1357913', name: 'Overclock',      kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 12 },
-  { code: '7531946', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 3 }
+  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 1.0, speed: 24, life: 1.4, count: 1, spread: 0 },
+  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 4,   speed: 22, life: 1.2, count: 3, spread: 0.22 },
+  { code: '8472', name: 'Null Pointer',   kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 5,   speed: 38, life: 1.1, count: 1, spread: 0 },
+  { code: '4242', name: 'Fork Bomb',      kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 7,   speed: 26, life: 1.2, count: 5, spread: 0.16 },
+  { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 6,   radius: 6 },
+  { code: '5551', name: 'Freeze Frame',   kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 11,  radius: 5.5, stun: 2 },
+  { code: '3735', name: 'Laser Beam',     kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 7,   range: 28 },
+  { code: '2718', name: 'Stack Overflow', kind: 'slam',   emoji: '🔨', color: '#ffb84d', damage: 40, cd: 9,   radius: 5 },
+  { code: '1618', name: 'Landmine',       kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 8,   radius: 2.2, dur: 25, stun: 0.6 },
+  { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 16,  count: 1, dur: 12, speed: 12 },
+  { code: '1928', name: 'Elang Kembar',   kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 24,  count: 2, dur: 10, speed: 13 },
+  { code: '7294', name: 'Elang Tunggangan', kind: 'ride',  emoji: '🦅', color: '#ffe0b0', dur: 10, speed: 13, cd: 25 },
+  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 10 },
+  { code: '9876', name: 'Auto Backup',    kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 14,  dur: 6 },
+  { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 12 },
+  { code: '1357', name: 'Overclock',      kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 12 },
+  { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 3 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride'];
 
@@ -83,8 +84,14 @@ function loadDB() {
     j.rooms = Array.isArray(j.rooms) ? j.rooms : [];
     j.techniques = Array.isArray(j.techniques) ? j.techniques : DEFAULT_TECHS.map(t => Object.assign({}, t));
     j.settings = Object.assign({ showBook: true }, j.settings || {});
-    if ((j.techVersion || 1) < TECH_VERSION) {
-      for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+    const ver = j.techVersion || 1;
+    if (ver < TECH_VERSION) {
+      /* kode bawaan lama (7 digit) -> kode pendek 3-4 digit */
+      for (const t of j.techniques) {
+        const nc = OLD_CODE_MAP[t.code];
+        if (nc && !j.techniques.some(x => x.code === nc)) t.code = nc;
+      }
+      if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
     }
@@ -915,17 +922,18 @@ const LANDING_HTML = String.raw`<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Digital War</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 10%,#1b2a66,#070b1a 65%);color:#e8efff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
-.card{width:min(94vw,420px);background:rgba(16,22,48,.94);border:2px solid #4de1ff44;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4de1ff22}
-h1{margin:0;font-size:40px;letter-spacing:6px;background:linear-gradient(90deg,#4de1ff,#b57bff,#ff7ad1);-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 10%,#0d2347,#03060c 65%);color:#f2f8ff;font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
+.card{width:min(94vw,420px);background:rgba(5,10,22,.95);border:2px solid #4db8ff44;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4db8ff22}
+h1{margin:0;font-size:46px;letter-spacing:3px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
 p{opacity:.75;font-size:14px;line-height:1.55}
-input{width:100%;margin-top:6px;background:#0a0f20;border:2px solid #2a3560;border-radius:12px;color:#fff;font-size:22px;letter-spacing:6px;text-align:center;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;outline:none}
-input:focus{border-color:#4de1ff}
-button{margin-top:14px;border:0;border-radius:999px;background:linear-gradient(90deg,#2fa8ff,#8a5bff);color:#fff;font-size:17px;font-weight:800;padding:12px 32px;cursor:pointer;box-shadow:0 5px 0 #2a3a8a;font-family:inherit}
-a{color:#6f86c8;font-size:12px;display:inline-block;margin-top:18px;text-decoration:none}
+input{width:100%;margin-top:6px;background:#050a14;border:2px solid #1c3a66;border-radius:12px;color:#fff;font-size:22px;letter-spacing:6px;text-align:center;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;outline:none}
+input:focus{border-color:#4db8ff}
+button{margin-top:14px;border:0;border-radius:999px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font-size:17px;font-weight:800;padding:12px 32px;cursor:pointer;box-shadow:0 5px 0 #0a3d99;font-family:inherit}
+a{color:#6fa8e8;font-size:12px;display:inline-block;margin-top:18px;text-decoration:none}
 </style>
 </head>
 <body>
@@ -952,22 +960,24 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Digital War · Admin</title>
 <style>
-:root{--bg:#0b1020;--card:#141b34;--line:#2a3560;--tx:#e8efff;--mut:#8fa0cc;--ac:#4de1ff;--ok:#1fa05a;--bad:#d63a4a}
+:root{--bg:#05070d;--card:#0a1424;--line:#1c3a66;--tx:#f2f8ff;--mut:#8fb4e0;--ac:#4db8ff;--ok:#1fa05a;--bad:#d63a4a}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at 50% 0,#17224a,var(--bg) 60%);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
-h1{margin:0;font-size:22px;letter-spacing:3px;background:linear-gradient(90deg,#4de1ff,#b57bff,#ff7ad1);-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase}
+body{margin:0;background:radial-gradient(ellipse at 50% 0,#0d2347,var(--bg) 60%);color:var(--tx);font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+h1{margin:0;font-size:28px;letter-spacing:2px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
+h1 small{font-size:14px;color:#4db8ff;text-shadow:none;letter-spacing:1px;margin-left:6px;font-weight:600}
 .wrap{max-width:860px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
 .card h2{margin:0 0 10px;font-size:16px;color:var(--ac)}
 label{display:block;font-size:12px;font-weight:700;color:var(--mut);margin:10px 0 4px}
-input,select{width:100%;background:#0a0f20;border:2px solid var(--line);border-radius:10px;color:var(--tx);font-size:15px;padding:9px 11px;font-family:inherit;outline:none}
+input,select{width:100%;background:#050a14;border:2px solid var(--line);border-radius:10px;color:var(--tx);font-size:15px;padding:9px 11px;font-family:inherit;outline:none}
 input:focus,select:focus{border-color:var(--ac)}
 input[type=color]{padding:2px;height:40px}
-button{border:0;border-radius:10px;background:#2a3a7a;color:#fff;font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer;font-family:inherit}
+button{border:0;border-radius:10px;background:#12408a;color:#fff;font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer;font-family:inherit}
 button:hover{filter:brightness(1.15)}
-button.pri{background:linear-gradient(90deg,#2fa8ff,#8a5bff)}
+button.pri{background:linear-gradient(90deg,#1e6fff,#4db8ff)}
 button.ok{background:var(--ok)}
 button.bad{background:var(--bad)}
 button:disabled{opacity:.5}
@@ -976,21 +986,21 @@ button:disabled{opacity:.5}
 .row>button{flex:0 0 auto}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
 .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.tabs button{background:#1b244a}
-.tabs button.on{background:linear-gradient(90deg,#2fa8ff,#8a5bff)}
+.tabs button{background:#0f2a54}
+.tabs button.on{background:linear-gradient(90deg,#1e6fff,#4db8ff)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.chip{background:#1b244a;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer}
+.chip{background:#0f2a54;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer}
 .chip.on{background:var(--ac);color:#04121c;border-color:var(--ac)}
-.room{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#0f1630}
+.room{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#08101f}
 .room h3{margin:0;font-size:16px}
 .room .meta{font-size:12px;color:var(--mut);margin:2px 0 8px}
 .link{display:flex;gap:6px;margin:6px 0}
 .link input{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
 .pl{font-size:12px;color:var(--mut);margin-top:6px}
-.pl b{color:var(--tx);background:#1b244a;border-radius:8px;padding:2px 8px;margin:2px 3px 0 0;display:inline-block}
+.pl b{color:var(--tx);background:#0f2a54;border-radius:8px;padding:2px 8px;margin:2px 3px 0 0;display:inline-block}
 .msg{padding:9px 12px;border-radius:10px;font-size:13px;font-weight:700;margin:8px 0}
 .msg.err{background:#4a1a22;color:#ff9aa6}.msg.ok{background:#12402a;color:#8affc0}.msg.warn{background:#4a3a12;color:#ffd77a}
-.tech{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#0f1630}
+.tech{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#08101f}
 .tech .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .tech .g label{margin:0 0 3px}
 .tech .hd{display:flex;gap:8px;align-items:center;margin-bottom:8px}
@@ -1014,7 +1024,7 @@ button:disabled{opacity:.5}
 </div>
 
 <div id="app" class="hidden">
-  <div class="top"><h1>Digital War · Admin</h1><button id="logout">Keluar</button></div>
+  <div class="top"><h1>Digital War <small>Admin</small></h1><button id="logout">Keluar</button></div>
   <div id="warnPw" class="msg warn hidden">⚠️ Password masih default (admin). Ganti di tab Akun supaya tidak sembarang orang bisa membuat room.</div>
   <div class="tabs">
     <button data-tab="rooms" class="on">Room</button>
@@ -1160,13 +1170,13 @@ function renderTech(){
     const code=document.createElement('input');code.className='code';code.value=t.code;code.maxLength=12;code.inputMode='numeric';code.addEventListener('input',()=>{code.value=code.value.replace(/[^1-9]/g,'');t.code=code.value;});field('Kode (1-9)',code);
     const kind=document.createElement('select');Object.keys(KINDS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=KINDS[k];if(k===t.kind)o.selected=true;kind.appendChild(o);});
     kind.addEventListener('change',()=>{t.kind=kind.value;renderTech();});field('Jenis',kind);
-    const col=document.createElement('input');col.type='color';col.value=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4de1ff';col.addEventListener('input',()=>t.color=col.value);field('Warna',col);
+    const col=document.createElement('input');col.type='color';col.value=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4db8ff';col.addEventListener('input',()=>t.color=col.value);field('Warna',col);
     const ds=document.createElement('input');ds.value=t.desc||'';ds.maxLength=80;ds.placeholder='(otomatis)';ds.addEventListener('input',()=>t.desc=ds.value);field('Deskripsi di buku',ds);
     (FIELDS[t.kind]||[]).forEach(f=>{const n=document.createElement('input');n.type='number';n.step='any';n.value=t[f[0]]==null?'':t[f[0]];n.addEventListener('input',()=>t[f[0]]=parseFloat(n.value));field(f[1],n);});
     d.appendChild(g);box.appendChild(d);
   });
 }
-$('techAdd').addEventListener('click',()=>{techs.push({code:'',name:'Teknik baru',kind:'bolt',emoji:'✨',color:'#4de1ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0});renderTech();});
+$('techAdd').addEventListener('click',()=>{techs.push({code:'',name:'Teknik baru',kind:'bolt',emoji:'✨',color:'#4db8ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0});renderTech();});
 $('techSave').addEventListener('click',async()=>{try{const j=await api('/techniques',{method:'PUT',body:{techniques:techs}});techs=j.techniques;renderTech();msg($('tmsg'),'Buku tersimpan ('+techs.length+' teknik)','ok');}catch(e){msg($('tmsg'),e.message);}});
 $('techReset').addEventListener('click',async()=>{if(!confirm('Kembalikan semua teknik ke default?'))return;try{const j=await api('/techniques/reset',{method:'POST'});techs=j.techniques;renderTech();msg($('tmsg'),'Dikembalikan ke default','ok');}catch(e){msg($('tmsg'),e.message);}});
 
@@ -1190,9 +1200,10 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Digital War</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--s:clamp(46px,8vh,60px)}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;color:#fff;font-family:"Fredoka","Baloo 2","Nunito","Trebuchet MS",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 canvas#c{display:block;width:100%;height:100%;touch-action:none;outline:none}
 .hud{display:none!important}
 body.playing .hud{display:block!important}
@@ -1246,14 +1257,15 @@ body.playing .hudf{display:flex}
 .btn.down{transform:scale(.92);background:rgba(255,255,255,.35)}
 #btnJump{width:62px;height:62px;right:calc(var(--s) + 18px);bottom:max(16px,env(safe-area-inset-bottom));font-size:20px}
 #btnAtk{width:54px;height:54px;right:calc(var(--s) + 88px);bottom:max(20px,env(safe-area-inset-bottom));background:rgba(180,40,50,.55);font-size:19px}
-#btnGuard{width:48px;height:48px;right:calc(var(--s) + 91px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 62px);background:rgba(40,90,170,.6);font-size:18px}
+#btnGuard{width:58px;height:58px;right:calc(var(--s) + 86px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 62px);background:rgba(40,90,170,.6);font-size:18px}
 #btnGuard.on{background:rgba(110,200,255,.85);box-shadow:0 0 18px rgba(120,210,255,.9);color:#04223a}
 #btnGuard.broken{opacity:.45}
 #btnAct{width:44px;height:44px;right:calc(var(--s) + 150px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 10px);display:none;font-size:18px}
 #btnAct.on{display:flex;background:rgba(255,200,60,.85);color:#3a2a00;box-shadow:0 0 22px rgba(255,210,80,.9)}
-#btnDive{width:46px;height:46px;right:calc(var(--s) + 26px);bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);display:none;background:rgba(30,120,200,.6);font-size:18px}
+#btnDive{width:58px;height:58px;right:calc(var(--s) + 20px);bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);display:none;background:rgba(30,120,200,.6);font-size:18px}
 #btnDive.on{display:flex}
-.btn small{font-size:9px}
+.btn small{font-size:10px;font-weight:600;white-space:nowrap}
+#btnGuard i,#btnDive i{width:24px;height:24px}
 .btn i{display:block;width:26px;height:26px;font-style:normal}
 .btn.big i{width:30px;height:30px}
 .svgi{width:100%;height:100%;display:block}
@@ -1266,12 +1278,15 @@ body.playing .hudf{display:flex}
 .bkb svg{width:18px;height:18px}
 #bkX svg{width:16px;height:16px}
 .kdi{width:13px;height:13px;vertical-align:-2px}
+.bki{width:20px;height:20px;vertical-align:-4px;margin-right:6px;display:inline-block}
+.mi{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:5px}
+.mi svg{width:100%;height:100%}
 .clki{width:14px;height:14px;vertical-align:-2px}
 @media (orientation:portrait){
 #btnJump{right:12px;bottom:max(22px,env(safe-area-inset-bottom))}
 #btnAtk{right:82px;bottom:max(26px,env(safe-area-inset-bottom))}
-#btnGuard{right:85px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 80px)}
-#btnDive{right:20px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 76px)}
+#btnGuard{right:80px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 84px)}
+#btnDive{right:14px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 88px)}
 #btnAct{right:146px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 30px)}
 body #slots{top:42%}
 }
@@ -1325,14 +1340,14 @@ body.playing #slots{display:flex}
 #dc{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,10,.85);z-index:30;text-align:center;padding:20px}
 #dc button{margin-top:14px}
 /* start screen */
-#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,rgba(30,50,110,.75),rgba(4,6,18,.92));z-index:10;overflow:auto;touch-action:pan-y}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,rgba(14,50,120,.78),rgba(2,4,10,.94));z-index:10;overflow:auto;touch-action:pan-y}
 #start.hide{display:none}
-#card{background:rgba(16,22,48,.94);border:2px solid #4de1ff44;border-radius:24px;padding:24px 22px;width:min(92vw,460px);text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4de1ff22;margin:auto}
-#card h1{margin:0;font-size:36px;letter-spacing:5px;background:linear-gradient(90deg,#4de1ff,#b57bff,#ff7ad1);-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase}
+#card{background:rgba(5,10,22,.95);border:2px solid #4db8ff66;border-radius:24px;padding:24px 22px;width:min(92vw,460px);text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4de1ff22;margin:auto}
+#card h1{margin:0;font-size:40px;letter-spacing:3px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
 #card .sub{font-size:12px;opacity:.65;margin:2px 0 12px}
 #lore{font-size:15px;line-height:1.6;min-height:150px;text-align:left;color:#d8e6ff;white-space:pre-wrap}
-.cbtn{margin-top:14px;border:0;border-radius:999px;background:linear-gradient(90deg,#2fa8ff,#8a5bff);color:#fff;font-size:17px;font-weight:800;padding:12px 30px;cursor:pointer;box-shadow:0 5px 0 #2a3a8a;touch-action:manipulation;font-family:inherit}
-.cbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #2a3a8a}
+.cbtn{margin-top:14px;border:0;border-radius:999px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font-size:18px;font-weight:700;padding:12px 30px;cursor:pointer;box-shadow:0 5px 0 #0a3d99;touch-action:manipulation;font-family:inherit}
+.cbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #0a3d99}
 .cbtn:disabled{opacity:.5}
 #form{display:none;text-align:left}
 #form label{display:block;font-size:12px;font-weight:700;opacity:.75;margin:10px 0 4px}
@@ -1396,7 +1411,7 @@ body.playing #slots{display:flex}
     <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
     <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
   </div>
-  <div id="mrow"><button class="mbtn" id="mCancel">Batal</button><button class="mbtn" id="mBack">⌫ Hapus</button><button class="mbtn ok" id="mOk">Pasang</button></div>
+  <div id="mrow"><button class="mbtn" id="mCancel">Batal</button><button class="mbtn" id="mBack"><span class="mi" data-ico="back"></span>Hapus</button><button class="mbtn ok" id="mOk">Pasang</button></div>
   <div id="mrow2" style="margin-top:8px;display:none"><button class="mbtn del" id="mClear" style="width:100%">Kosongkan slot ini</button></div>
 </div></div>
 
@@ -1444,6 +1459,7 @@ const ICO={
  fs:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
  fsx:'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
+ back:'<path d="M20 5H9l-6 7 6 7h11z"/><path d="M13 9.500l4 5M17 9.500l-4 5"/>',
  sword:'<path d="M20 4L9 15M6.5 12.5l5 5M9 15l-4.5 4.5M4 4l11 11M12.5 17.5l5-5M15 15l4.500 4.500"/><circle cx="4" cy="20" r="1" fill="currentColor"/><circle cx="20" cy="20" r="1" fill="currentColor"/>',
  shield:'<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2.200 2.200L15.500 10"/>',
  jump:'<path d="M12 19V6M6 12l6-6 6 6M6 21.500h12"/>',
@@ -1944,7 +1960,7 @@ function castSlot(i){
 function renderCode(){$('codeBox').textContent=typed||'· · · · · ·';$('mOk').disabled=typed.length<2||pendingLearn;}
 function openModal(i){
   modalSlot=i;typed='';modalOpen=true;pendingLearn=false;$('codeErr').textContent='';$('codeBox').classList.remove('err');
-  $('mTitle').textContent='TEKNIK DIGITAL · SLOT '+(i+1);
+  $('mTitle').textContent='TEKNIK DIGITAL, SLOT '+(i+1);
   $('mSub').textContent=slots[i]?'Slot ini berisi: '+slots[i].name+'. Ketik kode baru untuk mengganti.':'Masukkan kode angka 1-9 dari buku';
   $('mrow2').style.display=slots[i]?'block':'none';
   $('modal').classList.add('show');renderCode();
@@ -2071,18 +2087,18 @@ function renderBook(){
   const per=bookPer(),spreads=Math.max(1,Math.ceil(bookData.length/(per*2)));
   bookPage=clamp(bookPage,0,spreads-1);
   const fill=(el,items,no,title)=>{
-    el.innerHTML='';const h=document.createElement('h3');h.textContent=title;el.appendChild(h);
+    el.innerHTML='';const h=document.createElement('h3');h.innerHTML=title;el.appendChild(h);
     items.forEach(t=>{const d=document.createElement('div');d.className='te';
       const ic=document.createElement('div');ic.className='ic';ic.innerHTML=svg(t.kind,'#7a3a14');
       const bx=document.createElement('div');const b=document.createElement('b');b.textContent=t.name;
       const cd=document.createElement('div');cd.className='cd';cd.textContent=t.code;
-      const sm=document.createElement('small');sm.textContent=t.desc+' · CD '+t.cd+'s';
+      const sm=document.createElement('small');sm.textContent=t.desc+'. Cooldown '+t.cd+' dtk';
       bx.appendChild(b);bx.appendChild(cd);bx.appendChild(sm);d.appendChild(ic);d.appendChild(bx);el.appendChild(d);});
-    const n=document.createElement('div');n.className='pn';n.textContent='— '+no+' —';el.appendChild(n);
+    const n=document.createElement('div');n.className='pn';n.textContent=no;el.appendChild(n);
   };
   const base=bookPage*per*2;
-  fill($('pgL'),bookData.slice(base,base+per),bookPage*2+1,'📖 Buku Teknik Digital');
-  fill($('pgR'),bookData.slice(base+per,base+per*2),bookPage*2+2,'Kode & kekuatan');
+  fill($('pgL'),bookData.slice(base,base+per),bookPage*2+1,svg('book',null,'bki')+'Buku Teknik Digital');
+  fill($('pgR'),bookData.slice(base+per,base+per*2),bookPage*2+2,'Kode dan kekuatan');
   $('bkPrev').style.visibility=bookPage>0?'visible':'hidden';$('bkNext').style.visibility=bookPage<spreads-1?'visible':'hidden';
 }
 function openBook(){
@@ -2313,7 +2329,7 @@ function renderBoard(){
   const bd=$('board');bd.innerHTML='<h4>PAPAN SKOR</h4>';
   rows.forEach((r,i)=>{const d=document.createElement('div');if(r.me)d.className='me';const b=document.createElement('b');b.textContent=(i+1)+'. '+r.name;const s=document.createElement('span');s.innerHTML=kdHtml(r.k,r.d);d.appendChild(b);d.appendChild(s);bd.appendChild(d);});
   $('kd').innerHTML=kdHtml(me.k,me.d);
-  $('roomTag').textContent=(roomInfo.name||'Room')+' · '+rows.length+'/'+(roomInfo.max||'?');
+  $('roomTag').textContent=(roomInfo.name||'Room')+' '+rows.length+'/'+(roomInfo.max||'?');
 }
 let roomInfo={name:'',max:0};
 function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>35?'':'linear-gradient(#ff8080,#d63a3a)';}
@@ -2446,7 +2462,7 @@ $('nameIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter
 $('nameIn').addEventListener('keyup',e=>e.stopPropagation());
 let roomOk=false;
 fetch('/api/room/'+encodeURIComponent(ROOM)).then(r=>r.ok?r.json():Promise.reject()).then(j=>{
-  roomOk=true;roomInfo=j;$('roomInfo').textContent='Room: '+j.name+' · '+j.count+'/'+j.max+' pemain';
+  roomOk=true;roomInfo=j;$('roomInfo').textContent='Room: '+j.name+' ('+j.count+'/'+j.max+' pemain)';
 }).catch(()=>{$('roomInfo').textContent='Room tidak ditemukan. Minta link baru ke admin.';$('roomInfo').style.color='#ff8a8a';$('go').disabled=true;});
 $('go').addEventListener('click',()=>{
   initAudio();
