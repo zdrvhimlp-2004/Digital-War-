@@ -3107,7 +3107,7 @@ function updMobs(dt,rgt,fwd){
 /* tunggangan elang */
 function mountMake(){const tex=eagleTex();const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);return {mesh,tex};}
 /* penunggang duduk di punggung elang; posisi dihitung per arah hadap (ruang layar) */
-const RIDE_OFF={0:[0.4,0.05,0.5],1:[0,0.3,-0.8],3:[0.34,0.22,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
+const RIDE_OFF={0:[0.4,0.05,0.5],1:[0,0.95,-0.8],3:[0.34,0.6,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
 function mountPlace(m,x,y,z,fx,fz,rgt,fwd,id){
   const fl=eagleSet(m,fx,fz,rgt,fwd,Math.floor(tAll*7+id)%2);
   const rw=ROWMAP[m.vk],t=RIDE_OFF[rw]||RIDE_OFF[0],tail=fl?1:-1;
@@ -3941,6 +3941,7 @@ function update(dt){
   spriteMesh.material.color.setHex(hurtFlash>0?0xff7a7a:(stunT>0?0xaee6ff:0xffffff));spriteMesh.visible=!fps&&!(invuln>0.25&&Math.floor(tAll*16)%2===0&&!dead);
   playerRoot.position.copy(pos);
   if(swim)playerRoot.position.y+=Math.sin(tAll*3)*0.05;
+  ghost.visible=!riding;
   if(riding){if(!myMount)myMount=mountMake();myMount.mesh.visible=!fps;mountPlace(myMount,pos.x,pos.y,pos.z,faceX,faceZ,rgt,fwd,0);playerRoot.position.x+=myMount.off.x;playerRoot.position.y+=myMount.off.y;playerRoot.position.z+=myMount.off.z;}else if(myMount)myMount.mesh.visible=false;
   const hAbove=pos.y-terrainBelow();
   pShadow.position.set(pos.x,Math.max(groundAt(pos.x,pos.z,pos.y-0.5)+0.07,swim?WATER_Y+0.03:-999),pos.z);
