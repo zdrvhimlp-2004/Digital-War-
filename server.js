@@ -982,8 +982,9 @@ body.playing .hudf{display:flex}
 #oxyBox small{display:block;text-align:center;font-size:11px;font-weight:700;text-shadow:0 1px 3px #000}
 #mini{position:fixed;left:max(10px,env(safe-area-inset-left));top:calc(max(10px,env(safe-area-inset-top)) + 52px);width:96px;height:96px;border-radius:50%;border:2px solid rgba(255,255,255,.65);box-shadow:0 2px 10px rgba(0,0,0,.3);pointer-events:none;z-index:3}
 #roomTag{top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:12px;padding:4px 12px;white-space:nowrap}
-#clock{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));font-size:12px;padding:4px 10px;right:calc(max(10px,env(safe-area-inset-right)) + 46px)}
+#clock{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));font-size:12px;padding:4px 10px;right:calc(max(10px,env(safe-area-inset-right)) + 82px)}
 #sbBtn{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:34px;height:30px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;font-size:16px;z-index:4;cursor:pointer;padding:0}
+#fsBtn{position:fixed;top:max(8px,env(safe-area-inset-top));right:calc(max(10px,env(safe-area-inset-right)) + 40px);width:34px;height:30px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;font-size:17px;z-index:4;cursor:pointer;padding:0;line-height:1}
 #board{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 38px);right:max(10px,env(safe-area-inset-right));min-width:170px;max-width:240px;background:rgba(10,16,32,.78);border-radius:12px;padding:8px 10px;font-size:13px;z-index:4;display:none;pointer-events:none}
 #board.show{display:block}
 #board h4{margin:0 0 4px;font-size:12px;opacity:.7;letter-spacing:1px}
@@ -1072,7 +1073,7 @@ body.playing #slots{display:flex}
 #form .cbtn{display:block;margin:6px auto 0}
 @media (max-height:520px){#card{padding:14px 16px}#card h1{font-size:26px}#lore{min-height:110px;font-size:13px}.chr canvas{width:34px;height:49px}#chars{grid-template-columns:repeat(8,1fr)}}
 @media (max-width:700px) and (orientation:landscape){#hint{display:none}}
-@media (max-width:700px){body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 40px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{right:calc(max(10px,env(safe-area-inset-right)) + 44px)}}
+@media (max-width:700px){body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 40px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{right:calc(max(10px,env(safe-area-inset-right)) + 82px)}}
 @media (pointer:coarse){body.playing #hint.hud{display:none!important}.key{display:none}#prompt{bottom:auto;top:40%}}
 </style>
 </head>
@@ -1086,6 +1087,7 @@ body.playing #slots{display:flex}
 <canvas id="mini" class="hud" width="192" height="192"></canvas>
 <div id="roomTag" class="pill hud"></div>
 <div id="clock" class="pill hud">☀️ 09:00</div>
+<button id="fsBtn" class="hud" aria-label="Layar penuh" title="Layar penuh">⛶</button>
 <button id="sbBtn" class="hud" aria-label="Papan skor">🏆</button>
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
@@ -1702,6 +1704,25 @@ bindBtn($('btnJump'),()=>{jumpBtnHeld=true;jumpBuf=0.13;},()=>{jumpBtnHeld=false
 bindBtn($('btnDive'),()=>{diveBtnHeld=true;},()=>{diveBtnHeld=false;});
 bindBtn($('btnAct'),()=>interact());
 bindBtn($('btnAtk'),()=>doAttack());
+
+/* ---------- fullscreen ---------- */
+(function(){
+  const el=document.documentElement,btn=$('fsBtn');
+  const req=el.requestFullscreen||el.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
+  if(!req){btn.style.display='none';return;}
+  const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+  const sync=()=>{btn.textContent=isFs()?'✕':'⛶';setTimeout(resize,150);};
+  document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync);
+  btn.addEventListener('pointerdown',e=>e.stopPropagation());
+  btn.addEventListener('click',()=>{
+    try{
+      if(isFs()){exit.call(document);}
+      else{const r=req.call(el);if(r&&r.catch)r.catch(()=>{});
+        try{if(screen.orientation&&screen.orientation.lock&&innerWidth<innerHeight)screen.orientation.lock('landscape').catch(()=>{});}catch(_){}}
+    }catch(_){}
+    canvas.focus();
+  });
+})();
 
 /* ---------- remote players ---------- */
 function makeLabel(){
