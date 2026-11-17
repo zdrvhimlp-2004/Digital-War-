@@ -56,6 +56,14 @@ const BANDITS_PER_CAMP = { sword: 2, archer: 2, brute: 1 };
 const BANDIT_OWNER = -1, BANDIT = { id: -1, name: 'Penyamun' };
 const SOLDIER = { brute: { hp: 95, speed: 5.4, dmg: 14, range: 2.7, cd: 1150 }, sword: { hp: 45, speed: 6.5, dmg: 8, range: 2.4, cd: 1000 }, archer: { hp: 30, speed: 4.5, dmg: 7, range: 17, cd: 1800, arrow: 22 } };
 const SOLDIERS_PER_FORT = { sword: 3, archer: 2 };
+/* pasukan benteng: sebagian menjaga benteng, sebagian mengawal pemilik */
+const FORT_ROSTER = [
+  { kind: 'sword', role: 'guard' }, { kind: 'sword', role: 'guard' }, { kind: 'sword', role: 'escort' },
+  { kind: 'archer', role: 'guard' }, { kind: 'archer', role: 'escort' }
+];
+const ESCORT_AGGRO = 18;
+const MOB_HP = 40, MOUNT_HP = 70;
+const CAVE_MOUTH = { x: -15, z: 87 };
 const SOLDIER_RESPAWN_MS = 12000;
 const CHAT_MAX = 140;
 const SPAWN_RADIUS = 96;                   // titik spawn: pojok/tepi peta
@@ -280,11 +288,25 @@ function victims(room) {
   const a = [];
   for (const p of room.players.values()) if (!p.dead) a.push(p);
   for (const s of room.sols) a.push(s);
+  for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
 }
-function friendly(ownerId, v) { return v.id === ownerId || (v.isSol && v.owner === ownerId); }
+function friendly(ownerId, v) { if (v.isMob) return v.o === ownerId; return v.id === ownerId || (v.isSol && v.owner === ownerId); }
+function damageMob(room, m, dmg, attacker) {
+  if (m.hp <= 0) return;
+  if (attacker && attacker.id === m.o) return;
+  dmg = Math.max(1, Math.round(dmg));
+  m.hp = Math.max(0, m.hp - dmg);
+  broadcast(room, { t: 'mh', id: m.id, hp: m.hp, dmg });
+  if (m.hp <= 0) {
+    const i = room.mobs.indexOf(m);
+    if (i >= 0) room.mobs.splice(i, 1);
+    broadcast(room, { t: 'mobx', id: m.id, dead: 1 });
+  }
+}
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
-  if (v.isSol) damageSoldier(room, v, dmg, attacker);
+  if (v.isMob) damageMob(room, v.m, dmg, attacker);
+  else if (v.isSol) damageSoldier(room, v, dmg, attacker);
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
 }
 function damageSoldier(room, s, dmg, attacker) {
@@ -330,6 +352,13 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   const t = now();
   if (victim.dead || t < victim.invuln) return;
   if (victim.sleeping) setSleep(room, victim, false);
+  if (victim.rideUntil && victim.mountHp > 0) {
+    const d = Math.max(1, Math.round(dmg));
+    victim.mountHp = Math.max(0, victim.mountHp - d);
+    broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg: d, hp: victim.hp, kx: 0, kz: 0, mnt: 1, mhp: victim.mountHp });
+    if (victim.mountHp <= 0) { victim.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: victim.id }); }
+    return;
+  }
   if (victim.guarding) {
     if (opt.area) dmg *= 0.5;
     else if (opt.sx !== undefined && (victim.fx * opt.sx + victim.fz * opt.sz) > 0) {
@@ -472,9 +501,9 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
-        broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
+        broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
       break;
     }
@@ -499,7 +528,7 @@ function doCast(room, p, slot, ax, ay, az) {
       break;
     }
     case 'ride': {
-      p.rideUntil = t + tech.dur * 1000;
+      p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
       broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: tech.speed || 24, c: tech.color });
       break;
     }
@@ -595,10 +624,10 @@ function stepBandits(room, dt, t) {
     }
   }
 }
-function spawnSoldier(room, f, kind) {
+function spawnSoldier(room, f, kind, role) {
   const a = Math.random() * Math.PI * 2, r = 3 + Math.random() * 3;
   const sp = SOLDIER[kind];
-  const s = { id: solSeq++, isSol: true, fort: f.id, owner: f.owner, ch: f.ownerCh, kind, x: f.x + Math.cos(a) * r, y: 0, z: f.z + Math.sin(a) * r, fx: 0, fz: 1, hp: sp.hp, max: sp.hp, atkAt: 0, dead: false, atkFlag: 0, hx: f.x + Math.cos(a) * r, hz: f.z + Math.sin(a) * r };
+  const s = { id: solSeq++, isSol: true, role: role || 'guard', eo: Math.random() * 6.28, fort: f.id, owner: f.owner, ch: f.ownerCh, kind, x: f.x + Math.cos(a) * r, y: 0, z: f.z + Math.sin(a) * r, fx: 0, fz: 1, hp: sp.hp, max: sp.hp, atkAt: 0, dead: false, atkFlag: 0, hx: f.x + Math.cos(a) * r, hz: f.z + Math.sin(a) * r };
   room.sols.push(s);
   broadcast(room, { t: 'sol', s: solPublic(s) });
   return s;
@@ -611,7 +640,7 @@ function setFortOwner(room, f, p) {
   f.owner = p ? p.id : 0; f.ownerName = p ? p.name : ''; f.ownerCh = p ? p.ch : 0; f.cap = null;
   broadcast(room, { t: 'fort', f: fortPublic(f) });
   if (p) {
-    for (const kind of Object.keys(SOLDIERS_PER_FORT)) for (let i = 0; i < SOLDIERS_PER_FORT[kind]; i++) spawnSoldier(room, f, kind);
+    for (const e of FORT_ROSTER) spawnSoldier(room, f, e.kind, e.role);
     f.nextSpawn = now() + SOLDIER_RESPAWN_MS;
   }
 }
@@ -637,25 +666,34 @@ function stepForts(room, dt, t) {
       }
     }
     if (f.owner && t >= f.nextSpawn) {
-      for (const kind of Object.keys(SOLDIERS_PER_FORT)) {
-        const have = room.sols.filter(s => s.fort === f.id && s.kind === kind).length;
-        if (have < SOLDIERS_PER_FORT[kind]) { spawnSoldier(room, f, kind); f.nextSpawn = t + SOLDIER_RESPAWN_MS; break; }
+      const need = {};
+      for (const e of FORT_ROSTER) need[e.kind + ':' + e.role] = (need[e.kind + ':' + e.role] || 0) + 1;
+      for (const key of Object.keys(need)) {
+        const [kind, role] = key.split(':');
+        const have = room.sols.filter(s => s.fort === f.id && s.kind === kind && s.role === role).length;
+        if (have < need[key]) { spawnSoldier(room, f, kind, role); f.nextSpawn = t + SOLDIER_RESPAWN_MS; break; }
       }
     }
   }
+  const vs = victims(room);
   for (const s of room.sols) {
+    if (s.bandit) continue;
     const f = room.forts[s.fort], sp = SOLDIER[s.kind], owner = room.players.get(s.owner);
     if (!f || !owner) continue;
-    /* cari musuh terdekat dalam jangkauan benteng */
+    const escort = s.role === 'escort';
+    const ax = escort ? (owner.x > 1000 ? CAVE_MOUTH.x : owner.x) : f.x, az = escort ? (owner.x > 1000 ? CAVE_MOUTH.z : owner.z) : f.z;
+    if (escort && Math.hypot(ax - s.x, az - s.z) > 70) { s.x = ax + Math.cos(s.eo) * 3; s.z = az + Math.sin(s.eo) * 3; }
+    /* cari musuh terdekat dekat jangkar (benteng atau pemilik) */
     let best = null, bd = 1e9;
-    for (const v of room.players.values()) {
-      if (v.dead || v.id === s.owner || v.x > 1000) continue;
-      const dF = Math.hypot(v.x - f.x, v.z - f.z);
-      if (dF > FORT_AGGRO) continue;
+    for (const v of vs) {
+      if (friendly(s.owner, v) || (v.isSol && v.dead) || v.x > 1000) continue;
+      if (Math.hypot(v.x - ax, v.z - az) > (escort ? ESCORT_AGGRO : FORT_AGGRO)) continue;
       const d = Math.hypot(v.x - s.x, v.z - s.z);
       if (d < bd) { bd = d; best = v; }
     }
-    let tx = s.hx, tz = s.hz, speed = sp.speed * 0.6, moving = false;
+    let tx, tz, speed = sp.speed * 0.6;
+    if (escort) { tx = ax + Math.cos(s.eo) * 3.2; tz = az + Math.sin(s.eo) * 3.2; const dd0 = Math.hypot(tx - s.x, tz - s.z); if (dd0 < 1.2) { tx = s.x; tz = s.z; } else speed = sp.speed * (dd0 > 8 ? 1.35 : 0.9); }
+    else { tx = s.hx; tz = s.hz; }
     if (best) {
       const dx = best.x - s.x, dz = best.z - s.z, d = bd || 0.01;
       s.fx = dx / d; s.fz = dz / d;
@@ -682,8 +720,7 @@ function stepForts(room, dt, t) {
     if (dd > 0.2) {
       const step = Math.min(dd, speed * dt);
       let nx = s.x + ddx / dd * step, nz = s.z + ddz / dd * step;
-      const fd = Math.hypot(nx - f.x, nz - f.z);
-      if (fd > FORT_LEASH) { nx = f.x + (nx - f.x) / fd * FORT_LEASH; nz = f.z + (nz - f.z) / fd * FORT_LEASH; }
+      if (!escort) { const fd = Math.hypot(nx - f.x, nz - f.z); if (fd > FORT_LEASH) { nx = f.x + (nx - f.x) / fd * FORT_LEASH; nz = f.z + (nz - f.z) / fd * FORT_LEASH; } }
       s.x = nx; s.z = nz;
       if (!best) { s.fx = ddx / dd; s.fz = ddz / dd; }
     }
@@ -1902,7 +1939,7 @@ const ICO={
  chevr:'<path d="M9 5l7 7-7 7"/>',
  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.500v2.500M12 19v2.500M2.500 12H5M19 12h2.500M5.300 5.300l1.800 1.800M16.900 16.900l1.800 1.800M18.700 5.300l-1.800 1.800M7.100 16.900l-1.800 1.800"/>',
  moon:'<path d="M20 14.500A8 8 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/>',
- skull:'<path d="M12 3a8 8 0 0 0-5 14.200V20h10v-2.800A8 8 0 0 0 12 3z"/><circle cx="9" cy="12" r="1.200" fill="currentColor"/><circle cx="15" cy="12" r="1.200" fill="currentColor"/><path d="M10.500 20v-2.500M13.500 20v-2.500"/>',
+ dead:'<circle cx="12" cy="12" r="8.500"/><path d="M8.500 8.500l7 7M15.500 8.500l-7 7"/>',
  /* jenis teknik */
  bolt:'<path d="M2.500 8h7M1.500 12h8M2.500 16h7"/><circle cx="16.500" cy="12" r="4.500" fill="currentColor" fill-opacity=".25"/>',
  nova:'<circle cx="12" cy="12" r="3.200" fill="currentColor" fill-opacity=".25"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.800 2.800M16.200 16.200L19 19M19 5l-2.800 2.800M7.800 16.200L5 19"/>',
@@ -1918,7 +1955,7 @@ const ICO={
  spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
 };
 function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO.spark)+'</svg>';}
-function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('skull',null,'kdi')+' '+d;}
+function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('dead',null,'kdi')+' '+d;}
 
 
 /* ---------- renderer / scene ---------- */
@@ -2220,8 +2257,8 @@ CAMP_DEFS.forEach(cp=>{
   for(let k=0;k<4;k++){const lg=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,1.5,6),dk);lg.position.set(0,0.2,0);lg.rotation.set(Math.PI/2,k*0.8,0.3);g.add(lg);}
   const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xff8a2a,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:0.7,fog:false}));glow.scale.set(6,6,1);glow.position.y=1.2;g.add(glow);
   circles.push({x:cp.x,z:cp.z,r:1.4});
-  /* bendera tengkorak */
-  const cv=document.createElement('canvas');cv.width=64;cv.height=64;const x=cv.getContext('2d');x.fillStyle='#2a0f12';x.fillRect(0,0,64,64);x.fillStyle='#e8e0d0';x.beginPath();x.arc(32,26,14,0,6.2832);x.fill();x.fillRect(22,34,20,10);x.fillStyle='#2a0f12';x.beginPath();x.arc(26,26,4,0,6.2832);x.arc(38,26,4,0,6.2832);x.fill();x.fillRect(30,32,4,5);x.fillStyle='#e8e0d0';x.fillRect(14,50,36,4);
+  /* bendera pedang bersilang */
+  const cv=document.createElement('canvas');cv.width=64;cv.height=64;const x=cv.getContext('2d');x.fillStyle='#4a1418';x.fillRect(0,0,64,64);x.strokeStyle='#e8e0d0';x.lineWidth=5;x.lineCap='round';x.beginPath();x.moveTo(14,12);x.lineTo(50,48);x.moveTo(50,12);x.lineTo(14,48);x.stroke();x.lineWidth=4;x.beginPath();x.moveTo(8,40);x.lineTo(22,30);x.moveTo(42,30);x.lineTo(56,40);x.stroke();x.fillStyle='#d6ad2b';x.fillRect(8,54,48,4);
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),side:THREE.DoubleSide,fog:false}));fl.position.set(1.2,8.6,-9);
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.13,10,6),wood);pole.position.set(0,5,-9);g.add(pole);g.add(fl);
   campFx.push({x:cp.x,z:cp.z,glow,fl});
@@ -2958,7 +2995,7 @@ function addMob(m){
   const tex=eagleTex();
   const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
-  mobs.set(m.id,{id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
+  mobs.set(m.id,{hp:m.hp||40,flash:0,id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
   burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfx.eagle();
 }
 function removeMob(id,quiet){
@@ -2972,7 +3009,7 @@ function updMobs(dt,rgt,fwd){
     const sc=1+(m.atkT>0?0.35:0);
     m.mesh.position.set(m.x,m.y,m.z);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
     const fl=eagleSet(m,m.fx,m.fz,rgt,fwd,Math.floor(tAll*10+m.id)%2);
-    m.mesh.scale.set(fl?-sc:sc,sc,1);
+    m.flash=Math.max(0,m.flash-dt);m.mesh.material.color.setHex(m.flash>0?0xff7a7a:0xffffff);m.mesh.scale.set(fl?-sc:sc,sc,1);
     const gy=Math.max(groundAt(m.x,m.z,m.y),WATER_Y);
     m.sh.position.set(m.x,gy+0.07,m.z);m.sh.scale.setScalar(clamp(1-(m.y-gy)*0.1,0.3,1)*1.2);
   }
@@ -3017,23 +3054,14 @@ function updBeams(dt){
 function makeShield3D(ch){
   const pal=Object.assign({},PAL_PLAYER,CHARS[clamp(ch|0,0,CHARS.length-1)].pal);
   const g=new THREE.Group();
-  const sh=new THREE.Shape();
-  sh.moveTo(-0.95,1.1);sh.lineTo(0.95,1.1);sh.lineTo(0.95,0.15);sh.quadraticCurveTo(0.9,-0.75,0,-1.35);sh.quadraticCurveTo(-0.9,-0.75,-0.95,0.15);sh.lineTo(-0.95,1.1);
-  const bodyG=new THREE.ExtrudeGeometry(sh,{depth:0.16,bevelEnabled:true,bevelThickness:0.08,bevelSize:0.07,bevelSegments:2,curveSegments:10});bodyG.translate(0,0,-0.08);
-  const body=new THREE.Mesh(bodyG,mat(pal.tunic,{shininess:40,specular:0x666666}));g.add(body);
-  const rimG=new THREE.ExtrudeGeometry(sh,{depth:0.1,bevelEnabled:false,curveSegments:10});rimG.translate(0,0,-0.2);
-  const rim=new THREE.Mesh(rimG,mat('#d6ad2b',{shininess:60,specular:0x886600}));rim.scale.set(1.13,1.1,1);rim.position.y=-0.04;g.add(rim);
-  const sA=new THREE.Mesh(new THREE.BoxGeometry(0.26,1.9,0.07),mat(pal.scarf));sA.position.set(0,0.0,0.19);g.add(sA);
-  const sB=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.26,0.07),mat(pal.scarf));sB.position.set(0,0.42,0.19);g.add(sB);
-  const boss=new THREE.Mesh(new THREE.SphereGeometry(0.26,12,8),mat('#ffe27a',{emissive:'#8a6400',emissiveIntensity:0.5,shininess:80}));boss.position.set(0,0.42,0.2);boss.scale.z=0.6;g.add(boss);
-  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0x6fc8ff,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:0.55,fog:false}));glow.scale.set(4.2,4.2,1);glow.position.z=-0.15;g.add(glow);
-  g.userData.boss=boss;g.userData.glow=glow;g.visible=false;scene.add(g);return g;
+  const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.09,24).rotateX(Math.PI/2),mat(pal.tunic,{shininess:25,specular:0x444444}));g.add(disc);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.045,8,28),mat(pal.tunicD||pal.tunic));rim.position.z=0.045;g.add(rim);
+  g.visible=false;scene.add(g);return g;
 }
 function makeGuardSp(ch){return makeShield3D(ch);}
 function placeShield(sh,x,y,z,fx,fz,t){
-  sh.position.set(x+fx*1.05,y+1.15+Math.sin(t*3)*0.04,z+fz*1.05);
+  sh.position.set(x+fx*0.62,y+0.95,z+fz*0.62);
   sh.rotation.set(0,Math.atan2(fx,fz),0);
-  sh.userData.glow.material.opacity=0.45+0.15*Math.sin(t*5);
 }
 
 /* ---------- bola biru raksasa 3D ---------- */
@@ -3303,7 +3331,7 @@ function updOthers(dt,rgt,fwd){
     else if(o.atkT>0){row=5;col=(0.32-o.atkT)<0.1?4:5;flip=(o.fx*rgt.x+o.fz*rgt.z)<0;}
     else if(o.ride)col=Math.floor(tAll/0.35+o.id)%2;
     else if(o.a>0&&!wet)col=o.a===1?6:7;
-    else if(o.m>0){o.wt+=dt*(2.2+(o.m===2?12:8)*0.9);col=2+(Math.floor(o.wt)%4);{const sx2=Math.floor(o.wt)%2;if(sx2!==o.lastS&&!o.sw){o.lastS=sx2;sfxAt('step',o.x,o.z,(o.x>1000)?'stone':'grass');}}}
+    else if(o.m>0){o.wt+=dt*(2.2+(o.m===2?10:6.5)*0.9);col=2+(Math.floor(o.wt)%4);{const sx2=Math.floor(o.wt)%2;if(sx2!==o.lastS&&!o.sw){o.lastS=sx2;sfxAt('step',o.x,o.z,(o.x>1000)?'stone':'grass');}}}
     else col=Math.floor(tAll/0.55+o.id)%2;
     setTexFrame(o.tex,col,row);
     const bob=wet?Math.sin(tAll*3+o.id)*0.06:0;
@@ -3410,7 +3438,8 @@ function onMsg(m){
     case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah! 💥',1.6);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfx.gbreak();}}break;}
     case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku! ❄️',1.4);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
-    case 'mobx':removeMob(m.id);break;
+    case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
+    case 'mh':{const o=mobs.get(m.id);if(o){o.hp=m.hp;o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
     case 'ms':m.m.forEach(r=>{const o=mobs.get(r[0]);if(!o)return;o.tx=r[1];o.ty=r[2];o.tz=r[3];o.fx=r[4];o.fz=r[5];if(r[6])o.atkT=0.3;});break;
     case 'trap':addTrap(m);break;
     case 'trapx':removeTrap(m.id,m.quiet?null:m);break;
@@ -3455,6 +3484,7 @@ function onFx(m){
 }
 function onHit(m){
   const v=entPos(m.id);if(!v)return;
+  if(m.mnt){floatText(v.x,v.y+2.3,v.z,'-'+m.dmg,'#ffb84d');burst(v.x,v.y+0.6,v.z,'#ffe0b0',8,3);sfxAt('hit',v.x,v.z);if(m.id===me.id){hurtFlash=0.15;shake=Math.max(shake,0.15);toast('Elangmu diserang! Sisa '+m.mhp,1.2);}return;}
   if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
   floatText(v.x,v.y+2.1,v.z,'-'+m.dmg,m.id===me.id?'#ff6a6a':'#ffd84d');
   burst(v.x,v.y+1,v.z,'#fff6a0',6,3);
@@ -3465,7 +3495,7 @@ function onHit(m){
   }else{const o=others.get(m.id);if(o){o.hp=m.hp;o.flash=0.18;drawLabel(o);}sfxAt('hit',v.x,v.z);}
 }
 function onDie(m){
-  feed('💀 '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
+  feed('✖ '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
   if(m.by===me.id&&m.id!==me.id)sfx.kill();
   if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display='flex';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
   else{const o=others.get(m.id);if(o){o.ride=false;o.dead=true;o.hp=0;drawLabel(o);burst(o.x,o.y+1,o.z,'#ffffff',16,5);}}
@@ -3600,7 +3630,7 @@ function drawMini(){
 }
 
 /* ---------- physics ---------- */
-const SPEED_WALK=19.5,SPEED_RUN=30,GRAV=30,JUMPV=15.56; /* lompat 2x lebih tinggi (v^2 x2) */
+const SPEED_WALK=6.5,SPEED_RUN=10,GRAV=30,JUMPV=15.56; /* lompat 2x lebih tinggi (v^2 x2) */
 function canMove(nx,nz,step,swim){
   const g=groundAt(nx,nz,pos.y);const rise=g-pos.y;
   const maxRise=swim?1.6:(grounded?0.9*step+0.03:0.45);
@@ -3771,8 +3801,8 @@ function update(dt){
   if(riding){idleT+=dt;frame=Math.floor(idleT/0.35)%2;}
   else if(!grounded&&!swim)frame=vy>0?6:7;
   else if(sp>0.9){
-    walkT+=dt*(2.2+Math.min(sp,12)*0.9);const idx=Math.floor(walkT)%4;frame=2+idx;
-    if(!swim&&idx!==lastStepIdx&&(idx===0||idx===2)){sfx.step(stepKind());if(sp>22)dust(2,1.2,0.5);else if(Math.random()<0.5)dust(1,0.8,0.4);}
+    walkT+=dt*(2.2+sp*0.9);const idx=Math.floor(walkT)%4;frame=2+idx;
+    if(!swim&&idx!==lastStepIdx&&(idx===0||idx===2)){sfx.step(stepKind());if(sp>7.5)dust(2,1.2,0.5);else if(Math.random()<0.5)dust(1,0.8,0.4);}
     lastStepIdx=idx;
   }else{idleT+=dt;frame=Math.floor(idleT/0.55)%2;lastStepIdx=-1;}
   let row=ROWMAP[viewK],flip=viewK>4;
@@ -3841,7 +3871,7 @@ function update(dt){
   if(joined){
     netT-=dt;netIdle+=dt;
     if(netT<=0){netT=0.066;
-      const m=sp<0.9?0:(sp>22?2:1),a=grounded||swim||riding?0:(vy>0?1:2),sw=swim?(headUnder?2:1):0;
+      const m=sp<0.9?0:(sp>7.5?2:1),a=grounded||swim||riding?0:(vy>0?1:2),sw=swim?(headUnder?2:1):0;
       netSend({t:'s',x:+pos.x.toFixed(2),y:+pos.y.toFixed(2),z:+pos.z.toFixed(2),fx:+faceX.toFixed(2),fz:+faceZ.toFixed(2),m,a,sw});}
   }
 
@@ -3883,7 +3913,7 @@ function update(dt){
   camera.position.set(cx,cy,cz);camera.lookAt(started?cam.tx:0,started?cam.ty+1.0:2,started?cam.tz:0);
   if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0),cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
   if(shake>0){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
-  const fovGoal=(cam.baseFov||50)+(sp>25?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
+  const fovGoal=(cam.baseFov||50)+(sp>8.5?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
   if(Math.abs(camera.fov-cam.fov)>0.02){camera.fov=cam.fov;camera.updateProjectionMatrix();}
   underwater=camera.position.y<WATER_Y&&lakeDist(camera.position.x,camera.position.z)<LAKE.R+1;
   $('uw').style.opacity=underwater?1:0;
@@ -3898,7 +3928,7 @@ function frame(now){
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
-window.__dw={sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
+window.__dw={mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
 })();
 </script>
