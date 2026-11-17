@@ -1,0 +1,112 @@
+# Digital War
+
+Game multiplayer 2.5D (Three.js) untuk main bareng teman. Tanpa login pemain: cukup buka link room, tulis nama, pilih karakter.
+
+Seluruh server, game, halaman admin, dan landing ada di **satu file: `server.js`**. Tidak ada dependency, tidak perlu `npm install`.
+
+> Ini adalah dunia digital yang dibuat menggunakan kode-kode bukan asli. Di dunia ini kamu bisa mengeluarkan dan membuat hal-hal yang telah ditetapkan di buku. Jadi kamu hafalkan dan praktekkan untuk beradaptasi dan menyerang lawan.
+
+## Menjalankan
+
+Butuh Node.js 18 atau lebih baru.
+
+```bash
+node server.js          # atau: npm start
+PORT=8080 node server.js
+```
+
+| Env | Fungsi | Default |
+|---|---|---|
+| `PORT` | port HTTP dan WebSocket | `3000` |
+| `DATA_FILE` | lokasi file data | `./digital-war-data.json` |
+
+Pemain butuh internet untuk memuat Three.js (cdnjs) dan font Poppins (Google Fonts) dari CDN.
+
+## Halaman
+
+| URL | Isi |
+|---|---|
+| `/` | landing, masukkan kode room |
+| `/r/KODE` | game untuk satu room (link ini yang dibagikan ke teman) |
+| `/admin` | halaman admin |
+
+## Admin
+
+Login awal: **`admin` / `admin`**. Segera ganti di tab **Akun** (ada peringatan selama masih default).
+
+- **Room**: buat room (nama + maksimal pemain, 2 sampai 100), salin link, ubah nama atau kapasitas, hapus room, lihat siapa yang online.
+- **Buku Teknik**: tambah, ubah, hapus teknik digital (kode, jenis, damage, cooldown, dst.). Berlaku langsung ke semua room. Ada pengaturan untuk menampilkan buku di dalam game atau tidak.
+- **Akun**: ganti password.
+
+Password disimpan sebagai hash (scrypt) di file data. Login dibatasi 6 percobaan gagal per menit per IP.
+
+## Cara main
+
+1. Buka link room, baca cerita pembuka, tulis nama, pilih salah satu dari 8 karakter. Nama dan karakter tersimpan di browser.
+2. Kalahkan lawan: serangan dasar, teknik digital, dan sniper dari peti goa.
+
+### Kontrol
+
+| Aksi | Keyboard | HP |
+|---|---|---|
+| Jalan / lari | WASD / Shift | joystick (setengah layar kiri) |
+| Kamera | seret mouse, Q / R | geser layar kanan |
+| Lompat (2x lebih tinggi) / naik saat berenang | Spasi | tombol Lompat |
+| Serang | J | tombol Serang |
+| Tahan (tameng) | K (tahan) | tombol Tahan |
+| Selam / turun saat terbang | V | tombol Selam |
+| Sniper | H | tombol Sniper |
+| Pintu, kasur, peti | E | tombol Aksi |
+| Teknik slot 1 sampai 5 | 1 sampai 5 | 5 tombol di kanan |
+| Buku teknik | B | tombol buku atau ketuk minimap |
+| Papan skor | Tab | tombol piala |
+
+### Teknik digital
+
+Tekan slot kosong, ketik kode angka 1-9 di popup, tekan Pasang. Slot langsung menjadi tombol teknik. Ada 5 slot; tahan lama slot terisi untuk mengganti atau mengosongkan. Kode dicek oleh server.
+
+Teknik bawaan (semua bisa diubah di admin):
+
+| Kode | Teknik | Jenis |
+|---|---|---|
+| 637 | Byte Bolt | peluru |
+| 314 | Loop Barrage | 3 peluru menyebar |
+| 8472 | Null Pointer | peluru cepat |
+| 4242 | Fork Bomb | 5 peluru menyebar |
+| 519 | Overflow Nova | ledakan area |
+| 5551 | Freeze Frame | ledakan yang membekukan |
+| 3735 | Laser Beam | sinar tembus |
+| 2718 | Stack Overflow | lompat lalu hantam area |
+| 1618 | Landmine | ranjau |
+| 481 | Elang Digital | panggil elang penyerang |
+| 1928 | Elang Kembar | panggil 2 elang |
+| 7294 | Elang Tunggangan | terbang menunggangi elang |
+| 918 | Patch Heal | pulihkan HP |
+| 9876 | Auto Backup | pulih bertahap |
+| 246 | Firewall | perisai sementara |
+| 1357 | Overclock | lari lebih cepat |
+| 753 | Lag Dash | lesat ke depan |
+
+### Mekanik lain
+
+- **Tameng**: menahan serangan dari depan. 3 serangan dalam 3 detik memecahkan tameng (tidak bisa dipakai 2,5 detik).
+- **Air**: danau dengan dermaga, bisa berenang dan menyelam (ada bar napas). Menyelam menghindari peluru.
+- **Goa kelelawar**: mulut goa di selatan desa. Isinya kelelawar dan peti berisi sniper (5 peluru, 45 damage, jarak 90 m, isi ulang peti tiap 60 detik). Pemain di dalam goa tidak terlihat dari luar dan sebaliknya, sehingga bisa bersembunyi atau bertarung di sana. Darah dan status tetap sama.
+- **Tidur**: tidur di kasur dalam rumah memulihkan 6 HP per detik. Terkena serangan membangunkanmu.
+- **Spawn**: acak di 8 titik tepi peta, bukan di tengah desa.
+- **Siang dan malam** berjalan sama untuk semua pemain di satu room.
+
+## Data dan keamanan
+
+- Password admin, daftar room, dan buku teknik disimpan di `digital-war-data.json` (sudah masuk `.gitignore`). Simpan atau backup file ini.
+- Posisi pemain dipercaya dari klien. Cocok untuk main bareng teman, bukan untuk kompetisi anti-curang.
+- Untuk dipakai lewat internet, jalankan di belakang reverse proxy HTTPS (Nginx, Caddy, dsb.) dan pastikan WebSocket (`/ws`) diteruskan. Game otomatis memakai `wss://` bila halaman dibuka lewat HTTPS.
+
+## Struktur
+
+```
+server.js        server HTTP + WebSocket + halaman game/admin/landing (satu file)
+package.json
+README.md
+.gitignore
+```

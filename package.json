@@ -1,0 +1,16 @@
+{
+  "name": "digital-war",
+  "version": "1.0.0",
+  "description": "Digital War - game multiplayer 2.5D untuk main bareng teman. Satu file server.js tanpa dependency.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["game", "multiplayer", "three.js", "websocket"],
+  "license": "UNLICENSED",
+  "private": true
+}
