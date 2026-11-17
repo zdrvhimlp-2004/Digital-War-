@@ -1012,12 +1012,20 @@ body.playing .hudf{display:flex}
 .btn{position:fixed;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(10,16,32,.5);color:#fff;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center;flex-direction:column;touch-action:none;cursor:pointer;z-index:3;font-family:inherit;padding:0;line-height:1}
 .btn small{font-size:10px;font-weight:700;opacity:.85;margin-top:2px}
 .btn.down{transform:scale(.92);background:rgba(255,255,255,.35)}
-#btnJump{width:74px;height:74px;right:calc(var(--s) + 26px);bottom:max(18px,env(safe-area-inset-bottom))}
-#btnAtk{width:64px;height:64px;right:calc(var(--s) + 108px);bottom:max(26px,env(safe-area-inset-bottom));background:rgba(180,40,50,.55)}
-#btnAct{width:54px;height:54px;right:calc(var(--s) + 34px);bottom:calc(max(18px,env(safe-area-inset-bottom)) + 84px);display:none}
+#btnJump{width:62px;height:62px;right:calc(var(--s) + 18px);bottom:max(16px,env(safe-area-inset-bottom));font-size:20px}
+#btnAtk{width:54px;height:54px;right:calc(var(--s) + 88px);bottom:max(20px,env(safe-area-inset-bottom));background:rgba(180,40,50,.55);font-size:19px}
+#btnAct{width:44px;height:44px;right:calc(var(--s) + 93px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 62px);display:none;font-size:18px}
 #btnAct.on{display:flex;background:rgba(255,200,60,.85);color:#3a2a00;box-shadow:0 0 22px rgba(255,210,80,.9)}
-#btnDive{width:54px;height:54px;right:calc(var(--s) + 108px);bottom:calc(max(26px,env(safe-area-inset-bottom)) + 74px);display:none;background:rgba(30,120,200,.6)}
+#btnDive{width:46px;height:46px;right:calc(var(--s) + 26px);bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);display:none;background:rgba(30,120,200,.6);font-size:18px}
 #btnDive.on{display:flex}
+.btn small{font-size:9px}
+@media (orientation:portrait){
+#btnJump{right:12px;bottom:max(22px,env(safe-area-inset-bottom))}
+#btnAtk{right:12px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 72px)}
+#btnDive{right:20px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 136px)}
+#btnAct{right:78px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 76px)}
+body #slots{top:42%}
+}
 #slots{position:fixed;right:max(8px,env(safe-area-inset-right));top:50%;transform:translateY(-46%);display:none;flex-direction:column;gap:6px;z-index:3}
 body.playing #slots{display:flex}
 .slot{position:relative;width:var(--s);height:var(--s);border-radius:14px;border:2px solid rgba(255,255,255,.6);background:rgba(10,16,32,.55);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;touch-action:none;font-family:inherit;padding:0}
