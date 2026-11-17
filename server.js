@@ -1072,7 +1072,8 @@ body.playing #slots{display:flex}
 #form .cbtn{display:block;margin:6px auto 0}
 @media (max-height:520px){#card{padding:14px 16px}#card h1{font-size:26px}#lore{min-height:110px;font-size:13px}.chr canvas{width:34px;height:49px}#chars{grid-template-columns:repeat(8,1fr)}}
 @media (max-width:700px) and (orientation:landscape){#hint{display:none}}
-@media (pointer:coarse){#hint{display:none}.key{display:none}#prompt{bottom:auto;top:40%}}
+@media (max-width:700px){body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 40px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{right:calc(max(10px,env(safe-area-inset-right)) + 44px)}}
+@media (pointer:coarse){body.playing #hint.hud{display:none!important}.key{display:none}#prompt{bottom:auto;top:40%}}
 </style>
 </head>
 <body>
