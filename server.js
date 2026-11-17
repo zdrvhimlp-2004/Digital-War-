@@ -3106,11 +3106,15 @@ function updMobs(dt,rgt,fwd){
 }
 /* tunggangan elang */
 function mountMake(){const tex=eagleTex();const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);return {mesh,tex};}
+/* penunggang duduk di punggung elang; posisi dihitung per arah hadap (ruang layar) */
+const RIDE_OFF={0:[0.4,0.05,0.5],1:[0,0.3,-0.8],3:[0.34,0.22,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
 function mountPlace(m,x,y,z,fx,fz,rgt,fwd,id){
   const fl=eagleSet(m,fx,fz,rgt,fwd,Math.floor(tAll*7+id)%2);
-  const rw=ROWMAP[m.vk],off=(rw===1||rw===3)?0.4:-0.15;
-  m.mesh.position.set(x+Math.sin(cam.yaw)*off,y+0.4,z+Math.cos(cam.yaw)*off);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
+  const rw=ROWMAP[m.vk],t=RIDE_OFF[rw]||RIDE_OFF[0],tail=fl?1:-1;
+  m.mesh.position.set(x,y+0.4,z);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
   m.mesh.scale.set(fl?-1.6:1.6,1.6,1);
+  const dx=t[0]*(rw===0||rw===3||rw===4?tail:0)*1.6,sx2=Math.cos(cam.yaw),sz2=-Math.sin(cam.yaw),tx=Math.sin(cam.yaw),tz=Math.cos(cam.yaw);
+  m.off={x:sx2*dx+tx*t[2],y:0.4+t[1],z:sz2*dx+tz*t[2]};
 }
 function mountDrop(m){scene.remove(m.mesh);m.mesh.material.dispose();m.tex.dispose();}
 /* ranjau */
@@ -3432,9 +3436,9 @@ function updOthers(dt,rgt,fwd){
     else col=Math.floor(tAll/0.55+o.id)%2;
     setTexFrame(o.tex,col,row);
     const bob=wet?Math.sin(tAll*3+o.id)*0.06:0;
-    const lift=o.ride?((o.mount&&(ROWMAP[o.mount.vk]===1||ROWMAP[o.mount.vk]===3))?1.2:0.8):0;
-    o.mesh.position.set(o.x,o.y+bob+lift,o.z);
-    if(o.ride&&!o.dead){if(!o.mount)o.mount=mountMake();o.mount.mesh.visible=true;mountPlace(o.mount,o.x,o.y,o.z,o.fx,o.fz,rgt,fwd,o.id);}else if(o.mount)o.mount.mesh.visible=false;o.mesh.rotation.y=cam.yaw;o.mesh.rotation.x=-cam.pitch*0.55;
+    let lift=0,rox=0,roz=0;
+    if(o.ride&&!o.dead){if(!o.mount)o.mount=mountMake();o.mount.mesh.visible=true;mountPlace(o.mount,o.x,o.y,o.z,o.fx,o.fz,rgt,fwd,o.id);lift=o.mount.off.y;rox=o.mount.off.x;roz=o.mount.off.z;}else if(o.mount)o.mount.mesh.visible=false;
+    o.mesh.position.set(o.x+rox,o.y+bob+lift,o.z+roz);o.mesh.rotation.y=cam.yaw;o.mesh.rotation.x=-cam.pitch*0.55;
     o.mesh.scale.set(flip?-1:1,1,1);
     o.mat.color.setHex(o.flash>0?0xff7a7a:(o.stunT>0?0xaee6ff:0xffffff));
     const gy=groundAt(o.x,o.z,o.y-0.5);
@@ -3937,8 +3941,7 @@ function update(dt){
   spriteMesh.material.color.setHex(hurtFlash>0?0xff7a7a:(stunT>0?0xaee6ff:0xffffff));spriteMesh.visible=!fps&&!(invuln>0.25&&Math.floor(tAll*16)%2===0&&!dead);
   playerRoot.position.copy(pos);
   if(swim)playerRoot.position.y+=Math.sin(tAll*3)*0.05;
-  if(riding)playerRoot.position.y+=(myMount&&(ROWMAP[myMount.vk]===1||ROWMAP[myMount.vk]===3))?1.2:0.8;
-  if(riding){if(!myMount)myMount=mountMake();myMount.mesh.visible=!fps;mountPlace(myMount,pos.x,pos.y,pos.z,faceX,faceZ,rgt,fwd,0);}else if(myMount)myMount.mesh.visible=false;
+  if(riding){if(!myMount)myMount=mountMake();myMount.mesh.visible=!fps;mountPlace(myMount,pos.x,pos.y,pos.z,faceX,faceZ,rgt,fwd,0);playerRoot.position.x+=myMount.off.x;playerRoot.position.y+=myMount.off.y;playerRoot.position.z+=myMount.off.z;}else if(myMount)myMount.mesh.visible=false;
   const hAbove=pos.y-terrainBelow();
   pShadow.position.set(pos.x,Math.max(groundAt(pos.x,pos.z,pos.y-0.5)+0.07,swim?WATER_Y+0.03:-999),pos.z);
   const sc=clamp(1-hAbove*0.12,0.35,1);pShadow.scale.setScalar(sc*1.25);pShadow.material.opacity=clamp(1-hAbove*0.1,0.35,1);
