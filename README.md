@@ -68,7 +68,7 @@ Password disimpan sebagai hash (scrypt) di file data. Login dibatasi 6 percobaan
 
 Tekan slot kosong, ketik kode angka 1-9 di popup, tekan Pasang. Kalau admin mengaktifkan **mode pilih teknik** pada room, popup menampilkan daftar teknik beserta deskripsinya dan pemain tinggal memilih tanpa mengetik angka (kode tidak ditampilkan). Slot langsung menjadi tombol teknik. Ada 5 slot; tahan lama slot terisi untuk mengganti atau mengosongkan. Kode dicek oleh server.
 
-**Bola lempar**: teknik peluru berbentuk bola besar bercahaya yang melengkung jatuh seperti dilempar. Bola meledak saat mengenai tanah atau musuh: yang kena langsung menerima damage penuh, dan pemain atau musuh di sekitar ledakan menerima percikan sekitar 60% (makin jauh makin kecil). Ukuran bola dan radius ledakan bisa diatur per teknik di admin.
+**Bola lempar**: teknik peluru berbentuk bola besar bercahaya yang melengkung jatuh seperti dilempar. Bola meledak saat mengenai tanah atau musuh: yang kena langsung menerima damage penuh, dan pemain atau musuh di sekitar ledakan menerima percikan sekitar 60% (makin jauh makin kecil). Cahaya bola menerangi tanah di bawahnya dan meredup saat mendekati tanah. Ukuran bola dan radius ledakan bisa diatur per teknik di admin.
 
 **Bidik dulu**: teknik arah (peluru, sinar, bola biru, lesat, hantam) tidak langsung ditembakkan. Tekan slot untuk masuk mode bidik (garis dan lingkaran bidik muncul), geser kamera ke arah yang diinginkan (atas, bawah, samping), lalu tekan slot lagi atau tombol **Tembak**. Bidikan otomatis mengunci musuh yang ada di depan.
 
