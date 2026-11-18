@@ -1874,6 +1874,18 @@ body.pickmode #mrow{grid-template-columns:1fr}
 @media (max-width:700px) and (orientation:landscape){#hint{display:none}}
 @media (max-width:700px){body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 74px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{top:calc(max(10px,env(safe-area-inset-top)) + 40px);right:max(10px,env(safe-area-inset-right))}}
 @media (pointer:coarse){body.playing #hint.hud{display:none!important}.key{display:none}#prompt{bottom:auto;top:40%}}
+
+#cine{display:none;position:fixed;inset:0;z-index:70;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
+body.cine #cine{display:block}
+#cine .bar{position:absolute;left:0;right:0;height:9vh;background:#000}
+#cine .bar.t{top:0}#cine .bar.b{bottom:0}
+#cineSkip{position:absolute;top:calc(9vh + 12px);right:max(14px,env(safe-area-inset-right));pointer-events:auto;border:1px solid rgba(160,210,255,.45);background:rgba(10,18,40,.7);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;padding:9px 16px;border-radius:999px;cursor:pointer}
+#cineBox{position:absolute;left:50%;bottom:calc(9vh + 16px);transform:translateX(-50%);width:min(620px,calc(100vw - 28px));pointer-events:auto;background:rgba(8,14,34,.9);border:1px solid rgba(120,190,255,.4);border-radius:16px;padding:14px 18px 12px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;cursor:pointer}
+#cine.talk #cineBox{display:block}
+#cineName{display:block;color:#6cd4ff;font-weight:700;font-size:14px;margin-bottom:4px}
+#cineTxt{margin:0;font-size:15px;line-height:1.5;min-height:3em}
+#cineHint{display:block;text-align:right;color:#9db4d6;font-size:11px;margin-top:4px}
+body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#board.hud,#hint.hud,#sbBtn.hud,#fsBtn.hud,#bookBtn.hud,#slots,#xhair,#joyBase,#joyKnob,#hpBox,#oxyBox,#toast,#prompt,#hurt,#btnDive,#btnAct,#btnSnipe){display:none!important}
 </style>
 </head>
 <body>
@@ -1905,6 +1917,7 @@ body.pickmode #mrow{grid-template-columns:1fr}
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<div id="cine"><div class="bar t"></div><div class="bar b"></div><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
 <div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · Tab skor</div>
 <div id="joyBase"></div><div id="joyKnob"></div>
@@ -3568,7 +3581,7 @@ function onMsg(m){
       document.body.classList.add('playing');$('start').classList.add('hide');canvas.focus();
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
-      renderBoard();break;}
+      renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
     case 'pl':{closePeer(m.id);const o=others.get(m.id);if(o){feed('➖ '+o.name+' keluar');removeOther(m.id);renderBoard();}break;}
@@ -3831,10 +3844,11 @@ function occludes(h){
 
 function update(dt){
   tAll+=dt;
+  if(intro)updIntro(dt);
   gameHour=(hourBase+(performance.now()-hourAt)/1000*0.04)%24;
   inCave=pos.x>1000;
   const fwd={x:-Math.sin(cam.yaw),z:-Math.cos(cam.yaw)},rgt={x:Math.cos(cam.yaw),z:-Math.sin(cam.yaw)};
-  const live=started&&!dead&&!modalOpen&&!bookOpen&&!chatOpen&&stunT<=0&&!fade;
+  const live=started&&!dead&&!modalOpen&&!bookOpen&&!chatOpen&&stunT<=0&&!fade&&!intro;
   let ix=0,iy=0,run=false,diveHeld=diveBtnHeld;
   if(live){
     if(keys.has('KeyA')||keys.has('ArrowLeft'))ix-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))ix+=1;
@@ -4082,7 +4096,7 @@ function update(dt){
   if(inCave){const ddx=cx-CX,ddz=cz-CZ,r0=Math.hypot(ddx,ddz);if(r0>CAVE_R-2){const k0=(CAVE_R-2)/r0;cx=CX+ddx*k0;cz=CZ+ddz*k0;}cy=clamp(cy,1.5,13);}
   if(!started){/* menu orbit above the village */cx=Math.sin(cam.yaw)*38;cz=Math.cos(cam.yaw)*38+10;cy=terrainH(cx,cz)+16;}
   camera.position.set(cx,cy,cz);camera.lookAt(started?cam.tx:0,started?cam.ty+1.0:2,started?cam.tz:0);
-  if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0),cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
+  if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0)+introBob,cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
   if(shake>0){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
   const fovGoal=(cam.baseFov||50)+(sp>8.5?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
   if(Math.abs(camera.fov-cam.fov)>0.02){camera.fov=cam.fov;camera.updateProjectionMatrix();}
@@ -4093,6 +4107,77 @@ function update(dt){
 
 /* ---------- loop ---------- */
 let last=performance.now();
+
+/* ---------- skenario pembuka: jalan FPS ke desa, ngobrol dengan warga ---------- */
+const INTRO_NPC=-999;
+const INTRO_LINES=[
+  'Oh, ada pendatang baru! Selamat datang di Desa Digital.',
+  'Dunia ini dibuat dari kode-kode. Dengan angka dari buku teknik, kamu bisa memunculkan bola cahaya, perisai, bahkan elang.',
+  'Hati-hati di luar sana. Para penyamun mengintai dari kamp mereka, dan benteng yang kosong menunggu untuk direbut.',
+  'Kalau lelah, tidurlah di rumah atau di goa, darahmu akan pulih. Nah, tulis kode tekniknya di tombol +, lalu berangkatlah!'
+];
+let intro=null,introBob=0;
+function startIntro(){
+  if(intro)return;
+  const sx=pos.x,sz=pos.z;let dx=-sx,dz=-sz,dist=Math.hypot(dx,dz);
+  if(dist<1){dx=0;dz=1;dist=1;}
+  const ux=dx/dist,uz=dz/dist;                       /* arah ke pusat desa */
+  const nd=dist>28?dist-22:9;                        /* jarak dari titik awal ke warga */
+  let np=findFree(sx+ux*nd,sz+uz*nd);
+  let wx=np.x-sx,wz=np.z-sz,wl=Math.hypot(wx,wz)||1;wx/=wl;wz/=wl;
+  const stop={x:np.x-wx*3.4,z:np.z-wz*3.4};
+  const walk=Math.min(24,Math.hypot(stop.x-sx,stop.z-sz));
+  const st=findFree(stop.x-wx*walk,stop.z-wz*walk);
+  pos.set(st.x,0,st.z);vel.set(0,0,0);vy=0;
+  const ddx=np.x-st.x,ddz=np.z-st.z,dl=Math.hypot(ddx,ddz)||1;
+  const dir={x:ddx/dl,z:ddz/dl};
+  const chs=CHARS.length,ch=((me.ch|0)+1+Math.floor(Math.random()*(chs-1)))%chs;
+  const o=addOther({id:INTRO_NPC,name:'Warga Desa',ch,x:np.x,y:0,z:np.z,hp:MAXHP});o.friend=true;o.fx=-dir.x;o.fz=-dir.z;drawLabel(o);
+  intro={ph:'walk',t:0,dir,goal:Math.max(0,dl-3.4),walked:0,line:0,chars:0,full:'',npcY:0};
+  fps=true;fpsPitch=0;cam.yaw=cam.yawT=Math.atan2(-dir.x,-dir.z);cam.tx=pos.x;cam.tz=pos.z;
+  document.body.classList.add('cine');$('cine').classList.remove('talk');
+}
+function introSay(i){
+  intro.line=i;intro.full=INTRO_LINES[i];intro.chars=0;
+  $('cineName').textContent='Warga Desa';$('cineTxt').textContent='';
+  $('cineHint').textContent=i===INTRO_LINES.length-1?'Ketuk untuk mulai bermain':'Ketuk untuk lanjut';
+  sfx.click&&sfx.click();
+}
+function introNext(){
+  if(!intro||intro.ph!=='talk')return;
+  if(intro.chars<intro.full.length){intro.chars=intro.full.length;$('cineTxt').textContent=intro.full;return;}
+  if(intro.line+1>=INTRO_LINES.length)endIntro();else introSay(intro.line+1);
+}
+function endIntro(){
+  if(!intro)return;
+  intro=null;introBob=0;removeOther(INTRO_NPC);
+  fps=false;$('xhair').classList.remove('show');$('camBtn').classList.remove('active');
+  document.body.classList.remove('cine');$('cine').classList.remove('talk');
+  cam.yawT=cam.yaw;cam.tx=pos.x;cam.tz=pos.z;cam.pitchT=0.32;
+  renderBoard();toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
+}
+function updIntro(dt){
+  const I=intro;if(dead){endIntro();return;}
+  I.t+=dt;
+  if(I.ph==='walk'){
+    if(I.goal-I.walked<=0.05){I.ph='talk';$('cine').classList.add('talk');introSay(0);}
+    else{const st=5.5*dt;I.walked+=st;pos.x+=I.dir.x*st;pos.z+=I.dir.z*st;introBob=Math.sin(I.t*10)*0.05;
+      if(Math.floor(I.t*3.2)!==I.stp){I.stp=Math.floor(I.t*3.2);sfx.step&&sfx.step('grass');}}
+  }else{
+    introBob*=0.9;
+    if(I.chars<I.full.length){I.acc=(I.acc||0)+dt*42;const add=Math.floor(I.acc);if(add>0){I.acc-=add;I.chars=Math.min(I.full.length,I.chars+add);$('cineTxt').textContent=I.full.slice(0,I.chars);}}
+  }
+}
+function introBlock(e){
+  if(!intro)return;
+  if(e.target&&e.target.closest&&e.target.closest('#cine')){return;}
+  e.stopImmediatePropagation();
+  if(e.type==='keydown'){e.preventDefault();if(e.code==='Escape')endIntro();else if(e.code==='Space'||e.code==='Enter'||e.code==='KeyE'||e.code==='KeyJ')introNext();}
+  else if(e.type==='pointerdown')introNext();
+}
+['keydown','keyup','pointerdown','pointerup','pointermove','wheel'].forEach(t=>window.addEventListener(t,introBlock,true));
+$('cineSkip').addEventListener('click',e=>{e.stopPropagation();endIntro();});
+$('cineBox').addEventListener('click',e=>{e.stopPropagation();introNext();});
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
