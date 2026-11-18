@@ -485,7 +485,7 @@ function doMelee(room, p, fx, fz, ay) {
   {
     const ay2 = ay === undefined ? 0 : ay, hl = Math.sqrt(Math.max(0.0001, 1 - ay2 * ay2));
     const wdx = fx * hl, wdz = fz * hl;
-    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life, dmg: WAVE.dmg, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, skip: hitIds };
+    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life, dmg: WAVE.dmg, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, pierce: 3, skip: hitIds };
     room.projs.push(wv);
     broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1 });
   }
@@ -527,9 +527,10 @@ function doCast(room, p, slot, ax, ay, az) {
   if (!tech) { p.slots[slot] = null; send(p.ws, { t: 'slotclear', slot }); return; }
   const t = now();
   if (t < p.stunUntil) return;
-  if (tech.kind !== 'dash') {            /* dash: tanpa cooldown */
+  {
+    const cdv = tech.kind === 'dash' ? Math.max(tech.cd, 3) : tech.cd;   /* dash: cooldown min 3 dtk */
     if ((p.cdUntil[code] || 0) > t + 120) return;
-    p.cdUntil[code] = t + tech.cd * 1000;
+    p.cdUntil[code] = t + cdv * 1000;
   }
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
@@ -604,7 +605,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * 0.55, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
@@ -632,7 +633,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'ride': {
       p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
-      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: tech.speed || 24, c: tech.color });
+      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * 0.55, c: tech.color });
       break;
     }
     case 'dash': {
@@ -870,6 +871,12 @@ function stepRoom(room, dt, t) {
       const wd = Math.hypot(pr.x - ARENA.x, pr.z - ARENA.z);
       if (wd > ARENA.ringR - br * 0.5) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; }
       else if (pr.y > ARENA.height) { wall = true; pr.y = ARENA.height; }
+    }
+    if (hit && pr.wv && !ground && !wall && pr.pierce > 1) {   /* tebasan angin tembus sampai 3 target */
+      const ow = room.players.get(pr.o) || null;
+      hurt(room, hit, pr.dmg, ow, pr.dx * 12, pr.dz * 12, { sx: -pr.dx, sz: -pr.dz, stun: 0, hr: 0 });
+      pr.skip.add(hit.id); pr.pierce--;
+      continue;
     }
     if (hit || ground || wall) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
@@ -3266,7 +3273,7 @@ function castSlot(i){
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
-  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?0:s.cd);
+  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?Math.max(s.cd,3):s.cd);
   attackT=s.kind==='dash'?0:Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
 }
@@ -4230,7 +4237,7 @@ function drawMini(){
 }
 
 /* ---------- physics ---------- */
-const SPEED_WALK=6.5,SPEED_RUN=10,GRAV=30,JUMPV=15.56; /* lompat 2x lebih tinggi (v^2 x2) */
+const SPEED_WALK=4.6,SPEED_RUN=7,GRAV=30,JUMPV=19.5; /* lompat 2x lebih tinggi (v^2 x2) */
 function canMove(nx,nz,step,swim){
   const g=groundAt(nx,nz,pos.y);const rise=g-pos.y;
   const maxRise=swim?1.6:(grounded?0.9*step+0.03:0.45);
