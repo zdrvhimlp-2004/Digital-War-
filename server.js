@@ -436,12 +436,13 @@ const WAVE = { speed: 17, life: 0.3, dmg: 20, hr: 1.25 };   /* tebasan angin: ja
 const MELEE_CONE = 0.64;   /* kerucut FPS: cos 50 derajat */
 function vName(v) { return v.name || (v.isSol ? (v.bandit ? 'Penyamun' : 'Prajurit') : (v.isMob ? 'Elang' : '?')); }
 /* apakah tebasan p (arah fx,fz, ay = arah vertikal bila FPS) mengenai v? */
-function meleeCheck(p, v, fx, fz, ay) {
+function meleeCheck(p, v, fx, fz, ay, rb) {
+  rb = rb || 0;
   const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
   if (ay !== undefined) {
     /* mode FPS: kerucut 3D mengikuti arah + (atas/bawah) */
     const dy = (v.y + 0.9) - (p.y + 1.45), d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (d3 > MELEE.range + 0.6) return { ok: false, d: d3, why: 'terlalu jauh (' + d3.toFixed(1) + ' > ' + (MELEE.range + 0.6).toFixed(1) + ')' };
+    if (d3 > MELEE.range + rb + 0.6) return { ok: false, d: d3, why: 'terlalu jauh (' + d3.toFixed(1) + ' > ' + (MELEE.range + rb + 0.6).toFixed(1) + ')' };
     if (d3 > 1.3) {
       const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
       const cs = (dx * fx * hl + dz * fz * hl + dy * ay) / d3;
@@ -449,23 +450,29 @@ function meleeCheck(p, v, fx, fz, ay) {
     }
     return { ok: true, d, dx, dz, d3 };
   }
-  if (d > MELEE.range) return { ok: false, d, why: 'terlalu jauh (' + d.toFixed(1) + ' > ' + MELEE.range + ')' };
+  if (d > MELEE.range + rb) return { ok: false, d, why: 'terlalu jauh (' + d.toFixed(1) + ' > ' + (MELEE.range + rb) + ')' };
   if (Math.abs(v.y - p.y) > 2.8) return { ok: false, d, why: 'selisih tinggi ' + Math.abs(v.y - p.y).toFixed(1) + ' (batas 2.8)' };
   if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) return { ok: false, d, why: 'ada di belakangmu' };
   return { ok: true, d, dx, dz };
 }
 function doMelee(room, p, fx, fz, ay) {
   const t = now();
-  if (p.dead || t - p.atkAt < MELEE.cd - 60) return;
+  if (p.dead || t - p.atkAt < (p.atkCd || MELEE.cd) - 60) return;
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
+  /* kombo 3 tahap: tebasan 1-2 cepat, tebasan 3 (penutup) lebih kuat, jauh, dan jeda lebih lama */
+  p.combo = (t - (p.atkAt || 0) > 900 || !p.combo) ? 1 : (p.combo % 3) + 1;
+  const cb = p.combo, fin = cb === 3, dm = fin ? 1.6 : 1, rb = fin ? 0.7 : 0;
+  p.atkCd = fin ? 720 : MELEE.cd;
   p.atkAt = t; p.atkFx = fx; p.atkFz = fz;
-  broadcast(room, { t: 'atk', id: p.id, fx, fz });
+  broadcast(room, { t: 'atk', id: p.id, fx, fz, cb });
+  let hfSent = false;
+  const hf = (v) => { if (hfSent) return; hfSent = true; send(p.ws, { t: 'hf', cb, x: r2(v.x), y: r2(v.y), z: r2(v.z) }); };
   let landed = 0, nearMiss = null;
   const hitIds = new Set();
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
-    const ck = meleeCheck(p, v, fx, fz, ay);
+    const ck = meleeCheck(p, v, fx, fz, ay, rb);
     if (!ck.ok) { if (room.debug && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
     const dx = ck.dx, dz = ck.dz, d = ck.d;
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
@@ -479,13 +486,14 @@ function doMelee(room, p, fx, fz, ay) {
     }
     landed++; hitIds.add(v.id);
     if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
-    hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
+    hurt(room, v, MELEE.dmg * dm, p, nx * MELEE.knock * dm, nz * MELEE.knock * dm, { sx: -nx, sz: -nz });
+    hf(v);
   }
   /* tebasan angin: gelombang pendek yang meluncur sedikit lebih jauh dari jangkauan pedang */
   {
     const ay2 = ay === undefined ? 0 : ay, hl = Math.sqrt(Math.max(0.0001, 1 - ay2 * ay2));
     const wdx = fx * hl, wdz = fz * hl;
-    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life, dmg: WAVE.dmg, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, pierce: 3, skip: hitIds };
+    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life * (fin ? 1.5 : 1), dmg: WAVE.dmg * dm, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, pierce: 3, skip: hitIds };
     room.projs.push(wv);
     broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1 });
   }
@@ -3134,6 +3142,7 @@ $('btnJump').addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- state ---------- */
 const pos=new THREE.Vector3(0,0,6),vel=new THREE.Vector3();
+let comboN=0,comboT=0,hitStop=0;
 let vy=0,grounded=true,coyote=0,jumpBuf=0,jumping=false,started=false,tAll=0;
 const cam={yaw:0,yawT:0,pitch:0.55,pitchT:0.55,dist:14,distT:14,tx:pos.x,ty:0,tz:pos.z,fov:50};
 let faceX=0,faceZ=1,viewK=0,walkT=0,idleT=0,lastStepIdx=-1;
@@ -3239,6 +3248,7 @@ function aim(){
   }
   return best?{x:best[0],z:best[1]}:{x:fx,z:fz};
 }
+function comboStep(){comboN=comboT>0?comboN%3+1:1;comboT=0.9;return comboN===3;}
 function doAttack(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||attackT>0||atkCool>0)return;
   if(duelBlock())return;
@@ -3246,11 +3256,11 @@ function doAttack(){
   if(guarding)setGuard(false);
   if(fps&&started){
     const v=aimVec(),hl=Math.hypot(v.x,v.z)||1,ax=v.x/hl,az=v.z/hl;faceX=ax;faceZ=az;
-    attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
+    {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
     netSend({t:'atk',fx:+ax.toFixed(3),fz:+az.toFixed(3),fy:+v.y.toFixed(3)});return;
   }
   const a=aim();faceX=a.x;faceZ=a.z;
-  attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
+  {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
   netSend({t:'atk',fx:a.x,fz:a.z});
 }
 function updSlotUI(i){
@@ -4013,6 +4023,7 @@ function onMsg(m){
         if(o.fresh===undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;o.fresh=false;}
       });break;}
     case 'atk':{const o=others.get(m.id);if(o){o.atkT=0.32;o.fx=m.fx;o.fz=m.fz;sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,o.y,o.z,m.fx,m.fz,0xffd9a0,1,o.side);}break;}
+    case 'hf':{const big=m.cb===3;hitStop=big?0.11:0.05;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
       const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
@@ -4383,7 +4394,7 @@ function update(dt){
     h.wallMats.forEach(m=>{m.opacity=h.wallOp;m.transparent=h.wallOp<0.99;m.depthWrite=h.wallOp>0.99;});
   }
 
-  atkCool=Math.max(0,atkCool-dt);invuln=Math.max(0,invuln-dt);hurtFlash=Math.max(0,hurtFlash-dt);shake=Math.max(0,shake-dt*2);
+  atkCool=Math.max(0,atkCool-dt);comboT=Math.max(0,comboT-dt);invuln=Math.max(0,invuln-dt);hurtFlash=Math.max(0,hurtFlash-dt);shake=Math.max(0,shake-dt*2);
   if(myShieldT>0)myShieldT-=dt;
   if(rideT>0)rideT-=dt;
   if(stunT>0){stunT-=dt;if(Math.random()<dt*10)emit(pos.x+Math.cos(tAll*8)*0.5,pos.y+2.0,pos.z+Math.sin(tAll*8)*0.5,0,0,0,0.5,0.3,'#fff6a0',0,1,0);}
@@ -4829,6 +4840,7 @@ function updHitboxes(dt){
 }
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(hitStop>0){hitStop-=dt;dt*=0.04;}   /* jeda singkat saat tebasan kena */
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
