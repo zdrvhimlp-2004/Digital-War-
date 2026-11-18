@@ -2253,6 +2253,21 @@ towerSpecs.forEach(t=>{
 
 /* ---------- benteng (bisa direbut) ---------- */
 function fortColor(ch){const p=CHARS[clamp(ch|0,0,CHARS.length-1)].pal;return p.tunic||PAL_PLAYER.tunic;}
+function fortFloorTex(){
+  if(fortFloorTex.t)return fortFloorTex.t;
+  const cv=document.createElement('canvas');cv.width=cv.height=256;const c=cv.getContext('2d');
+  c.fillStyle='#4f493e';c.fillRect(0,0,256,256);
+  let sd=7;const rnd2=()=>{sd=(sd*16807)%2147483647;return sd/2147483647;};
+  for(let ty=0;ty<2;ty++)for(let tx=0;tx<2;tx++){
+    const v=Math.floor(158+rnd2()*34-17);
+    c.fillStyle='rgb('+v+','+(v-6)+','+(v-20)+')';c.fillRect(tx*128+3,ty*128+3,122,122);
+    c.fillStyle='rgba(255,255,255,.12)';c.fillRect(tx*128+3,ty*128+3,122,4);c.fillRect(tx*128+3,ty*128+3,4,122);
+    c.fillStyle='rgba(0,0,0,.16)';c.fillRect(tx*128+3,ty*128+121,122,4);c.fillRect(tx*128+121,ty*128+3,4,122);
+    for(let i=0;i<14;i++){c.fillStyle='rgba(0,0,0,'+(0.05+rnd2()*0.07)+')';c.fillRect(tx*128+8+rnd2()*108,ty*128+8+rnd2()*108,3+rnd2()*6,2+rnd2()*4);}
+  }
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);t.anisotropy=4;
+  return fortFloorTex.t=t;
+}
 const forts=FORT_DEFS.map(def=>{
   const f=Object.assign({owner:0,ownerName:'',ownerCh:0,capEnd:0,capBy:0},def);
   const rot=Math.atan2(-f.x,-f.z),c=Math.cos(rot),s=Math.sin(rot);
@@ -2275,7 +2290,7 @@ const forts=FORT_DEFS.map(def=>{
   box(g,5.2,5.2,5.2,stone,0,2.6,-3.6);box(g,5.8,0.5,5.8,stoneD,0,5.45,-3.6);addOBB(hh,0,-3.6,2.6,2.6);
   const kr=new THREE.Mesh(new THREE.ConeGeometry(4.4,2.2,4),roofM);kr.rotation.y=Math.PI/4;kr.position.set(0,6.7,-3.6);g.add(kr);
   box(g,1.3,2.2,0.25,wood,0,1.1,-0.95);                                /* pintu keep */
-  const fl=new THREE.Mesh(new THREE.BoxGeometry(15.6,0.3,15.6),mat('#a89f88'));fl.position.y=0.02;g.add(fl);
+  const sideM=mat('#8e877a'),topM=new THREE.MeshLambertMaterial({map:fortFloorTex()});const fl=new THREE.Mesh(new THREE.BoxGeometry(15.6,0.3,15.6),[sideM,sideM,topM,sideM,sideM,sideM]);fl.position.y=-0.1;g.add(fl);
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,4,6),wood);pole.position.set(0,8.8,-3.6);g.add(pole);
   const flagMat=new THREE.MeshBasicMaterial({color:0x7f8794,side:THREE.DoubleSide,fog:false});
   const flag=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.4).translate(1.2,0,0),flagMat);flag.position.set(0.1,10.2,-3.6);g.add(flag);
