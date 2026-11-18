@@ -93,7 +93,7 @@ Teknik bawaan (semua bisa diubah di admin):
 | 9876 | Auto Backup | pulih bertahap |
 | 246 | Firewall | perisai sementara |
 | 1357 | Overclock | lari lebih cepat |
-| 753 | Lag Dash | lesat ke depan |
+| 753 | Lag Dash | lesat ke arah gerakmu tanpa bidik (tekan kiri lalu dash, maka melesat ke kiri; tanpa input, ke arah hadap karakter) |
 
 ### Mekanik lain
 

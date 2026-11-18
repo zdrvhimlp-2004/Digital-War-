@@ -253,7 +253,7 @@ function techDesc(t) {
     case 'nova': return 'Ledakan radius ' + t.radius + ', ' + t.damage + ' dmg' + st;
     case 'heal': return 'Pulihkan ' + t.damage + ' HP';
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
-    case 'dash': return 'Lesat ke depan, kebal sebentar';
+    case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
     case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
@@ -2861,7 +2861,9 @@ function castSlot(i){
   if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
   if(aiming>=0)cancelAim();
   if(guarding)setGuard(false);
-  const a=aim();faceX=a.x;faceZ=a.z;
+  let a;
+  if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
+  else{a=aim();faceX=a.x;faceZ=a.z;}
   slotCd[i]=slotCdMax[i]=s.cd;
   attackT=Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
@@ -3268,7 +3270,8 @@ function updSols(dt,rgt,fwd){
 
 /* ---------- bidik dulu (aim mode) ---------- */
 let aiming=-1,fps=false,fpsPitch=0;
-const AIM_KINDS={bolt:1,beam:1,orb:1,dash:1,slam:1};
+const AIM_KINDS={bolt:1,beam:1,orb:1,slam:1};
+let moveDirX=0,moveDirZ=1,moveDirT=-9;
 const retC=document.createElement('canvas');retC.width=retC.height=64;
 (function(){const x=retC.getContext('2d');x.strokeStyle='#fff';x.lineWidth=5;x.beginPath();x.arc(32,32,22,0,6.2832);x.stroke();x.lineWidth=4;x.beginPath();x.moveTo(32,4);x.lineTo(32,18);x.moveTo(32,46);x.lineTo(32,60);x.moveTo(4,32);x.lineTo(18,32);x.moveTo(46,32);x.lineTo(60,32);x.stroke();})();
 const aimRet=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(retC),depthTest:false,transparent:true,fog:false,opacity:0.95}));aimRet.renderOrder=25;aimRet.visible=false;scene.add(aimRet);
@@ -3862,6 +3865,7 @@ function update(dt){
   if(riding)speed=(joy.id!==null&&mag>0.02?ridePw*Math.min(1,mag/0.9):ridePw);
   if(attackT>0)speed*=0.55;
   if(!live||sleeping)speed=0;
+  if(mag>0.1){const mx=rgt.x*ix+fwd.x*iy,mz=rgt.z*ix+fwd.z*iy,ml=Math.hypot(mx,mz)||1;moveDirX=mx/ml;moveDirZ=mz/ml;moveDirT=tAll;}
   const tx=(rgt.x*ix+fwd.x*iy)*speed,tz=(rgt.z*ix+fwd.z*iy)*speed;
   const k=swim?6:(grounded?(mag>0.02?14:20):5);
   vel.x+=(tx-vel.x)*damp(k,dt);vel.z+=(tz-vel.z)*damp(k,dt);
