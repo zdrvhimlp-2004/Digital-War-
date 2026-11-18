@@ -3,7 +3,6 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
-- **Tebasan pedang 3D penuh**: model pedang 3D (bilah baja, gagang emas, pegangan) berayun dengan jejak bulan sabit bercahaya yang bervolume, menggantikan efek busur datar.
 - **Hitbox terlihat 0.5 detik saat kena** (silinder badan oranye, plus bola biru untuk bola/panah).
 - **Tebasan terasa lebih kena**: jangkauan serang 2.9 jadi 3.3 (sama dengan panjang efek tebasan), toleransi tinggi lebih longgar, ada tulisan KEBAL saat lawan sedang kebal, korban terpental sesaat di layar penyerang, dan layar bergetar halus saat tebasanmu mengenai.
 - **Indikator jaringan** (ikon sinyal dan ping) di atas layar.
