@@ -32,7 +32,7 @@ const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
-const MELEE = { dmg: 20, range: 2.9, cd: 380, knock: 28 };
+const MELEE = { dmg: 20, range: 3.3, cd: 380, knock: 28 };
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -373,7 +373,8 @@ function setGuard(room, p, on) {
 function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   opt = opt || {};
   const t = now();
-  if (victim.dead || t < victim.invuln) return;
+  if (victim.dead) return;
+  if (t < victim.invuln) { if (attacker && attacker.ws && t - (victim.invMsgAt || 0) > 250) { victim.invMsgAt = t; broadcast(room, { t: 'hit', id: victim.id, by: attacker.id, dmg: 0, hp: victim.hp, kx: 0, kz: 0, inv: 1 }); } return; }
   if (victim.sleeping) setSleep(room, victim, false);
   if (victim.rideUntil && victim.mountHp > 0) {
     const d = Math.max(1, Math.round(dmg));
@@ -436,7 +437,7 @@ function doMelee(room, p, fx, fz, ay) {
         if (cs < 0.8) continue;
       }
     } else {
-      if (d > MELEE.range || Math.abs(v.y - p.y) > 2.2) continue;
+      if (d > MELEE.range || Math.abs(v.y - p.y) > 2.8) continue;
       if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
     }
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
@@ -3758,6 +3759,7 @@ function onClash(m){
 function onHit(m){
   const v=entPos(m.id);if(!v)return;
   if(m.mnt){floatText(v.x,v.y+2.3,v.z,'-'+m.dmg,'#ffb84d');burst(v.x,v.y+0.6,v.z,'#ffe0b0',8,3);sfxAt('hit',v.x,v.z);if(m.id===me.id){hurtFlash=0.15;shake=Math.max(shake,0.15);toast('Elangmu diserang! Sisa '+m.mhp,1.2);}return;}
+  if(m.inv){floatText(v.x,v.y+2.1,v.z,'KEBAL','#c9d6ff');sfxAt('block',v.x,v.z);return;}
   if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
   floatText(v.x,v.y+2.1,v.z,'-'+m.dmg,m.id===me.id?'#ff6a6a':'#ffd84d');
   burst(v.x,v.y+1,v.z,'#fff6a0',6,3);
@@ -3765,7 +3767,7 @@ function onHit(m){
     setHp(m.hp);hurtFlash=0.25;shake=Math.max(shake,0.35);sfx.hurt();$('hurt').style.opacity=1;setTimeout(()=>{$('hurt').style.opacity=0;},120);
     if(m.kx||m.kz){kb.x+=m.kx;kb.z+=m.kz;if(grounded&&!swimNow){vy=Math.max(vy,4);grounded=false;}}
     if(attackT>0&&m.dmg>0)attackT=0;
-  }else{const o=others.get(m.id);if(o){o.hp=m.hp;o.flash=0.18;drawLabel(o);}sfxAt('hit',v.x,v.z);}
+  }else{const o=others.get(m.id);if(o){o.hp=m.hp;o.flash=0.18;drawLabel(o);if(m.kx||m.kz){o.x+=m.kx*0.05;o.z+=m.kz*0.05;}}sfxAt('hit',v.x,v.z);if(m.by===me.id){shake=Math.max(shake,0.2);burst(v.x,v.y+1.1,v.z,'#ffffff',8,4);}}
 }
 function onDie(m){
   feed('✖ '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
