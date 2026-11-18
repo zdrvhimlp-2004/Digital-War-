@@ -105,7 +105,7 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const ARENA = { x: 0, z: 48, ringR: 8, side: 4.5 };
+const ARENA = { x: 0, z: 48, ringR: 18, side: 10 };
 const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 24, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
@@ -2242,7 +2242,7 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const ARENA={x:0,z:48,ringR:8,side:4.5};
+const ARENA={x:0,z:48,ringR:18,side:10};
 const flats=[{x:ARENA.x,z:ARENA.z,r:24,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
@@ -2349,6 +2349,7 @@ for(let i=0;i<5000&&flowers.length<650;i++){
   const a=rand()*Math.PI*2,r=Math.sqrt(rand())*100,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(r<10)continue;
   if(lakeDist(x,z)<LAKE.R+3)continue;
+  if(Math.hypot(x-ARENA.x,z-ARENA.z)<ARENA.ringR+1)continue;
   if(Math.hypot(x-CAVE.x,z-CAVE.z)<12)continue;
   if(FORT_DEFS.some(f=>Math.hypot(x-f.x,z-f.z)<14))continue;
   if(CAMP_DEFS.some(c=>Math.hypot(x-c.x,z-c.z)<18))continue;
