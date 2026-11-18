@@ -1879,8 +1879,8 @@ body.pickmode #mrow{grid-template-columns:1fr}
 body.cine #cine{display:block}
 #cine .bar{position:absolute;left:0;right:0;height:9vh;background:#000}
 #cine .bar.t{top:0}#cine .bar.b{bottom:0}
-#cineSkip{position:absolute;top:calc(9vh + 12px);right:max(14px,env(safe-area-inset-right));pointer-events:auto;border:1px solid rgba(160,210,255,.45);background:rgba(10,18,40,.7);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;padding:9px 16px;border-radius:999px;cursor:pointer}
-#cineBox{position:absolute;left:50%;bottom:calc(9vh + 16px);transform:translateX(-50%);width:min(620px,calc(100vw - 28px));pointer-events:auto;background:rgba(8,14,34,.9);border:1px solid rgba(120,190,255,.4);border-radius:16px;padding:14px 18px 12px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;cursor:pointer}
+#cineSkip{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 4px);right:max(14px,env(safe-area-inset-right));pointer-events:auto;border:1px solid rgba(160,210,255,.45);background:rgba(10,18,40,.7);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;padding:9px 16px;border-radius:999px;cursor:pointer}
+#cineBox{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100vw - 28px));pointer-events:auto;background:rgba(8,14,34,.9);border:1px solid rgba(120,190,255,.4);border-radius:16px;padding:14px 18px 12px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;cursor:pointer}
 #cine.talk #cineBox{display:block}
 #cineName{display:block;color:#6cd4ff;font-weight:700;font-size:14px;margin-bottom:4px}
 #cineTxt{margin:0;font-size:15px;line-height:1.5;min-height:3em}
@@ -1917,7 +1917,7 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
-<div id="cine"><div class="bar t"></div><div class="bar b"></div><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
+<div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
 <div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · Tab skor</div>
 <div id="joyBase"></div><div id="joyKnob"></div>
@@ -3466,7 +3466,7 @@ function updOthers(dt,rgt,fwd){
     else if(o.ride)col=Math.floor(tAll/0.35+o.id)%2;
     else if(o.a>0&&!wet)col=o.a===1?6:7;
     else if(o.m>0){o.wt+=dt*(2.2+(o.m===2?10:6.5)*0.9);col=2+(Math.floor(o.wt)%4);{const sx2=Math.floor(o.wt)%2;if(sx2!==o.lastS&&!o.sw){o.lastS=sx2;sfxAt('step',o.x,o.z,(o.x>1000)?'stone':'grass');}}}
-    else col=Math.floor(tAll/0.55+o.id)%2;
+    else col=o.still?0:Math.floor(tAll/0.55+o.id)%2;
     setTexFrame(o.tex,col,row);
     const bob=wet?Math.sin(tAll*3+o.id)*0.06:0;
     let lift=0,rox=0,roz=0;
@@ -4132,7 +4132,7 @@ function startIntro(){
   const ddx=np.x-st.x,ddz=np.z-st.z,dl=Math.hypot(ddx,ddz)||1;
   const dir={x:ddx/dl,z:ddz/dl};
   const chs=CHARS.length,ch=((me.ch|0)+1+Math.floor(Math.random()*(chs-1)))%chs;
-  const o=addOther({id:INTRO_NPC,name:'Warga Desa',ch,x:np.x,y:0,z:np.z,hp:MAXHP});o.friend=true;o.fx=-dir.x;o.fz=-dir.z;drawLabel(o);
+  const ny=terrainH(np.x,np.z);const o=addOther({id:INTRO_NPC,name:'Warga Desa',ch,x:np.x,y:ny,z:np.z,hp:MAXHP});o.friend=true;o.still=true;o.m=0;o.fx=-dir.x;o.fz=-dir.z;drawLabel(o);
   intro={ph:'walk',t:0,dir,goal:Math.max(0,dl-3.4),walked:0,line:0,chars:0,full:'',npcY:0};
   fps=true;fpsPitch=0;cam.yaw=cam.yawT=Math.atan2(-dir.x,-dir.z);cam.tx=pos.x;cam.tz=pos.z;
   document.body.classList.add('cine');$('cine').classList.remove('talk');
