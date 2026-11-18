@@ -4309,31 +4309,20 @@ drawNet();
 
 /* ---------- efek kena (0.5 dtk): gaya 'flash' (siluet+cincin) atau 'glass' (silinder kaca) atau 'lines' ---------- */
 const hitboxes=[];
-let HB_STYLE='flash';
-const hbCyl=new THREE.CylinderGeometry(0.5,0.5,1.8,16,1,true),hbCylLines=new THREE.CylinderGeometry(0.5,0.5,1.8,12,3),hbBodyGeo=new THREE.WireframeGeometry(hbCylLines);
-const hbRingTex=radialTex([[0,'rgba(255,200,120,0)'],[0.6,'rgba(255,200,120,0)'],[0.78,'rgba(255,230,170,.9)'],[0.9,'rgba(255,170,90,.55)'],[1,'rgba(255,170,90,0)']],128);
+let HB_STYLE='glass';
+const hbCyl=new THREE.CylinderGeometry(0.5,0.5,1.8,16,1,true);
 const hbGlowTex=radialTex([[0,'rgba(255,200,130,.55)'],[0.7,'rgba(255,170,90,.25)'],[1,'rgba(255,170,90,0)']],128);
 function hbGlassTex(){const cv=document.createElement('canvas');cv.width=4;cv.height=64;const c=cv.getContext('2d');const gr=c.createLinearGradient(0,0,0,64);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(0.18,'rgba(255,225,170,.75)');gr.addColorStop(0.5,'rgba(255,170,90,.38)');gr.addColorStop(0.85,'rgba(255,225,170,.75)');gr.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gr;c.fillRect(0,0,4,64);return new THREE.CanvasTexture(cv);}
 const hbGlass=hbGlassTex();
 function showHitbox(o,off,hr){
   if(!o)return;
-  const style=window.__HBS||HB_STYLE;const parts=[];
+  const style=HB_STYLE;const parts=[];
   const add=(mesh,fn)=>{mesh.renderOrder=26;scene.add(mesh);parts.push({mesh,fn});return mesh;};
   const am=(map,col)=>new THREE.MeshBasicMaterial({map,color:col||0xffffff,transparent:true,opacity:1,depthTest:false,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,fog:false});
-  if(style==='lines'){
-    const mk=(geo,col)=>new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:1,depthTest:false,fog:false}));
-    add(mk(hbBodyGeo,0xffa63d),(m,k)=>{m.material.opacity=1-k;});
-    if(hr>0)add(mk(new THREE.WireframeGeometry(new THREE.SphereGeometry(hr,14,9)),0x6cd4ff),(m,k)=>{m.material.opacity=0.8*(1-k);});
-  }else if(style==='glass'){
+  if(style==='glass'){
     add(new THREE.Mesh(hbCyl,am(hbGlass,0xffffff)),(m,k)=>{m.material.opacity=(1-k)*(1-k);m.scale.set(1+k*0.18,1,1+k*0.18);});
     add(new THREE.Mesh(new THREE.CircleGeometry(0.9,24).rotateX(-Math.PI/2),am(hbGlowTex)),(m,k)=>{m.material.opacity=1-k;m.position.y-=0.84;m.scale.setScalar(1+k*0.6);});
     if(hr>0)add(new THREE.Mesh(new THREE.SphereGeometry(hr,20,14),new THREE.MeshBasicMaterial({color:0x6cd4ff,transparent:true,opacity:0.2,depthTest:false,depthWrite:false,blending:THREE.AdditiveBlending,fog:false})),(m,k)=>{m.material.opacity=0.22*(1-k);});
-  }else{
-    /* flash: cincin cahaya di kaki yang melebar, karakter berkedip merah-putih */
-    const R=hr>0?Math.max(1.2,hr):1.1;
-    add(new THREE.Mesh(new THREE.CircleGeometry(R,32).rotateX(-Math.PI/2),am(hbRingTex)),(m,k)=>{m.material.opacity=(1-k)*(1-k*0.5);m.position.y-=0.84;m.scale.setScalar(0.75+k*0.9);});
-    add(new THREE.Mesh(new THREE.CircleGeometry(R*0.9,24).rotateX(-Math.PI/2),am(hbGlowTex)),(m,k)=>{m.material.opacity=0.8*(1-k);m.position.y-=0.85;});
-    if(o.flash!==undefined)o.flash=0.5;
   }
   hitboxes.push({o,off:off==null?0.9:off,parts,t:0});
   while(hitboxes.length>14)dropHitbox(hitboxes.shift());

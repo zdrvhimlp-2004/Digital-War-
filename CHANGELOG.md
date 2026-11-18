@@ -3,7 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
-- **Hitbox terlihat 0.5 detik saat kena** (silinder badan oranye, plus bola biru untuk bola/panah).
+- **Efek kena**: selubung kaca bercahaya di badan korban selama 0.5 detik (plus bola biru untuk bola/panah), tanpa garis kerangka.
 - **Tebasan terasa lebih kena**: jangkauan serang 2.9 jadi 3.3 (sama dengan panjang efek tebasan), toleransi tinggi lebih longgar, ada tulisan KEBAL saat lawan sedang kebal, korban terpental sesaat di layar penyerang, dan layar bergetar halus saat tebasanmu mengenai.
 - **Indikator jaringan** (ikon sinyal dan ping) di atas layar.
 - **Bola bisa ditebas** (hancur) dan **bola yang kena perisai dari depan dipantulkan balik** ke penembak.
