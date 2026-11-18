@@ -448,6 +448,23 @@ function doMelee(room, p, fx, fz, ay) {
     }
     hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
   }
+  /* tebasan menghancurkan bola yang melintas di depan */
+  for (let i = room.projs.length - 1; i >= 0; i--) {
+    const pr = room.projs[i];
+    if (pr.o === p.id) continue;
+    const dx = pr.x - p.x, dz = pr.z - p.z, d = Math.hypot(dx, dz), dy = pr.y - (p.y + 1.3);
+    const reach = MELEE.range + 0.8 + (pr.size ? 0.4 * pr.size : 0);
+    if (Math.sqrt(dx * dx + dy * dy + dz * dz) > reach) continue;
+    if (ay !== undefined) {
+      const d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d3 > 1.2) { const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay)); if ((dx * fx * hl + dz * fz * hl + dy * ay) / d3 < 0.6) continue; }
+    } else {
+      if (Math.abs(dy) > 2.2) continue;
+      if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
+    }
+    room.projs.splice(i, 1);
+    broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 2.2, c: pr.c, g: 0, ds: 1 });
+  }
 }
 
 function areaHit(room, p, radius, dmg, kb, stun) {
@@ -782,6 +799,16 @@ function stepRoom(room, dt, t) {
     for (const v of victims(room)) {
       if (friendly(pr.o, v)) continue;
       if (Math.hypot(v.x - pr.x, v.z - pr.z) < hr && Math.abs((v.y + 0.9) - pr.y) < hr + 0.05) { hit = v; break; }
+    }
+    if (hit && hit.guarding && !hit.isMob && !hit.isSol && hit.fx !== undefined && (hit.fx * -pr.dx + hit.fz * -pr.dz) > 0.15) {
+      /* kena perisai: bola dipantulkan balik ke arah penembak */
+      const nx = -pr.dx, nz = -pr.dz, hl2 = Math.hypot(nx, nz) || 1;
+      room.projs.splice(i, 1);
+      const np = { id: projSeq++, o: hit.id, x: hit.x + nx / hl2 * 1.5, y: pr.y, z: hit.z + nz / hl2 * 1.5, dx: nx, dy: -(pr.dy || 0) * 0.5 + 0.03, dz: nz, sp: pr.sp, life: Math.max(pr.life, 1.4), dmg: pr.dmg, stun: pr.stun, c: pr.c, hr: pr.hr, boom: pr.boom, size: pr.size, grav: pr.grav };
+      room.projs.push(np);
+      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, rf: 1 });
+      broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(np.dx), dy: r2(np.dy), dz: r2(np.dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
+      continue;
     }
     const br = pr.size ? 0.5 * pr.size : 0.15;
     const gy = Math.max(terrainH(pr.x, pr.z), terrainH(pr.x + pr.dx * br, pr.z + pr.dz * br));
@@ -3657,7 +3684,7 @@ function onMsg(m){
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
     case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
-    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);removeProj(m.id,m);break;}
+    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
