@@ -32,7 +32,7 @@ const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
-const MELEE = { dmg: 20, range: 3.3, cd: 380, knock: 28 };
+const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -329,6 +329,7 @@ function damageMob(room, m, dmg, attacker) {
   }
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
+  if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
@@ -870,30 +871,30 @@ function stepRoom(room, dt, t) {
   for (let i = room.mobs.length - 1; i >= 0; i--) {
     const m = room.mobs[i], owner = room.players.get(m.o);
     if (!owner || t > m.until) { room.mobs.splice(i, 1); broadcast(room, { t: 'mobx', id: m.id }); continue; }
-    if (t >= m.tgtAt) {
-      m.tgtAt = t + 400;
-      let best = null, bd = 45;
-      for (const v of room.players.values()) {
-        if (v === owner || v.dead) continue;
-        const d = Math.hypot(v.x - m.x, v.z - m.z);
-        if (d < bd) { bd = d; best = v; }
-      }
-      m.tgt = best ? best.id : 0;
+    /* sasaran = musuh yang terakhir kamu serang (7 dtk); tanpa sasaran elang hanya mengitarimu */
+    let tg = null, tp = null;
+    const fo = owner.focus;
+    if (fo && t < fo.until) {
+      const fv = fo.v;
+      let alive = false;
+      if (fv.isMob) { alive = room.mobs.includes(fv.m); tp = alive ? { x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z } : null; }
+      else if (fv.isSol) { alive = !fv.dead && room.sols.includes(fv); tp = alive ? { x: fv.x, y: fv.y || 0, z: fv.z } : null; }
+      else { alive = !fv.dead && room.players.get(fv.id) === fv && (!room.duel || duelFighting(room, fv)); tp = alive ? { x: fv.x, y: fv.y, z: fv.z } : null; }
+      if (alive && Math.hypot(tp.x - m.x, tp.z - m.z) < 90 && tp.x < 1000 === owner.x < 1000) tg = fv; else tp = null;
     }
-    const tg = m.tgt ? room.players.get(m.tgt) : null;
     let tx, ty, tz;
-    if (tg && !tg.dead) { tx = tg.x; tz = tg.z; ty = tg.y + 2.6; }
+    if (tg) { tx = tp.x; tz = tp.z; ty = tp.y + 2.6; }
     else { const a = t / 900 + m.id; tx = owner.x + Math.cos(a) * 3.5; tz = owner.z + Math.sin(a) * 3.5; ty = owner.y + 3.2; }
     const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
     const sp = m.sp * (dist > 12 ? 1.5 : 1), step = Math.min(dist, sp * dt);
     if (dist > 0.05) { m.x += dx / dist * step; m.z += dz / dist * step; }
     if (dist > 0.3) { m.fx = dx / dist; m.fz = dz / dist; }
-    if (tg && !tg.dead && dist < 4) ty = tg.y + 1.0;
+    if (tg && dist < 4) ty = tp.y + 1.0;
     m.y += (ty - m.y) * Math.min(1, 6 * dt);
-    if (tg && !tg.dead && dist < 2.2 && Math.abs(m.y - (tg.y + 0.9)) < 2.4 && t >= m.atkAt) {
+    if (tg && dist < 2.2 && Math.abs(m.y - (tp.y + 0.9)) < 2.4 && t >= m.atkAt) {
       m.atkAt = t + 1300; m.atkFlag = 1;
-      const ddx = m.x - tg.x, ddz = m.z - tg.z, dd = Math.hypot(ddx, ddz);
-      damagePlayer(room, tg, m.dmg, owner, m.fx * 5, m.fz * 5, dd > 0.3 ? { sx: ddx / dd, sz: ddz / dd } : {});
+      const ddx = m.x - tp.x, ddz = m.z - tp.z, dd = Math.hypot(ddx, ddz);
+      hurt(room, tg, m.dmg, owner, m.fx * 5, m.fz * 5, dd > 0.3 ? { sx: ddx / dd, sz: ddz / dd } : {});
     }
   }
   /* ranjau (permanen, hanya meledak saat diinjak musuh) */
@@ -2155,6 +2156,22 @@ body.playing.dbg #dbgBox{display:flex}
 #duelHelp li{margin-bottom:8px}
 #duelHelp b{color:#ffd84d}
 #duelHelp button{margin-top:6px;width:100%;border:0;border-radius:12px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font:700 15px Poppins,system-ui,sans-serif;padding:11px;cursor:pointer}
+#setBox{display:none;position:fixed;inset:0;z-index:55;background:rgba(2,6,18,.7);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
+#setBox.show{display:flex}
+#setBox .card{width:min(92vw,440px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 8px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#setBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#setBox h3{margin:0;font-size:18px;color:#6cd4ff}
+#setX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+#setX svg{width:16px;height:16px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid rgba(120,190,255,.15);cursor:pointer}
+.srow span{display:block;flex:1}.srow b{display:block;font-size:14px}.srow small{display:block;margin-top:2px;font-size:11.5px;line-height:1.4;color:#9db4d6}
+.srow input{display:none}
+.srow .sw{flex:0 0 auto;width:46px;height:26px;border-radius:999px;background:#26344f;position:relative;transition:background .15s}
+.srow .sw:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.srow input:checked+.sw{background:#1e6fff}.srow input:checked+.sw:after{transform:translateX(20px)}
+body.nonet #net{display:none!important}
+@media (max-height:560px){#lcol{flex-direction:row!important;flex-wrap:wrap;width:78px}}
+body.cine #setBox{display:none!important}
 </style>
 </head>
 <body>
@@ -2165,6 +2182,7 @@ body.playing.dbg #dbgBox{display:flex}
 <div id="lcol" class="hud">
   <button id="camBtn" data-ico="eye" title="Kamera FPS (C)" aria-label="Kamera FPS"></button>
   <button id="uiBtn" data-ico="hideui" title="Sembunyikan tombol (H)" aria-label="Sembunyikan tombol"></button>
+  <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
@@ -2188,6 +2206,12 @@ body.playing.dbg #dbgBox{display:flex}
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
+<label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
+<label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
+<label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
+<label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
+</div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -2272,6 +2296,7 @@ const ICO={
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
  orb:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4a8 8 0 0 1 0 16M12 4a8 8 0 0 0 0 16"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.500h8M8 12.500h5"/>',
+ gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
  hideui:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
@@ -3143,6 +3168,7 @@ function interact(){
   else netSend({t:'door',i:a.i});
 }
 function aim(){
+  if(!SET.autoAim)return {x:faceX,z:faceZ};
   let fx=faceX,fz=faceZ,best=null,bs=-9;
   for(const o of others.values()){
     if(o.dead)continue;const dx=o.x-pos.x,dz=o.z-pos.z,d=Math.hypot(dx,dz);if(d<0.5||d>28)continue;
@@ -3356,7 +3382,7 @@ function openBook(){
     $('book').classList.add('show');renderBook();sfx.plop();
   }).catch(()=>toast('Gagal memuat buku',2));
 }
-function closeBook(){bookOpen=false;$('book').classList.remove('show');}
+function closeBook(){if(typeof setOpen!=='undefined'&&setOpen){closeSet();return;}bookOpen=false;$('book').classList.remove('show');}
 function bookGo(d){bookPage+=d;renderBook();sfx.plop();}
 $('bookBtn').addEventListener('click',()=>{if(bookOpen)closeBook();else openBook();});
 $('bookBtn').addEventListener('pointerdown',e=>e.stopPropagation());
@@ -4417,7 +4443,7 @@ function update(dt){
   if(!started){/* menu orbit above the village */cx=Math.sin(cam.yaw)*38;cz=Math.cos(cam.yaw)*38+10;cy=terrainH(cx,cz)+16;}
   camera.position.set(cx,cy,cz);camera.lookAt(started?cam.tx:0,started?cam.ty+1.0:2,started?cam.tz:0);
   if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0)+introBob,cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
-  if(shake>0){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
+  if(shake>0&&SET.shake){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
   const fovGoal=(cam.baseFov||50)+(sp>8.5?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
   if(Math.abs(camera.fov-cam.fov)>0.02){camera.fov=cam.fov;camera.updateProjectionMatrix();}
   underwater=camera.position.y<WATER_Y&&lakeDist(camera.position.x,camera.position.z)<LAKE.R+1;
@@ -4516,6 +4542,18 @@ function updDuel(){
 }
 let duelCntN=0;
 
+
+/* ---------- pengaturan ---------- */
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+function applySet(){document.body.classList.toggle('nonet',!SET.net);}
+function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
+function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
+function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
+let setOpen=false;
+document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
+$('setBtn').addEventListener('click',openSet);$('setBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('setX').addEventListener('click',closeSet);$('setBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('setBox'))closeSet();});
+applySet();
 /* ---------- uji hit (admin) + bantuan arena ---------- */
 function addDbg(m){
   const box=$('dbgBox');if(!box)return;
@@ -4640,7 +4678,7 @@ const hbGlowTex=radialTex([[0,'rgba(255,200,130,.55)'],[0.7,'rgba(255,170,90,.25
 function hbGlassTex(){const cv=document.createElement('canvas');cv.width=4;cv.height=64;const c=cv.getContext('2d');const gr=c.createLinearGradient(0,0,0,64);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(0.18,'rgba(255,225,170,.75)');gr.addColorStop(0.5,'rgba(255,170,90,.38)');gr.addColorStop(0.85,'rgba(255,225,170,.75)');gr.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=gr;c.fillRect(0,0,4,64);return new THREE.CanvasTexture(cv);}
 const hbGlass=hbGlassTex();
 function showHitbox(o,off,hr){
-  if(!o)return;
+  if(!o||!SET.hitFx)return;
   const style=HB_STYLE;const parts=[];
   const add=(mesh,fn)=>{mesh.renderOrder=26;scene.add(mesh);parts.push({mesh,fn});return mesh;};
   const am=(map,col)=>new THREE.MeshBasicMaterial({map,color:col||0xffffff,transparent:true,opacity:1,depthTest:false,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,fog:false});
