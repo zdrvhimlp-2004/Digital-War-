@@ -3657,7 +3657,7 @@ function updSols(dt,rgt,fwd){
     const gy=terrainH(o.x,o.z),dp=Math.hypot(o.x-pos.x,o.z-pos.z);
     o.viewK=pickView(o.fx,o.fz,rgt,fwd,o.viewK);
     let row=ROWMAP[o.viewK],col,flip=o.viewK>4;
-    if(o.atkT>0&&o.kind==='archer'){row=5;col=4;flip=(o.fx*rgt.x+o.fz*rgt.z)<0;}
+    if(o.atkT>0){row=5;col=(0.3-o.atkT)<0.1?4:5;flip=(o.fx*rgt.x+o.fz*rgt.z)<0;if(o.kind==='archer')col=4;}
     else if(o.moving){o.wt+=dt*(2.4+mv*0.7);col=2+(Math.floor(o.wt)%4);}
     else col=Math.floor(tAll/0.6+o.id)%2;
     setTexFrame(o.tex,col,row);
@@ -3852,6 +3852,7 @@ function updOthers(dt,rgt,fwd){
     const wet=o.sw>0;
     if(o.dead){row=5;col=3;flip=false;}
     else if(o.sleep){row=5;col=6;flip=false;}
+    else if(o.atkT>0){row=5;col=(0.32-o.atkT)<0.1?4:5;flip=(o.fx*rgt.x+o.fz*rgt.z)<0;}
     else if(o.ride)col=Math.floor(tAll/0.35+o.id)%2;
     else if(o.a>0&&!wet)col=o.a===1?6:7;
     else if(o.m>0){o.wt+=dt*(2.2+(o.m===2?10:6.5)*0.9);col=2+(Math.floor(o.wt)%4);{const sx2=Math.floor(o.wt)%2;if(sx2!==o.lastS&&!o.sw){o.lastS=sx2;sfxAt('step',o.x,o.z,(o.x>1000)?'stone':'grass');}}}
@@ -4413,6 +4414,7 @@ function update(dt){
   let row=ROWMAP[viewK],flip=viewK>4;
   if(dead){row=5;frame=3;flip=false;}
   else if(sleeping){row=5;frame=6;flip=false;}
+  else if(attackT>0){row=5;frame=(0.32-attackT)<0.1?4:5;flip=(faceX*rgt.x+faceZ*rgt.z)<0;}
   setTexFrame(myTex,frame,row);
   sq.v+=(-140*(sq.y-1)-13*sq.v)*dt;sq.y+=sq.v*dt;
   const syy=clamp(sq.y,0.5,1.5),sxx=1/Math.pow(syy,0.6);
