@@ -2925,27 +2925,41 @@ function updRings(dt){
     q.mesh.scale.setScalar(0.3+q.r*(1-Math.pow(1-k,3)));q.m.opacity=0.9*(1-k);}
 }
 /* tebasan pedang */
-const slashGeo=new THREE.RingGeometry(0.7,2.3,28,1,-1.3,2.6).rotateX(-Math.PI/2);
-const slashGeo2=new THREE.RingGeometry(1.7,2.05,28,1,-1.15,2.3).rotateX(-Math.PI/2);
+/* tebasan tipis 3D: tabung bulan sabit meruncing (tebal di ujung depan, menipis ke belakang) */
+function makeTrailGeo(R,rmax,arc,seg,rad){
+  const pos=[],idx=[];
+  for(let i=0;i<=seg;i++){
+    const t=i/seg,phi=t*arc,r=rmax*Math.pow(1-t,0.85);
+    const cx=Math.cos(phi)*R,cz=-Math.sin(phi)*R;                 /* titik pusat di bidang xz, mengekor ke arah -z */
+    const tx=-Math.sin(phi),tz=-Math.cos(phi);                    /* arah singgung */
+    for(let k=0;k<rad;k++){
+      const a=k/rad*Math.PI*2,nx=Math.cos(phi),nz=-Math.sin(phi); /* normal radial */
+      pos.push(cx+nx*Math.cos(a)*r,Math.sin(a)*r*0.9,cz+nz*Math.cos(a)*r);
+    }
+  }
+  for(let i=0;i<seg;i++)for(let k=0;k<rad;k++){const a=i*rad+k,b=i*rad+(k+1)%rad,c=(i+1)*rad+k,d=(i+1)*rad+(k+1)%rad;idx.push(a,c,b,b,c,d);}
+  const gm=new THREE.BufferGeometry();gm.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));gm.setIndex(idx);return gm;
+}
+const slashGeo=makeTrailGeo(2.15,0.13,1.9,30,7),slashGeo2=makeTrailGeo(2.15,0.045,1.9,30,5),slashGeo3=makeTrailGeo(1.55,0.03,1.5,26,5);
 const slashes=[];
 function slashFx(x,y,z,fx,fz,col,sc,flip,ay){
   const l=Math.hypot(fx,fz)||1;fx/=l;fz/=l;sc=sc||1;
   const g=new THREE.Group();const fp=ay!==undefined;g.position.set(x+fx*0.3,fp?y+1.4:y+1.15,z+fz*0.3);g.scale.setScalar(sc*1.4);if(fp){g.rotation.order='YZX';}
-  const m1=new THREE.MeshBasicMaterial({color:col||0xffffff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
-  const m2=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
-  const a=new THREE.Mesh(slashGeo,m1),b=new THREE.Mesh(slashGeo2,m2);a.rotation.x=b.rotation.x=fp?(flip?-0.95:0.95):0.25;
-  g.add(a,b);scene.add(g);
+  const s=new THREE.Group();s.rotation.x=fp?(flip?-0.95:0.95):0.25;s.scale.z=flip?-1:1;g.add(s);
+  const mk=(c,o)=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+  const m1=mk(col||0xffffff,0.55),m2=mk(0xffffff,1),m3=mk(col||0xffffff,0.45);
+  s.add(new THREE.Mesh(slashGeo,m1),new THREE.Mesh(slashGeo2,m2),new THREE.Mesh(slashGeo3,m3));scene.add(g);
   const base=Math.atan2(-fz,fx),dir=flip?-1:1;
-  slashes.push({g,m1,m2,t:0,base,dir});
+  slashes.push({g,m1,m2,m3,t:0,base,dir});
   g.rotation.y=base+dir*1.0;if(fp){const el=Math.asin(clamp(ay,-0.95,0.95));g.rotation.z=el;g.position.y+=ay*0.7;g.position.x+=fx*0.4;g.position.z+=fz*0.4;}
 }
 function updSlashes(dt){
   for(let i=slashes.length-1;i>=0;i--){
     const q=slashes[i];q.t+=dt;const k=q.t/0.18;
-    if(k>=1){scene.remove(q.g);q.m1.dispose();q.m2.dispose();slashes.splice(i,1);continue;}
+    if(k>=1){scene.remove(q.g);q.m1.dispose();q.m2.dispose();q.m3.dispose();slashes.splice(i,1);continue;}
     const e=1-Math.pow(1-k,3);
     q.g.rotation.y=q.base+q.dir*(1.0-2.0*e);
-    q.m1.opacity=Math.pow(1-k,1.6);q.m2.opacity=Math.pow(1-k,2.2);
+    q.m1.opacity=0.55*Math.pow(1-k,1.5);q.m2.opacity=Math.pow(1-k,2);q.m3.opacity=0.45*Math.pow(1-k,1.8);
   }
 }
 /* floating text */

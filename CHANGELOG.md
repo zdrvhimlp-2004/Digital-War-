@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Tebasan tipis 3D**: jejak tabung bulan sabit yang meruncing (tebal di ujung depan, menipis ke belakang) dengan inti putih, menggantikan busur datar yang lebar.
 - **Menu Pengaturan: Tampilkan body fisika** (kerangka badan karakter 2D dan jangkauan tebasan).
 - **Elang menyerang sasaranmu**, bukan acak. **Menu pengaturan** (auto aim pedang, getar layar, efek kena, indikator jaringan), dan **damage pedang jadi 40** (2 kali lipat).
 - **Mode uji hit** (admin) menampilkan alasan serangan meleset, kerucut tebasan FPS dilebarkan ke 50 derajat, panduan singkat dan papan juara di arena, cadangan data (unduh dan pulihkan) di admin, serta `tools/loadtest.js` untuk uji beban pemain virtual.
