@@ -762,7 +762,9 @@ function stepRoom(room, dt, t) {
       if (friendly(pr.o, v)) continue;
       if (Math.hypot(v.x - pr.x, v.z - pr.z) < hr && Math.abs((v.y + 0.9) - pr.y) < hr + 0.05) { hit = v; break; }
     }
-    const ground = pr.y <= terrainH(pr.x, pr.z) + 0.15;
+    const br = pr.size ? 0.5 * pr.size : 0.15;
+    const gy = Math.max(terrainH(pr.x, pr.z), terrainH(pr.x + pr.dx * br, pr.z + pr.dz * br));
+    const ground = pr.y - br <= gy;
     if (hit || ground) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
       if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * 6, pr.dz * 6, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun });
@@ -776,7 +778,7 @@ function stepRoom(room, dt, t) {
           hurt(room, v, pr.dmg * 0.6 * f, owner, dx / hl * 8, dz / hl * 8, { area: true, stun: pr.stun });
         }
       }
-      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(Math.max(pr.y, terrainH(pr.x, pr.z) + 0.2)), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0 });
+      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(ground ? gy + 0.15 : pr.y), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0 });
       room.projs.splice(i, 1);
     } else if (pr.life <= 0) {
       broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1 });
@@ -3496,7 +3498,9 @@ function updProjs(dt){
     const p=projs[i];p.life-=dt;
     if(p.life<=0){projs.splice(i,1);disposeProj(p);continue;}
     if(p.big)p.dy-=BOLT_G/Math.max(1,p.sp)*dt;
-    p.x+=p.dx*p.sp*dt;p.y+=p.dy*p.sp*dt;p.z+=p.dz*p.sp*dt;p.g.position.set(p.x,p.y,p.z);
+    p.x+=p.dx*p.sp*dt;p.y+=p.dy*p.sp*dt;p.z+=p.dz*p.sp*dt;
+    if(p.big){const rr=0.5*p.sz,gg=Math.max(terrainH(p.x,p.z),terrainH(p.x+p.dx*rr,p.z+p.dz*rr))+rr;if(p.y<gg)p.y=gg;}
+    p.g.position.set(p.x,p.y,p.z);
     if(p.big){
       const u=p.g.userData,gh=terrainH(p.x,p.z),h=Math.max(0,p.y-gh),r=0.45*p.sz,k=clamp(h/(r*5+0.4),0,1);
       u.shell.rotation.x+=dt*7;u.shell.rotation.y+=dt*9;u.ball.rotation.y-=dt*5;
