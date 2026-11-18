@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Menu Pengaturan: Tampilkan body fisika** (kerangka badan, jangkauan tebasan, dan benda keras di dunia).
 - **Elang menyerang sasaranmu**, bukan acak. **Menu pengaturan** (auto aim pedang, getar layar, efek kena, indikator jaringan), dan **damage pedang jadi 40** (2 kali lipat).
 - **Mode uji hit** (admin) menampilkan alasan serangan meleset, kerucut tebasan FPS dilebarkan ke 50 derajat, panduan singkat dan papan juara di arena, cadangan data (unduh dan pulihkan) di admin, serta `tools/loadtest.js` untuk uji beban pemain virtual.
 - **Perbaikan bug**: penyamun dan prajurit selalu dianggap berada di ketinggian 0, jadi di area berbukit tebasanmu tidak mengenai mereka dan mereka tidak bisa memukulmu (selisih tinggi dianggap terlalu jauh). Sekarang tinggi mereka mengikuti tanah, dan panah ditembakkan dari ketinggian yang benar.
