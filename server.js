@@ -105,7 +105,7 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const ARENA = { x: 0, z: 48, ringR: 12 };
+const ARENA = { x: 0, z: 48, ringR: 8, side: 4.5 };
 const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 24, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
@@ -948,7 +948,7 @@ setInterval(() => {
  * ==================================================================== */
 const DUEL_COUNT_MS = 3500, DUEL_OVER_MS = 2800;
 function standSpawn() {
-  const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 6;
+  const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
 function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, last: null }; }
@@ -964,7 +964,7 @@ function teleportTo(p, x, z, fx, fz) {
   p.x = x; p.y = 0; p.z = z; p.fx = fx; p.fz = fz; p.tpUntil = now() + 350;
   send(p.ws, { t: 'tp', x: r2(x), z: r2(z), fx: r2(fx), fz: r2(fz) });
 }
-function duelSide(which) { return which === 'a' ? { x: ARENA.x - 7, z: ARENA.z, fx: 1, fz: 0 } : { x: ARENA.x + 7, z: ARENA.z, fx: -1, fz: 0 }; }
+function duelSide(which) { return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z, fx: -1, fz: 0 }; }
 function duelClearCombat(room) {
   room.projs = [];
   for (const m of room.mobs) broadcast(room, { t: 'mobx', id: m.id });
@@ -2242,7 +2242,7 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const ARENA={x:0,z:48,ringR:12};
+const ARENA={x:0,z:48,ringR:8,side:4.5};
 const flats=[{x:ARENA.x,z:ARENA.z,r:24,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
@@ -4342,13 +4342,13 @@ function buildArena(){
   for(let i=0;i<1400;i++){c.fillStyle='rgba(120,90,40,'+(0.05+Math.random()*0.08)+')';c.fillRect(Math.random()*512,Math.random()*512,2,2);}
   c.strokeStyle='rgba(90,60,25,.7)';c.lineWidth=7;c.beginPath();c.arc(256,256,238,0,6.283);c.stroke();c.lineWidth=4;c.beginPath();c.arc(256,256,60,0,6.283);c.stroke();
   c.beginPath();c.moveTo(256-238,256);c.lineTo(256+238,256);c.stroke();
-  c.fillStyle='rgba(60,120,255,.35)';c.beginPath();c.arc(256-(7/R)*256,256,34,0,6.283);c.fill();
-  c.fillStyle='rgba(255,70,70,.35)';c.beginPath();c.arc(256+(7/R)*256,256,34,0,6.283);c.fill();
+  c.fillStyle='rgba(60,120,255,.35)';c.beginPath();c.arc(256-(ARENA.side/R)*256,256,40,0,6.283);c.fill();
+  c.fillStyle='rgba(255,70,70,.35)';c.beginPath();c.arc(256+(ARENA.side/R)*256,256,40,0,6.283);c.fill();
   const tex=new THREE.CanvasTexture(cv);
   const fl=new THREE.Mesh(new THREE.CircleGeometry(R,48).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:tex,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));fl.position.y=0.05;g.add(fl);
   const rim=new THREE.Mesh(new THREE.TorusGeometry(R+0.2,0.35,6,48).rotateX(Math.PI/2),mat('#8e7650'));rim.position.y=0.15;g.add(rim);
   const wood=mat('#7a5233'),rope=mat('#d9c48a');
-  const N=52;
+  const N=Math.round(2*Math.PI*(R+0.5)/1.45);
   for(let i=0;i<N;i++){
     const a=i/N*Math.PI*2,px=Math.cos(a)*(R+0.5),pz=Math.sin(a)*(R+0.5);
     const p=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.2,1.7,6),wood);p.position.set(px,0.85,pz);g.add(p);
