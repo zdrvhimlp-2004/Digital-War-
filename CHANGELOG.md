@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Musuh mengejar lebih jauh**: penyamun (34 unit, batas kejar 56), prajurit benteng (40 unit, batas 36), pengawal (30 unit).
 - **Tebasan FPS** mengikuti arah + (atas/bawah) dan musuh hanya kena bila ada di arah itu; **dash** tanpa cooldown.
 - **Sembunyikan tombol**: tombol baru (ikon kotak-kotak) di kolom kiri, atau tekan `H`, menyembunyikan semua tombol (serang, lompat, slot teknik, buku, dll). Setelah kamera diputar sedikit, muncul tombol "Tampilkan tombol" di atas layar untuk mengembalikannya.
 - **Perbaikan visual**: z-fighting di bagian atas pintu dan kasur diperbaiki. Nama benteng hanya terlihat dalam jarak 34 unit (sebelumnya 150). Tombol silang buku teknik kini tepat di tengah lingkaran.

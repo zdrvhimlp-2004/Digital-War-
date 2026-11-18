@@ -46,13 +46,13 @@ const FORTS = [
   { id: 1, name: 'Benteng Senja', x: -72, z: -52 },
   { id: 2, name: 'Benteng Bayu', x: 40, z: 78 }
 ];
-const FORT_RANGE = 7, FORT_CAPTURE_MS = 3000, FORT_AGGRO = 26, FORT_LEASH = 22;
+const FORT_RANGE = 7, FORT_CAPTURE_MS = 3000, FORT_AGGRO = 40, FORT_LEASH = 36;
 const CAMPS = [
   { id: 0, x: 88, z: 0 },
   { id: 1, x: -90, z: 0 },
   { id: 2, x: 0, z: -92 }
 ];
-const BANDIT_AGGRO = 17, BANDIT_LEASH = 26, BANDIT_RESPAWN_MS = 20000, BANDIT_HEAL = 12;
+const BANDIT_AGGRO = 34, BANDIT_SEE = 32, BANDIT_LEASH = 56, BANDIT_RESPAWN_MS = 20000, BANDIT_HEAL = 12;
 const BANDITS_PER_CAMP = { sword: 2, archer: 2, brute: 1 };
 const BANDIT_OWNER = -1, BANDIT = { id: -1, name: 'Penyamun' };
 const SOLDIER = { brute: { hp: 95, speed: 5.4, dmg: 14, range: 2.7, cd: 1150 }, sword: { hp: 45, speed: 6.5, dmg: 8, range: 2.4, cd: 1000 }, archer: { hp: 30, speed: 4.5, dmg: 7, range: 17, cd: 1800, arrow: 22 } };
@@ -62,7 +62,7 @@ const FORT_ROSTER = [
   { kind: 'sword', role: 'guard' }, { kind: 'sword', role: 'guard' }, { kind: 'sword', role: 'escort' },
   { kind: 'archer', role: 'guard' }, { kind: 'archer', role: 'escort' }
 ];
-const ESCORT_AGGRO = 18;
+const ESCORT_AGGRO = 30;
 const MOB_HP = 40, MOUNT_HP = 70;
 const CAVE_MOUTH = { x: -15, z: 87 };
 const SOLDIER_RESPAWN_MS = 12000;
@@ -629,8 +629,8 @@ function stepBandits(room, dt, t) {
     let best = null, bd = 1e9;
     for (const v of room.players.values()) {
       if (v.dead || v.x > 1000 || t < v.invuln) continue;
-      if (Math.hypot(v.x - c.x, v.z - c.z) > BANDIT_AGGRO) continue;
       const d = Math.hypot(v.x - s.x, v.z - s.z);
+      if (Math.hypot(v.x - c.x, v.z - c.z) > BANDIT_AGGRO && d > BANDIT_SEE) continue;
       if (d < bd) { bd = d; best = v; }
     }
     let tx = s.hx, tz = s.hz, speed = sp.speed * 0.5;
