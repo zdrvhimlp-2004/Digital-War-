@@ -2598,7 +2598,7 @@ const slashGeo2=new THREE.RingGeometry(1.7,2.05,28,1,-1.15,2.3).rotateX(-Math.PI
 const slashes=[];
 function slashFx(x,y,z,fx,fz,col,sc,flip){
   const l=Math.hypot(fx,fz)||1;fx/=l;fz/=l;sc=sc||1;
-  const g=new THREE.Group();g.position.set(x+fx*0.3,y+1.15,z+fz*0.3);g.scale.setScalar(sc);
+  const g=new THREE.Group();g.position.set(x+fx*0.3,y+1.15,z+fz*0.3);g.scale.setScalar(sc*1.4);
   const m1=new THREE.MeshBasicMaterial({color:col||0xffffff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
   const m2=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
   const a=new THREE.Mesh(slashGeo,m1),b=new THREE.Mesh(slashGeo2,m2);a.rotation.x=b.rotation.x=0.25;
@@ -2609,11 +2609,11 @@ function slashFx(x,y,z,fx,fz,col,sc,flip){
 }
 function updSlashes(dt){
   for(let i=slashes.length-1;i>=0;i--){
-    const q=slashes[i];q.t+=dt;const k=q.t/0.28;
+    const q=slashes[i];q.t+=dt;const k=q.t/0.18;
     if(k>=1){scene.remove(q.g);q.m1.dispose();q.m2.dispose();slashes.splice(i,1);continue;}
     const e=1-Math.pow(1-k,3);
     q.g.rotation.y=q.base+q.dir*(1.0-2.0*e);
-    q.m1.opacity=1*(1-k*0.8);q.m2.opacity=1-k*k;
+    q.m1.opacity=Math.pow(1-k,1.6);q.m2.opacity=Math.pow(1-k,2.2);
   }
 }
 /* floating text */
@@ -3171,10 +3171,10 @@ function makeShield3D(ch){
   const pal=Object.assign({},PAL_PLAYER,CHARS[clamp(ch|0,0,CHARS.length-1)].pal);
   const g=new THREE.Group();
   const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.52,0.08,32).rotateX(Math.PI/2),mat(pal.tunic,{shininess:70,specular:0x99bbff}));g.add(disc);
-  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.52,0.05,10,36),mat('#e8f1ff',{shininess:90,specular:0xffffff}));rim.position.z=0.04;g.add(rim);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.33,0.025,8,32),mat('#bfe4ff',{shininess:60}));ring.position.z=0.05;g.add(ring);
-  const gem=new THREE.Mesh(new THREE.SphereGeometry(0.11,14,10),new THREE.MeshBasicMaterial({color:0x8fe0ff}));gem.scale.z=0.6;gem.position.z=0.08;g.add(gem);
-  const halo=new THREE.Mesh(new THREE.CircleGeometry(0.78,32),new THREE.MeshBasicMaterial({color:0x6cc8ff,transparent:true,opacity:0.16,depthWrite:false,side:THREE.DoubleSide,fog:false}));halo.position.z=-0.04;g.add(halo);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.52,0.05,10,36),mat('#e8f1ff',{shininess:90,specular:0xffffff}));rim.position.z=0.07;g.add(rim);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.33,0.025,8,32),mat('#bfe4ff',{shininess:60}));ring.position.z=0.065;g.add(ring);
+  const gem=new THREE.Mesh(new THREE.SphereGeometry(0.11,14,10),new THREE.MeshBasicMaterial({color:0x8fe0ff}));gem.scale.z=0.6;gem.position.z=0.1;g.add(gem);
+  const halo=new THREE.Mesh(new THREE.CircleGeometry(0.78,32),new THREE.MeshBasicMaterial({color:0x6cc8ff,transparent:true,opacity:0.16,depthWrite:false,side:THREE.DoubleSide,fog:false}));halo.position.z=-0.14;halo.renderOrder=-1;g.add(halo);
   g.visible=false;scene.add(g);return g;
 }
 function makeGuardSp(ch){return makeShield3D(ch);}
