@@ -2676,9 +2676,17 @@ let SV=1;
 const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
 function tone(f0,f1,dur,type,vol,delay){if(!AC||SV<0.03)return;const j=1+(Math.random()-0.5)*0.08,t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f0*j,t);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(Math.max(20,f1*j),t+dur);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol*SV),t+Math.min(0.012,dur/3));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.03);}
 function noiseHit(dur,vol,freq,delay,type,q){if(!AC||SV<0.03)return;const t=AC.currentTime+(delay||0),s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'lowpass';f.frequency.value=freq*(1+(Math.random()-0.5)*0.15);if(q)f.Q.value=q;const g=AC.createGain();g.gain.setValueAtTime(Math.max(0.0002,vol*SV),t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t,Math.random(),dur+0.05);}
-const SFX_RANGE=55,VOICE_RANGE=40;
-function distVol(d,R){return d>=R?0:Math.pow(1-d/R,1.6);}
-function sfxAt(name,x,z){if(!AC||!sfx[name])return;const d=Math.hypot(x-pos.x,z-pos.z);const v=distVol(d,SFX_RANGE);if(v<0.02)return;SV=v;const a=Array.prototype.slice.call(arguments,3);try{sfx[name].apply(null,a);}catch(e){}SV=1;}
+const SFX_RANGE=45,VOICE_RANGE=40;
+/* jarak dengar per jenis suara (unit); di atas jarak ini tidak terdengar sama sekali */
+const SFX_R={swing:24,hit:26,clang:26,clash:30,block:24,twang:26,arrowHit:24,soldierDie:24,gbreak:26,
+  throw:30,dash:26,orb:38,beam:36,shield:26,heal:26,regen:22,haste:22,eagle:30,step:16,land:18,jump:18,stroke:18,splash:26,sleep:14,
+  boom:55,snipe:70,horn:70,fanfare:60,chestOpen:30};
+let sfxWin=[];
+function distVol(d,R){return d>=R?0:Math.pow(1-d/R,2.2);}
+function sfxAt(name,x,z){if(!AC||!sfx[name])return;const R=SFX_R[name]||SFX_RANGE;const d=Math.hypot(x-pos.x,z-pos.z);const v=distVol(d,R);if(v<0.03)return;
+  /* batasi tumpukan suara jauh: maksimal 4 suara pelan per 150 ms */
+  const tn=performance.now();sfxWin=sfxWin.filter(t=>tn-t<150);if(v<0.35){if(sfxWin.length>=4)return;sfxWin.push(tn);}
+  SV=v;const a=Array.prototype.slice.call(arguments,3);try{sfx[name].apply(null,a);}catch(e){}SV=1;}
 const sfx={
   /* langkah */
   step(k){
