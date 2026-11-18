@@ -31,6 +31,7 @@ const TICK_MS = 33;             // simulasi server ~30 Hz
 const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
+const CLASH_MS = 350;
 const MELEE = { dmg: 20, range: 2.9, cd: 380, knock: 28 };
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
@@ -420,7 +421,7 @@ function doMelee(room, p, fx, fz) {
   if (p.dead || t - p.atkAt < MELEE.cd - 60) return;
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
-  p.atkAt = t;
+  p.atkAt = t; p.atkFx = fx; p.atkFz = fz;
   broadcast(room, { t: 'atk', id: p.id, fx, fz });
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
@@ -428,6 +429,12 @@ function doMelee(room, p, fx, fz) {
     if (d > MELEE.range || Math.abs(v.y - p.y) > 2.2) continue;
     if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
+    if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
+      /* pedang beradu: keduanya terpental, tanpa damage */
+      broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8), az: r2(-nz * MELEE.knock * 0.8), bx: r2(nx * MELEE.knock * 0.8), bz: r2(nz * MELEE.knock * 0.8) });
+      v.atkAt = 0;
+      continue;
+    }
     hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
   }
 }
@@ -3575,6 +3582,7 @@ function onMsg(m){
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'hit':onHit(m);break;
+    case 'clash':onClash(m);break;
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
     case 'die':onDie(m);break;
     case 'resp':{
@@ -3627,6 +3635,12 @@ function onFx(m){
     if(m.id===me.id){kb.x+=m.fx*m.pw;kb.z+=m.fz*m.pw;invuln=Math.max(invuln,0.35);}
     for(let i=0;i<10;i++)emit(p.x-m.fx*i*0.35,p.y+0.9,p.z-m.fz*i*0.35,0,0.2,0,0.5,0.7,col,0,0.8,0.5);
     sfxAt('dash',p.x,p.z);}
+}
+function onClash(m){
+  const va=entPos(m.a),vb=entPos(m.b);if(!va||!vb)return;
+  const mx=(va.x+vb.x)/2,my=(va.y+vb.y)/2+1.2,mz=(va.z+vb.z)/2;
+  floatText(mx,my+0.6,mz,'BENTROK!','#ffffff');burst(mx,my,mz,'#fff6a0',14,5);sfxAt('clang',mx,mz);
+  if(m.a===me.id||m.b===me.id){const k=m.a===me.id?[m.ax,m.az]:[m.bx,m.bz];kb.x+=k[0];kb.z+=k[1];if(grounded&&!swimNow){vy=Math.max(vy,3.5);grounded=false;}shake=Math.max(shake,0.3);attackT=0;}
 }
 function onHit(m){
   const v=entPos(m.id);if(!v)return;
