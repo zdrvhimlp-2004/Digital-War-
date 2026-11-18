@@ -400,7 +400,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   if (t < victim.shield) dmg *= 0.3;
   dmg = Math.max(1, Math.round(dmg));
   victim.hp = Math.max(0, victim.hp - dmg);
-  broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0) });
+  broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0), hr: opt.hr ? r2(opt.hr) : 0 });
   if (victim.hp <= 0) {
     victim.dead = true;
     victim.respawnAt = t + RESPAWN_MS;
@@ -816,7 +816,7 @@ function stepRoom(room, dt, t) {
     const ground = pr.y - br <= gy;
     if (hit || ground) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
-      if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * 26, pr.dz * 26, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun });
+      if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * 26, pr.dz * 26, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun, hr: pr.hr || 1.35 });
       const bm = pr.boom || 0;
       if (bm > 0) {
         for (const v of victims(room)) {
@@ -3707,7 +3707,7 @@ function onMsg(m){
     case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku! ❄️',1.4);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
     case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
-    case 'mh':{const o=mobs.get(m.id);if(o){o.hp=m.hp;drawMobLabel(o);o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
+    case 'mh':{const o=mobs.get(m.id);if(o){showHitbox(o,0,0);o.hp=m.hp;drawMobLabel(o);o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
     case 'ms':m.m.forEach(r=>{const o=mobs.get(r[0]);if(!o)return;o.tx=r[1];o.ty=r[2];o.tz=r[3];o.fx=r[4];o.fz=r[5];if(r[6])o.atkT=0.3;});break;
     case 'trap':addTrap(m);break;
     case 'trapx':removeTrap(m.id,m.quiet?null:m);break;
@@ -3721,7 +3721,7 @@ function onMsg(m){
     case 'bshout':{const o=sols.get(m.id);if(o){sfxAt(Math.random()<0.3?'banditLaugh':'bandit',o.x,o.z);}break;}
     case 'bloot':{sfx.loot();toast('Penyamun kalah! +'+m.heal+' HP',1.6);break;}
     case 'ss':m.s.forEach(r=>{const o=sols.get(r[0]);if(!o)return;o.tx=r[1];o.tz=r[2];o.fx=r[3];o.fz=r[4];if(r[5]){o.atkT=0.3;if(o.kind==='archer')sfxAt('twang',o.x,o.z);else{sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,terrainH(o.x,o.z),o.z,o.fx,o.fz,o.bandit?0xff6a5a:0xfff0c0,o.kind==='brute'?1.4:1,o.side);}}});break;
-    case 'sh':{const o=sols.get(m.id);if(o){o.hp=m.hp;o.flash=0.18;drawSolLabel(o);sfxAt(Math.random()<0.5?'clang':'hit',o.x,o.z);floatText(o.x,terrainH(o.x,o.z)+2.1,o.z,'-'+m.dmg,'#ffd84d');}break;}
+    case 'sh':{const o=sols.get(m.id);if(o){showHitbox({get x(){return o.x},get z(){return o.z},get y(){return terrainH(o.x,o.z)}},0.9,0);o.hp=m.hp;o.flash=0.18;drawSolLabel(o);sfxAt(Math.random()<0.5?'clang':'hit',o.x,o.z);floatText(o.x,terrainH(o.x,o.z)+2.1,o.z,'-'+m.dmg,'#ffd84d');}break;}
     case 'cap':onCap(m);break;
     case 'orb':addOrb(m);break;
     case 'orbx':removeOrb(m.id);break;
@@ -3762,6 +3762,7 @@ function onHit(m){
   if(m.inv){floatText(v.x,v.y+2.1,v.z,'KEBAL','#c9d6ff');sfxAt('block',v.x,v.z);return;}
   if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
   floatText(v.x,v.y+2.1,v.z,'-'+m.dmg,m.id===me.id?'#ff6a6a':'#ffd84d');
+  showHitbox(m.id===me.id?pos:others.get(m.id),0.9,m.hr||0);
   burst(v.x,v.y+1,v.z,'#fff6a0',6,3);
   if(m.id===me.id){
     setHp(m.hp);hurtFlash=0.25;shake=Math.max(shake,0.35);sfx.hurt();$('hurt').style.opacity=1;setTimeout(()=>{$('hurt').style.opacity=0;},120);
@@ -3939,6 +3940,7 @@ function update(dt){
   tAll+=dt;
   if(intro)updIntro(dt);
   updUiHide();
+  updHitboxes(dt);
   gameHour=(hourBase+(performance.now()-hourAt)/1000*0.04)%24;
   inCave=pos.x>1000;
   const fwd={x:-Math.sin(cam.yaw),z:-Math.cos(cam.yaw)},rgt={x:Math.cos(cam.yaw),z:-Math.sin(cam.yaw)};
@@ -4304,6 +4306,29 @@ function drawNet(){
 }
 setInterval(()=>{if(!joined)return;netPingT=performance.now();netSend({t:'ping',ts:netPingT});drawNet();},2000);
 drawNet();
+
+/* ---------- hitbox terlihat saat kena (0.5 dtk) ---------- */
+const hitboxes=[];
+const hbCyl=new THREE.CylinderGeometry(0.5,0.5,1.8,12,3),hbBodyGeo=new THREE.WireframeGeometry(hbCyl);
+function showHitbox(o,off,hr){
+  if(!o)return;
+  const mk=(geo,col)=>{const m=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:1,depthTest:false,fog:false}));m.renderOrder=26;scene.add(m);return m;};
+  const body=mk(hbBodyGeo,0xffa63d);let ball=null;
+  const fill=new THREE.Mesh(hbCyl,new THREE.MeshBasicMaterial({color:0xff8a1f,transparent:true,opacity:0.3,depthTest:false,depthWrite:false,fog:false}));fill.renderOrder=25;scene.add(fill);
+  if(hr>0)ball=mk(new THREE.WireframeGeometry(new THREE.SphereGeometry(hr,14,9)),0x6cd4ff);
+  hitboxes.push({o,off:off==null?0.9:off,body,fill,ball,t:0});
+  while(hitboxes.length>14)dropHitbox(hitboxes.shift());
+}
+function dropHitbox(h){scene.remove(h.body);h.body.material.dispose();scene.remove(h.fill);h.fill.material.dispose();if(h.ball){scene.remove(h.ball);h.ball.geometry.dispose();h.ball.material.dispose();}}
+function updHitboxes(dt){
+  for(let i=hitboxes.length-1;i>=0;i--){
+    const h=hitboxes[i];h.t+=dt;
+    if(h.t>=0.5){dropHitbox(h);hitboxes.splice(i,1);continue;}
+    const op=1-h.t/0.5,y=h.o.y+h.off;
+    h.body.position.set(h.o.x,y,h.o.z);h.body.material.opacity=op;h.fill.position.set(h.o.x,y,h.o.z);h.fill.material.opacity=0.3*op;
+    if(h.ball){h.ball.position.set(h.o.x,y,h.o.z);h.ball.material.opacity=op*0.8;}
+  }
+}
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
