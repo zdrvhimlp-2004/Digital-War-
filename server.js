@@ -1798,12 +1798,19 @@ body.playing #chatFeed.hud{display:flex!important}
 #chatHead{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 6px 14px;border-bottom:1px solid #1c3a66;font-weight:700;font-size:13px;color:#9fd0ff}
 #chatX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 #chatX svg{width:16px;height:16px}
-#chatList{overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.45;min-height:120px;max-height:36vh;word-break:break-word}
-#chatList div{margin-bottom:3px}
-#chatForm{display:flex;gap:6px;padding:8px;border-top:1px solid #1c3a66}
-#chatIn{flex:1;min-width:0;background:#050a14;border:2px solid #1c3a66;border-radius:10px;color:#fff;font-size:14px;padding:8px 10px;font-family:inherit;outline:none;-webkit-user-select:text;user-select:text}
-#chatIn:focus{border-color:#4db8ff}
-#chatForm button{width:42px;border:0;border-radius:10px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#chatPanel{max-height:min(60vh,420px)!important;overflow:hidden;border:1px solid rgba(120,190,255,.28)!important;border-radius:18px!important;background:rgba(8,14,32,.94)!important;box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:Poppins,system-ui,sans-serif}
+#chatHead{flex:0 0 auto}
+body.playing.chatopen #chatFeed.hud{display:none!important}
+#chatList{flex:1 1 auto;min-height:0;max-height:none!important;overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.45;word-break:break-word;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+#chatList div{margin:0;align-self:flex-start;max-width:86%;background:rgba(255,255,255,.07);padding:6px 11px;border-radius:14px 14px 14px 4px}
+#chatList div.me{align-self:flex-end;background:rgba(30,111,255,.38);border-radius:14px 14px 4px 14px}
+#chatList div.me b{display:none}
+#chatList:empty:before{content:'Belum ada pesan. Sapa temanmu!';color:#7f93b5;font-size:12px;text-align:center;margin:auto}
+#chatForm{flex:0 0 auto;display:flex;gap:8px;padding:8px 10px 10px;border-top:1px solid rgba(120,190,255,.18);align-items:center}
+#chatIn{flex:1;min-width:0;height:40px;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(160,200,255,.25);border-radius:999px;color:#fff;font-size:14px;padding:0 16px;font-family:inherit;outline:none;-webkit-user-select:text;user-select:text;transition:border-color .15s,background .15s}
+#chatIn::placeholder{color:#8396b8}
+#chatIn:focus{border-color:rgba(108,212,255,.8);background:rgba(255,255,255,.11)}
+#chatForm button{flex:0 0 auto;width:40px;height:40px;border:0;border-radius:50%;background:linear-gradient(135deg,#1e6fff,#4db8ff);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 10px rgba(30,111,255,.45)}
 #chatForm button svg{width:18px;height:18px}
 #xhair{position:fixed;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:3;display:none}
 #xhair.show{display:block}
@@ -3345,15 +3352,15 @@ function updAim(){
 /* ---------- chat ---------- */
 let chatOpen=false,chatUnread=0;
 function addChatLine(m,live){
-  const d=document.createElement('div');const b=document.createElement('b');b.textContent=m.name+': ';const sp=document.createElement('span');sp.textContent=m.text;d.appendChild(b);d.appendChild(sp);
+  const d=document.createElement('div');if(m.id===me.id)d.className='me';const b=document.createElement('b');b.textContent=m.name+': ';const sp=document.createElement('span');sp.textContent=m.text;d.appendChild(b);d.appendChild(sp);
   const lst=$('chatList');lst.appendChild(d);while(lst.children.length>80)lst.removeChild(lst.firstChild);lst.scrollTop=lst.scrollHeight;
   if(live){
     const f=document.createElement('div');f.innerHTML=d.innerHTML;$('chatFeed').appendChild(f);while($('chatFeed').children.length>5)$('chatFeed').removeChild($('chatFeed').firstChild);setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},9000);
     if(!chatOpen){chatUnread++;$('chatBadge').textContent=chatUnread>9?'9+':chatUnread;$('chatBadge').style.display='block';}
   }
 }
-function openChat(){if(!started||modalOpen||bookOpen||chatOpen)return;chatOpen=true;chatUnread=0;$('chatBadge').style.display='none';$('chatPanel').classList.add('show');keys.clear();jumpBtnHeld=false;diveBtnHeld=false;setGuard(false);setTimeout(()=>$('chatIn').focus(),30);$('chatList').scrollTop=$('chatList').scrollHeight;}
-function closeChat(){chatOpen=false;$('chatPanel').classList.remove('show');$('chatIn').blur();canvas.focus();}
+function openChat(){if(!started||modalOpen||bookOpen||chatOpen)return;chatOpen=true;document.body.classList.add('chatopen');chatUnread=0;$('chatBadge').style.display='none';$('chatPanel').classList.add('show');keys.clear();jumpBtnHeld=false;diveBtnHeld=false;setGuard(false);setTimeout(()=>$('chatIn').focus(),30);$('chatList').scrollTop=$('chatList').scrollHeight;}
+function closeChat(){chatOpen=false;document.body.classList.remove('chatopen');$('chatPanel').classList.remove('show');$('chatIn').blur();canvas.focus();}
 $('chatBtn').addEventListener('click',()=>{if(chatOpen)closeChat();else openChat();});
 $('chatBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('chatX').addEventListener('click',e=>{e.stopPropagation();closeChat();});$('chatX').addEventListener('pointerdown',e=>e.stopPropagation());
