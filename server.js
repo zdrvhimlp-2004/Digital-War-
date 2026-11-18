@@ -2672,6 +2672,12 @@ const sfx={
   /* pertarungan */
   swing(){pick([()=>{noiseHit(0.12,0.18,2400,0,'highpass');tone(500,200,0.1,'sawtooth',0.04);},()=>{noiseHit(0.1,0.16,3000,0,'highpass');tone(650,260,0.09,'triangle',0.05);},()=>{noiseHit(0.14,0.15,1800,0,'bandpass',0.8);tone(420,160,0.12,'sawtooth',0.035);}])();},
   hit(){pick([()=>{noiseHit(0.1,0.3,900,0);tone(180,70,0.14,'square',0.12);},()=>{noiseHit(0.12,0.28,700,0);tone(140,55,0.16,'sine',0.2);},()=>{noiseHit(0.08,0.3,1200,0);tone(240,90,0.1,'square',0.1);tone(90,50,0.14,'sine',0.14);}])();},
+  clash(){/* benturan besi: dentang logam berlapis, bernada tak harmonis, dengan gema */
+    noiseHit(0.05,0.5,6000,0,'highpass');noiseHit(0.12,0.3,1800,0,'bandpass');
+    [[1180,0.5,0.9],[1763,0.42,0.7],[2491,0.36,0.55],[3320,0.3,0.4],[640,0.55,0.8]].forEach(([f,d,v],i)=>tone(f,f*0.97,d,i%2?'triangle':'square',0.075*v,i*0.006));
+    tone(1180,1150,0.55,'sine',0.05,0.04);tone(1763,1740,0.5,'sine',0.035,0.04);
+    tone(1180,1160,0.3,'sine',0.02,0.19);tone(2491,2470,0.28,'sine',0.015,0.19);
+  },
   clang(){tone(rnd(850,1250),rnd(500,700),0.22,'square',0.06);tone(rnd(1700,2300),rnd(1200,1500),0.18,'triangle',0.05);noiseHit(0.06,0.18,4200,0,'highpass');},
   hurt(){pick([()=>{tone(300,120,0.25,'sawtooth',0.12);noiseHit(0.15,0.2,500,0);},()=>{tone(380,150,0.22,'square',0.08);tone(260,100,0.28,'sawtooth',0.07);},()=>{tone(220,90,0.3,'sawtooth',0.1);noiseHit(0.2,0.18,400,0);tone(520,260,0.12,'triangle',0.05);}])();},
   block(){noiseHit(0.08,0.25,2000,0,'highpass');tone(700,500,0.1,'square',0.08);tone(rnd(1100,1500),900,0.16,'triangle',0.05);},
@@ -3639,7 +3645,7 @@ function onFx(m){
 function onClash(m){
   const va=entPos(m.a),vb=entPos(m.b);if(!va||!vb)return;
   const mx=(va.x+vb.x)/2,my=(va.y+vb.y)/2+1.2,mz=(va.z+vb.z)/2;
-  floatText(mx,my+0.6,mz,'BENTROK!','#ffffff');burst(mx,my,mz,'#fff6a0',14,5);sfxAt('clang',mx,mz);
+  floatText(mx,my+0.6,mz,'BENTROK!','#ffffff');burst(mx,my,mz,'#fff6a0',14,5);sfxAt('clash',mx,mz);
   if(m.a===me.id||m.b===me.id){const k=m.a===me.id?[m.ax,m.az]:[m.bx,m.bz];kb.x+=k[0];kb.z+=k[1];if(grounded&&!swimNow){vy=Math.max(vy,3.5);grounded=false;}shake=Math.max(shake,0.3);attackT=0;}
 }
 function onHit(m){
