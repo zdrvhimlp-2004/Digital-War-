@@ -670,8 +670,8 @@ function stepBandits(room, dt, t) {
         else { tx = s.x; tz = s.z; }
         if (d < sp.range + 4 && t >= s.atkAt) {
           s.atkAt = t + sp.cd; s.atkFlag = 1;
-          const dyy = clampN((best.y + 0.9 - 1.1) / d, -0.3, 0.3), hl = Math.sqrt(1 - dyy * dyy);
-          const pr = { id: projSeq++, o: BANDIT_OWNER, x: s.x + s.fx * 0.8, y: 1.1, z: s.z + s.fz * 0.8, dx: s.fx * hl, dy: dyy, dz: s.fz * hl, sp: sp.arrow, life: 1.3, dmg: sp.dmg, stun: 0, c: '#b0764a' };
+          const dyy = clampN((best.y + 0.9 - (s.y + 1.1)) / d, -0.3, 0.3), hl = Math.sqrt(1 - dyy * dyy);
+          const pr = { id: projSeq++, o: BANDIT_OWNER, x: s.x + s.fx * 0.8, y: s.y + 1.1, z: s.z + s.fz * 0.8, dx: s.fx * hl, dy: dyy, dz: s.fz * hl, sp: sp.arrow, life: 1.3, dmg: sp.dmg, stun: 0, c: '#b0764a' };
           room.projs.push(pr);
           broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(pr.dx), dy: r2(pr.dy), dz: r2(pr.dz), sp: pr.sp, life: pr.life, c: pr.c, sz: 0.55 });
         }
@@ -773,8 +773,8 @@ function stepForts(room, dt, t) {
         else { tx = s.x; tz = s.z; }
         if (d < sp.range + 4 && t >= s.atkAt) {
           s.atkAt = t + sp.cd; s.atkFlag = 1;
-          const dyy = clampN((best.y + 0.9 - 1.1) / d, -0.3, 0.3), hl = Math.sqrt(1 - dyy * dyy);
-          const pr = { id: projSeq++, o: s.owner, x: s.x + s.fx * 0.8, y: 1.1, z: s.z + s.fz * 0.8, dx: s.fx * hl, dy: dyy, dz: s.fz * hl, sp: sp.arrow, life: 1.3, dmg: sp.dmg, stun: 0, c: '#d9b27a' };
+          const dyy = clampN((best.y + 0.9 - (s.y + 1.1)) / d, -0.3, 0.3), hl = Math.sqrt(1 - dyy * dyy);
+          const pr = { id: projSeq++, o: s.owner, x: s.x + s.fx * 0.8, y: s.y + 1.1, z: s.z + s.fz * 0.8, dx: s.fx * hl, dy: dyy, dz: s.fz * hl, sp: sp.arrow, life: 1.3, dmg: sp.dmg, stun: 0, c: '#d9b27a' };
           room.projs.push(pr);
           broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(pr.dx), dy: r2(pr.dy), dz: r2(pr.dz), sp: pr.sp, life: pr.life, c: pr.c, sz: 0.55 });
         }
@@ -896,6 +896,7 @@ function stepRoom(room, dt, t) {
     }
   }
   if (!room.duel) stepForts(room, dt, t);
+  for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
   if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
   /* jadwal tertunda, regen, respawn */
