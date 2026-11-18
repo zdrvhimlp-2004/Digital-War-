@@ -1,0 +1,22 @@
+# Catatan Perubahan Digital War
+
+Ringkasan fitur dan perbaikan, dari yang terbaru.
+
+## Terbaru
+- **Sembunyikan tombol**: tombol baru (ikon kotak-kotak) di kolom kiri, atau tekan `H`, menyembunyikan semua tombol (serang, lompat, slot teknik, buku, dll). Setelah kamera diputar sedikit, muncul tombol "Tampilkan tombol" di atas layar untuk mengembalikannya.
+- **Perbaikan visual**: z-fighting di bagian atas pintu dan kasur diperbaiki. Nama benteng hanya terlihat dalam jarak 34 unit (sebelumnya 150). Tombol silang buku teknik kini tepat di tengah lingkaran.
+- **Suara berjarak**: tiap jenis suara punya jarak dengar sendiri (tebasan dan pukulan sekitar 24-26 unit, ledakan 55, tanduk benteng 70), dengan penurunan volume lebih tajam dan batas 4 suara pelan per 150 ms.
+- **Chat**: tampilan baru berbentuk gelembung, input bulat, tombol silang, dan feed layar disembunyikan saat chat terbuka.
+- **Tombol serang** besar di pojok kanan bawah, layout tombol dan slot disesuaikan untuk layar landscape pendek.
+- **FPS**: rumah selalu solid (atap dan dinding tidak transparan).
+- **Benteng**: lantai diturunkan dan diberi tekstur ubin supaya karakter menapak.
+- **Skenario pembuka**: jalan FPS ke desa dan ngobrol dengan Warga Desa, bisa dilewati.
+- **Dash** mengikuti arah gerak, tanpa bidik.
+- **Pertempuran**: tebasan pedang 20 damage dengan knockback, bentrok pedang (keduanya terpental, bunyi besi), bola digital keluar setinggi mata dan mendorong korban, bar darah musuh merah dan milik sendiri hijau, perisai baru yang lebih estetik.
+
+## Sebelumnya
+- Server satu file tanpa dependensi (`server.js`), halaman admin (room, voice, mode pilih teknik, buku teknik), nama tanpa login.
+- Teknik kode angka 1-9 dengan 5 slot, banyak teknik (bola lempar, nova, elang, naik elang, ranjau, sniper, dll).
+- Danau dan menyelam, goa kelelawar dengan peti sniper, tidur memulihkan darah, spawn di pojok peta, air mancur desa.
+- Benteng yang bisa direbut dengan prajurit penjaga dan pengawal, kamp penyamun.
+- Voice chat WebRTC dan chat teks, suara sintetis lebih dari 60 efek, kamera FPS, tema Poppins biru-hitam-putih.

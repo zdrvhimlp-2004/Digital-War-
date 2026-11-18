@@ -1742,7 +1742,7 @@ body.playing .hudf{display:flex}
 .slot .ic svg{width:calc(var(--s)*.46);height:calc(var(--s)*.46)}
 .te .ic svg{width:26px;height:26px}
 .bkb svg{width:18px;height:18px}
-#bkX svg{width:16px;height:16px}
+#bkX svg{width:16px;height:16px;display:block;margin:0}
 .kdi{width:13px;height:13px;vertical-align:-2px}
 .bki{width:20px;height:20px;vertical-align:-4px;margin-right:6px;display:inline-block}
 .mi{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:5px}
@@ -1781,7 +1781,7 @@ body.playing #slots{display:flex}
 .pn{position:absolute;bottom:7px;left:0;right:0;text-align:center;font-size:11px;opacity:.6}
 .bkb{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:56px;border:0;border-radius:8px;background:rgba(40,25,10,.75);color:#f3e2b8;font-size:16px;cursor:pointer;padding:0;z-index:2}
 #bkPrev{left:-4px}#bkNext{right:-4px}
-#bkX{position:absolute;top:-10px;right:-8px;width:32px;height:32px;border-radius:50%;border:2px solid #f3e2b8;background:#46301a;color:#f3e2b8;font-size:14px;cursor:pointer;padding:0;z-index:3}
+#bkX{display:flex;align-items:center;justify-content:center;line-height:0;position:absolute;top:-10px;right:-8px;width:32px;height:32px;border-radius:50%;border:2px solid #f3e2b8;background:#46301a;color:#f3e2b8;font-size:14px;cursor:pointer;padding:0;z-index:3}
 #lcol{position:fixed;left:max(10px,env(safe-area-inset-left));top:calc(max(10px,env(safe-area-inset-top)) + 168px);display:flex;flex-direction:column;gap:6px;z-index:4}
 body.playing #lcol.hud{display:flex!important}
 #lcol button{position:relative;width:36px;height:34px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
@@ -1892,6 +1892,10 @@ body.cine #cine{display:block}
 #cineTxt{margin:0;font-size:15px;line-height:1.5;min-height:3em}
 #cineHint{display:block;text-align:right;color:#9db4d6;font-size:11px;margin-top:4px}
 body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#board.hud,#hint.hud,#sbBtn.hud,#fsBtn.hud,#bookBtn.hud,#slots,#xhair,#joyBase,#joyKnob,#hpBox,#oxyBox,#toast,#prompt,#hurt,#btnDive,#btnAct,#btnSnipe){display:none!important}
+#uiShow{display:none;position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:30;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid rgba(160,210,255,.5);background:rgba(10,18,40,.82);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;cursor:pointer}
+#uiShow span{display:flex;width:18px;height:18px}#uiShow svg{width:18px;height:18px}
+body.playing.uihide.uiask #uiShow{display:flex}
+body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar){display:none!important}
 </style>
 </head>
 <body>
@@ -1901,6 +1905,7 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 <div id="fade"></div>
 <div id="lcol" class="hud">
   <button id="camBtn" data-ico="eye" title="Kamera FPS (C)" aria-label="Kamera FPS"></button>
+  <button id="uiBtn" data-ico="hideui" title="Sembunyikan tombol (H)" aria-label="Sembunyikan tombol"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
@@ -1923,6 +1928,7 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
 <div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · Tab skor</div>
@@ -2004,6 +2010,7 @@ const ICO={
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
  orb:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4a8 8 0 0 1 0 16M12 4a8 8 0 0 0 0 16"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.500h8M8 12.500h5"/>',
+ hideui:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
  micoff:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6M3 3l18 18"/>',
@@ -2212,12 +2219,12 @@ houseSpecs.forEach((sp,idx)=>{
   const wm=mat(wallPal[idx%wallPal.length]),stone=mat('#a59d8f'),wood=mat('#8a5a3a'),dark=mat('#6e4528');h.wallMats.push(wm,stone,wood,dark);
   const walls=[[0,-3.5,4,0.15],[-4,0,0.15,3.5],[4,0,0.15,3.5],[-2.5,3.5,1.5,0.15],[2.5,3.5,1.5,0.15]];
   walls.forEach(w=>{box(g,w[2]*2,WALLH,w[3]*2,wm,w[0],WALLH/2,w[1]);box(g,w[2]*2+0.12,0.4,w[3]*2+0.12,stone,w[0],0.2,w[1]);addOBB(h,w[0],w[1],w[2],w[3]);});
-  box(g,2.2,0.79,0.34,wm,0,2.995,3.5);
+  box(g,2.0,0.7,0.3,wm,0,3.05,3.5);
   box(g,0.16,2.56,0.38,dark,-1.06,1.28,3.5);box(g,0.16,2.56,0.38,dark,1.06,1.28,3.5);box(g,2.28,0.16,0.4,dark,0,2.68,3.5);
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(7.7,6.7).rotateX(-Math.PI/2),mat('#b98a5a',{polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));fl.position.set(0,0.02,0);g.add(fl);
   const rug=new THREE.Mesh(new THREE.CircleGeometry(1.5,24).rotateX(-Math.PI/2),mat(roofPal[(idx+3)%8],{polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}));rug.position.set(0.2,0.025,-0.9);g.add(rug);
   const mt=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.9).rotateX(-Math.PI/2),mat('#9a4a3a',{polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}));mt.position.set(0,0.03,4.2);g.add(mt);
-  box(g,2.0,0.5,1.6,wood,-2.6,0.3,-2.5);box(g,2.0,0.25,1.6,mat('#e8e0d0'),-2.6,0.62,-2.5);box(g,0.7,0.15,0.5,mat('#e06a6a'),-3.2,0.82,-2.5);addOBB(h,-2.6,-2.5,1.0,0.8);
+  box(g,2.0,0.5,1.6,wood,-2.6,0.3,-2.5);box(g,1.94,0.25,1.54,mat('#e8e0d0'),-2.6,0.65,-2.5);box(g,0.7,0.15,0.5,mat('#e06a6a'),-3.2,0.84,-2.5);addOBB(h,-2.6,-2.5,1.0,0.8);
   box(g,1.8,0.1,1.1,wood,2.4,0.9,-1.7);box(g,0.3,0.9,0.3,dark,2.4,0.45,-1.7);box(g,1.0,0.08,0.7,dark,2.4,0.04,-1.7);addOBB(h,2.4,-1.7,0.9,0.55);
   const lan=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,6),new THREE.MeshBasicMaterial({color:0xffd27a}));lan.position.set(2.4,1.12,-1.7);g.add(lan);
   box(g,0.5,0.4,0.5,mat('#b5683f'),3.2,0.2,2.6);const pl=new THREE.Mesh(new THREE.IcosahedronGeometry(0.4,0),mat('#3f9a4f'));pl.position.set(3.2,0.75,2.6);g.add(pl);addOBB(h,3.2,2.6,0.28,0.28);
@@ -2335,7 +2342,7 @@ function nearestFort(){let best=null,bd=FORT_RANGE-0.5;for(const f of forts){con
 function updForts(dt){
   for(const f of forts){
     f.flag.rotation.y=Math.sin(tAll*3+f.id)*0.25;
-    const d=Math.hypot(f.x-pos.x,f.z-pos.z);f.lab.visible=d<150&&!inCave;
+    const d=Math.hypot(f.x-pos.x,f.z-pos.z);f.lab.visible=d<34&&!inCave;
   }
 }
 
@@ -2977,7 +2984,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space')jumpBuf=0.13;
   if(e.code==='KeyE')interact();
   if(e.code==='Enter')openChat();
-  if(e.code==='KeyC')setFps(!fps);
+  if(e.code==='KeyC')setFps(!fps);if(e.code==='KeyH')setUiHidden(!uiHid);
   if(e.code==='Escape'&&aiming>=0)cancelAim();
   if(e.code==='KeyJ'||e.code==='KeyX'||e.code==='KeyF')doAttack();
   if(e.code==='Tab')$('board').classList.add('show');
@@ -3163,7 +3170,7 @@ function updMobs(dt,rgt,fwd){
     const fl=eagleSet(m,m.fx,m.fz,rgt,fwd,Math.floor(tAll*10+m.id)%2);
     m.flash=Math.max(0,m.flash-dt);m.mesh.material.color.setHex(m.flash>0?0xff7a7a:0xffffff);m.mesh.scale.set(fl?-sc:sc,sc,1);
     const gy=Math.max(groundAt(m.x,m.z,m.y),WATER_Y);
-    m.lab.sp.visible=!inCave;m.lab.sp.position.set(m.x,m.y+1.3,m.z);
+    m.lab.sp.visible=!inCave&&Math.hypot(m.x-pos.x,m.z-pos.z)<40;m.lab.sp.position.set(m.x,m.y+1.3,m.z);
     m.sh.position.set(m.x,gy+0.07,m.z);m.sh.scale.setScalar(clamp(1-(m.y-gy)*0.1,0.3,1)*1.2);
   }
 }
@@ -3875,6 +3882,7 @@ function occludes(h){
 function update(dt){
   tAll+=dt;
   if(intro)updIntro(dt);
+  updUiHide();
   gameHour=(hourBase+(performance.now()-hourAt)/1000*0.04)%24;
   inCave=pos.x>1000;
   const fwd={x:-Math.sin(cam.yaw),z:-Math.cos(cam.yaw)},rgt={x:Math.cos(cam.yaw),z:-Math.sin(cam.yaw)};
@@ -4208,6 +4216,20 @@ function introBlock(e){
 ['keydown','keyup','pointerdown','pointerup','pointermove','wheel'].forEach(t=>window.addEventListener(t,introBlock,true));
 $('cineSkip').addEventListener('click',e=>{e.stopPropagation();endIntro();});
 $('cineBox').addEventListener('click',e=>{e.stopPropagation();introNext();});
+
+/* ---------- sembunyikan semua tombol ---------- */
+let uiHid=null;
+function setUiHidden(on){
+  if(on){if(chatOpen)closeChat();uiHid={yaw:cam.yawT,pitch:cam.pitchT,fp:fpsPitch};document.body.classList.add('uihide');document.body.classList.remove('uiask');toast('Tombol disembunyikan. Putar kamera sedikit untuk memunculkan tombol pengembali.',2.6);}
+  else{uiHid=null;document.body.classList.remove('uihide','uiask');}
+}
+function updUiHide(){
+  if(!uiHid||document.body.classList.contains('uiask'))return;
+  const dy=Math.abs(Math.atan2(Math.sin(cam.yawT-uiHid.yaw),Math.cos(cam.yawT-uiHid.yaw)));
+  if(dy>0.22||Math.abs(cam.pitchT-uiHid.pitch)>0.18||Math.abs(fpsPitch-uiHid.fp)>0.18)document.body.classList.add('uiask');
+}
+$('uiBtn').addEventListener('click',()=>setUiHidden(true));$('uiBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('uiShow').addEventListener('click',e=>{e.stopPropagation();setUiHidden(false);});$('uiShow').addEventListener('pointerdown',e=>e.stopPropagation());
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
