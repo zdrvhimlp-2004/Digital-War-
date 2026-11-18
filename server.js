@@ -3109,14 +3109,15 @@ function updMobs(dt,rgt,fwd){
 /* tunggangan elang */
 function mountMake(){const tex=eagleTex();const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);return {mesh,tex};}
 /* penunggang duduk di punggung elang; posisi dihitung per arah hadap (ruang layar) */
+const MOUNT_LIFT=1.3;
 const RIDE_OFF={0:[-0.02,0.2,0.5],1:[0,0.5,-0.8],3:[0.1,0.12,-0.55],2:[0,0.0,0.7],4:[0.34,0.0,0.55]};
 function mountPlace(m,x,y,z,fx,fz,rgt,fwd,id){
   const fl=eagleSet(m,fx,fz,rgt,fwd,Math.floor(tAll*7+id)%2);
   const rw=ROWMAP[m.vk],t=RIDE_OFF[rw]||RIDE_OFF[0],tail=fl?1:-1;
-  m.mesh.position.set(x,y+0.4,z);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
+  m.mesh.position.set(x,y+MOUNT_LIFT,z);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
   m.mesh.scale.set(fl?-1.6:1.6,1.6,1);
   const dx=t[0]*(rw===0||rw===3||rw===4?tail:0)*1.6,sx2=Math.cos(cam.yaw),sz2=-Math.sin(cam.yaw),tx=Math.sin(cam.yaw),tz=Math.cos(cam.yaw);
-  m.off={x:sx2*dx+tx*t[2],y:0.4+t[1],z:sz2*dx+tz*t[2]};
+  m.off={x:sx2*dx+tx*t[2],y:MOUNT_LIFT+t[1],z:sz2*dx+tz*t[2]};
 }
 function mountDrop(m){scene.remove(m.mesh);m.mesh.material.dispose();m.tex.dispose();}
 /* ranjau */
