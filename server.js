@@ -2844,7 +2844,7 @@ function castSlot(i){
   const s=slots[i];if(!s){cancelAim();openModal(i);return;}
   if(aiming===i){fireAim();return;}
   if(slotCd[i]>0)return;
-  if(AIM_KINDS[s.kind]){enterAim(i);return;}
+  if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
   if(aiming>=0)cancelAim();
   if(guarding)setGuard(false);
   const a=aim();faceX=a.x;faceZ=a.z;
@@ -3256,17 +3256,8 @@ const _v1=new THREE.Vector3(1,0,0),_v2=new THREE.Vector3();
 function camFwd(){return {x:-Math.sin(cam.yaw),z:-Math.cos(cam.yaw)};}
 function aimPitchVal(){return fps?Math.sin(fpsPitch):clamp((0.55-cam.pitchT)*1.6,-0.9,0.9);}
 function aimVec(){
-  const f=camFwd();let ax=f.x,az=f.z,ay=aimPitchVal(),lock=null,bd=1e9;
-  const cand=[];others.forEach(o=>{if(!o.dead&&(o.x>1000)===inCave)cand.push({x:o.x,y:o.y+0.9,z:o.z});});
-  sols.forEach(s=>{if(s.owner!==me.id&&!inCave)cand.push({x:s.x,y:terrainH(s.x,s.z)+0.9,z:s.z});});
-  for(const c of cand){
-    const dx=c.x-pos.x,dz=c.z-pos.z,dy=c.y-(pos.y+1.0),dh=Math.hypot(dx,dz),d=Math.hypot(dh,dy);
-    if(d<1.5||d>75||dh<0.01)continue;
-    const dot=(dx*f.x+dz*f.z)/dh;
-    if(dot>0.95&&d<bd){bd=d;lock={x:c.x,y:c.y,z:c.z,d,dx:dx/dh,dz:dz/dh,dy:dy/d};}
-  }
-  if(lock){ax=lock.dx;az=lock.dz;ay=clamp(lock.dy,-0.9,0.9);}
-  return {x:ax,y:ay,z:az,lock};
+  const f=camFwd();
+  return {x:f.x,y:aimPitchVal(),z:f.z,lock:null};
 }
 function enterAim(i){
   sfx.aim();aiming=i;const el=document.querySelector('.slot[data-i="'+i+'"]');
@@ -3274,16 +3265,19 @@ function enterAim(i){
   $('aimbar').classList.add('show');toast('Bidik dulu: geser kamera, lalu Tembak',1.8);sfx.plop();
 }
 function cancelAim(){aiming=-1;document.querySelectorAll('.slot').forEach(x=>x.classList.remove('aiming'));$('aimbar').classList.remove('show');aimRet.visible=false;aimLine.visible=false;}
-function fireAim(){
-  if(aiming<0)return;const i=aiming,s=slots[i];
-  if(!s||slotCd[i]>0||!started||dead||modalOpen||bookOpen||stunT>0||fade){cancelAim();return;}
+function castAimed(i){
+  const s=slots[i];
+  if(!s||slotCd[i]>0||!started||dead||modalOpen||bookOpen||stunT>0||fade)return false;
   const v=aimVec(),hl=Math.hypot(v.x,v.z)||1;
   faceX=v.x/hl;faceZ=v.z/hl;
   if(guarding)setGuard(false);if(sleeping)wakeUp();
   slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);
-  if(v.lock)sfx.lock();
   netSend({t:'cast',slot:i,fx:+v.x.toFixed(3),fy:+v.y.toFixed(3),fz:+v.z.toFixed(3)});
-  cancelAim();
+  return true;
+}
+function fireAim(){
+  if(aiming<0)return;const i=aiming;
+  castAimed(i);cancelAim();
 }
 function updAim(){
   if(aiming<0){return;}
@@ -3362,7 +3356,7 @@ $('micBtn').addEventListener('pointerdown',e=>e.stopPropagation());$('spkBtn').a
 
 /* ---------- kamera FPS ---------- */
 function setFps(on){
-  fps=!!on;$('camBtn').classList.toggle('active',fps);$('xhair').classList.toggle('show',fps&&started);
+  fps=!!on;if(fps)cancelAim();$('camBtn').classList.toggle('active',fps);$('xhair').classList.toggle('show',fps&&started);
   toast(fps?'Kamera FPS (tekan C untuk kembali)':'Kamera orang ketiga',1.4);
 }
 $('camBtn').addEventListener('click',()=>setFps(!fps));$('camBtn').addEventListener('pointerdown',e=>e.stopPropagation());

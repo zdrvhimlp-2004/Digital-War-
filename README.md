@@ -70,7 +70,7 @@ Tekan slot kosong, ketik kode angka 1-9 di popup, tekan Pasang. Kalau admin meng
 
 **Bola lempar**: teknik peluru berbentuk bola besar bercahaya yang melengkung jatuh seperti dilempar. Bola meledak saat mengenai tanah atau musuh: yang kena langsung menerima damage penuh, dan pemain atau musuh di sekitar ledakan menerima percikan sekitar 60% (makin jauh makin kecil). Cahaya bola menerangi tanah di bawahnya dan meredup saat mendekati tanah. Ukuran bola dan radius ledakan bisa diatur per teknik di admin.
 
-**Bidik dulu**: teknik arah (peluru, sinar, bola biru, lesat, hantam) tidak langsung ditembakkan. Tekan slot untuk masuk mode bidik (garis dan lingkaran bidik muncul), geser kamera ke arah yang diinginkan (atas, bawah, samping), lalu tekan slot lagi atau tombol **Tembak**. Bidikan otomatis mengunci musuh yang ada di depan.
+**Bidik dulu**: teknik arah (peluru, sinar, bola biru, lesat, hantam) tidak langsung ditembakkan. Tekan slot untuk masuk mode bidik (garis dan lingkaran bidik muncul), geser kamera ke arah yang diinginkan (atas, bawah, samping), lalu tekan slot lagi atau tombol **Tembak**. Bidikan manual penuh, tidak ada penguncian otomatis. Di **mode FPS** teknik arah langsung ditembakkan ke arah tanda + di tengah layar, tanpa mode bidik.
 
 Teknik bawaan (semua bisa diubah di admin):
 
