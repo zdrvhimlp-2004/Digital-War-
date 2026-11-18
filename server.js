@@ -2210,7 +2210,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
-<label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan semua karakter, jangkauan tebasan (cincin kuning), serta benda keras di dunia (pohon, batu, dinding, menara, pagar).</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
+<label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
@@ -4558,30 +4558,16 @@ $('setX').addEventListener('click',closeSet);$('setBox').addEventListener('point
 applySet();
 
 /* ---------- tampilan body fisika (collider) ---------- */
-let phStatic=null,phBodies=[],phRing=null;
+let phBodies=[],phRing=null;
 const phCylGeo=(()=>{const pts=[];const N=10,R=PR,H=1.8;for(let i=0;i<N;i++){const a=i/N*6.2832,b=(i+1)/N*6.2832;pts.push(Math.cos(a)*R,0,Math.sin(a)*R,Math.cos(b)*R,0,Math.sin(b)*R,Math.cos(a)*R,H,Math.sin(a)*R,Math.cos(b)*R,H,Math.sin(b)*R);if(i%2===0)pts.push(Math.cos(a)*R,0,Math.sin(a)*R,Math.cos(a)*R,H,Math.sin(a)*R);}const gm=new THREE.BufferGeometry();gm.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));return gm;})();
 const phMat={me:new THREE.LineBasicMaterial({color:0x4de1ff,depthTest:false,fog:false}),foe:new THREE.LineBasicMaterial({color:0xff4d4d,depthTest:false,fog:false}),fr:new THREE.LineBasicMaterial({color:0x4de27a,depthTest:false,fog:false})};
-function phBuildStatic(){
-  const pts=[];
-  const cyl=(x,z,r,h)=>{const y0=terrainH(x,z),y1=y0+h,N=10;for(let i=0;i<N;i++){const a=i/N*6.2832,b=(i+1)/N*6.2832;const ax=x+Math.cos(a)*r,az=z+Math.sin(a)*r,bx=x+Math.cos(b)*r,bz=z+Math.sin(b)*r;pts.push(ax,y0,az,bx,y0,bz,ax,y1,az,bx,y1,bz);if(i%2===0)pts.push(ax,y0,az,ax,y1,az);}};
-  for(const c of circles)cyl(c.x,c.z,c.r,3);
-  for(const p of platforms)cyl(p.x,p.z,p.r,p.top-terrainH(p.x,p.z));
-  for(const o of obbs){
-    if(!o.enabled)continue;const y0=terrainH(o.cx,o.cz),y1=y0+3.4;
-    const cs=[[-o.hx,-o.hz],[o.hx,-o.hz],[o.hx,o.hz],[-o.hx,o.hz]].map(([lx,lz])=>[o.cx+lx*o.c+lz*o.s,o.cz-lx*o.s+lz*o.c]);
-    for(let i=0;i<4;i++){const a=cs[i],b=cs[(i+1)%4];pts.push(a[0],y0,a[1],b[0],y0,b[1],a[0],y1,a[1],b[0],y1,b[1],a[0],y0,a[1],a[0],y1,a[1]);}
-  }
-  const gm=new THREE.BufferGeometry();gm.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  const m=new THREE.LineSegments(gm,new THREE.LineBasicMaterial({color:0xffa63d,transparent:true,opacity:0.75,depthTest:false,fog:false}));m.renderOrder=24;m.frustumCulled=false;scene.add(m);return m;
-}
 function phBody(i,mat){
   let b=phBodies[i];
   if(!b){b=new THREE.LineSegments(phCylGeo,mat);b.renderOrder=25;b.frustumCulled=false;scene.add(b);phBodies[i]=b;}
   b.material=mat;b.visible=true;return b;
 }
 function updPhysics(){
-  if(!SET.physics){if(phStatic)phStatic.visible=false;phBodies.forEach(b=>b.visible=false);if(phRing)phRing.visible=false;return;}
-  if(!phStatic)phStatic=phBuildStatic();phStatic.visible=!inCave;
+  if(!SET.physics){phBodies.forEach(b=>b.visible=false);if(phRing)phRing.visible=false;return;}
   if(!phRing){const pts=[];for(let i=0;i<48;i++){const a=i/48*6.2832,b=(i+1)/48*6.2832;pts.push(Math.cos(a),0,Math.sin(a),Math.cos(b),0,Math.sin(b));}const gm=new THREE.BufferGeometry();gm.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));phRing=new THREE.LineSegments(gm,new THREE.LineBasicMaterial({color:0xffe14d,depthTest:false,fog:false}));phRing.renderOrder=25;phRing.frustumCulled=false;scene.add(phRing);}
   phRing.visible=true;phRing.position.set(pos.x,pos.y+0.08,pos.z);phRing.scale.setScalar(3.3);
   let n=0;
