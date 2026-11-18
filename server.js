@@ -105,7 +105,8 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const TERRAIN_FLATS = [{ x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
+const ARENA = { x: 0, z: 48, ringR: 12 };
+const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 24, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
   { x: 88, z: 0, r: 16, b: 8 }, { x: -90, z: 0, r: 16, b: 8 }, { x: 0, z: -92, r: 16, b: 8 }];
@@ -287,7 +288,7 @@ function makeRuntime(r) {
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(); else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
@@ -309,7 +310,7 @@ const MAX_TRAPS = 6;
 /* ---- target umum: pemain + pasukan benteng ---- */
 function victims(room) {
   const a = [];
-  for (const p of room.players.values()) if (!p.dead) a.push(p);
+  for (const p of room.players.values()) if (!p.dead && (!room.duel || duelFighting(room, p))) a.push(p);
   for (const s of room.sols) a.push(s);
   for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
@@ -374,6 +375,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   opt = opt || {};
   const t = now();
   if (victim.dead) return;
+  if (room.duel) { if (!duelFighting(room, victim)) return; if (attacker && attacker.ws && !duelFighting(room, attacker)) return; }
   if (t < victim.invuln) { if (attacker && attacker.ws && t - (victim.invMsgAt || 0) > 250) { victim.invMsgAt = t; broadcast(room, { t: 'hit', id: victim.id, by: attacker.id, dmg: 0, hp: victim.hp, kx: 0, kz: 0, inv: 1 }); } return; }
   if (victim.sleeping) setSleep(room, victim, false);
   if (victim.rideUntil && victim.mountHp > 0) {
@@ -893,9 +895,9 @@ function stepRoom(room, dt, t) {
       }
     }
   }
-  stepForts(room, dt, t);
+  if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
-  stepBandits(room, dt, t);
+  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -912,7 +914,7 @@ function stepRoom(room, dt, t) {
     }
     if (p.rideUntil && (t >= p.rideUntil || p.dead)) { p.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: p.id }); }
     if (p.dead && t >= p.respawnAt) {
-      const s = randomSpawn();
+      const s = room.duel ? standSpawn() : randomSpawn();
       p.dead = false; p.hp = MAXHP; p.x = s.x; p.z = s.z; p.y = 0; p.invuln = t + SPAWN_PROTECT_MS; p.shield = 0; p.regenUntil = 0; p.stunUntil = 0; p.gbUntil = 0; p.sleeping = false;
       broadcast(room, { t: 'resp', id: p.id, x: s.x, z: s.z });
     }
@@ -941,6 +943,101 @@ setInterval(() => {
   for (const room of rooms.values()) if (room.players.size) stepRoom(room, dt, t);
 }, TICK_MS);
 
+/* ====================================================================
+ *  ARENA DUEL 1 vs 1 (yang menang tetap, yang kalah antri lagi)
+ * ==================================================================== */
+const DUEL_COUNT_MS = 3500, DUEL_OVER_MS = 2800;
+function standSpawn() {
+  const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 6;
+  return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
+}
+function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, last: null }; }
+function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && (d.a === p.id || d.b === p.id); }
+function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
+function duelState(room) {
+  const d = room.duel;
+  const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
+  return { t: 'duel', st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+}
+function duelBroadcast(room) { broadcast(room, duelState(room)); }
+function teleportTo(p, x, z, fx, fz) {
+  p.x = x; p.y = 0; p.z = z; p.fx = fx; p.fz = fz; p.tpUntil = now() + 350;
+  send(p.ws, { t: 'tp', x: r2(x), z: r2(z), fx: r2(fx), fz: r2(fz) });
+}
+function duelSide(which) { return which === 'a' ? { x: ARENA.x - 7, z: ARENA.z, fx: 1, fz: 0 } : { x: ARENA.x + 7, z: ARENA.z, fx: -1, fz: 0 }; }
+function duelClearCombat(room) {
+  room.projs = [];
+  for (const m of room.mobs) broadcast(room, { t: 'mobx', id: m.id });
+  room.mobs = [];
+  for (const o of room.orbs) broadcast(room, { t: 'orbx', id: o.id });
+  room.orbs = [];
+  for (const tr of room.traps) broadcast(room, { t: 'trapx', id: tr.id, x: r2(tr.x), y: r2(tr.y), z: r2(tr.z) });
+  room.traps = [];
+}
+function duelRefresh(room, p) {
+  p.hp = MAXHP; p.dead = false; p.shield = 0; p.stunUntil = 0; p.regenUntil = 0; p.gbUntil = 0; p.invuln = 0; p.cdUntil = {};
+  if (p.guarding) setGuard(room, p, false);
+  broadcast(room, { t: 'hp', id: p.id, hp: p.hp });
+}
+function duelNextAlive(room) {
+  const d = room.duel;
+  for (let i = 0; i < d.queue.length; i++) { const q = room.players.get(d.queue[i]); if (q && !q.dead) { d.queue.splice(i, 1); return q.id; } }
+  return 0;
+}
+function duelTick(room, t) {
+  const d = room.duel;
+  d.queue = d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
+  const A = d.a && room.players.get(d.a), B = d.b && room.players.get(d.b);
+  if (d.a && !A) d.a = 0;
+  if (d.b && !B) d.b = 0;
+  let changed = false;
+  if (d.st === 'fight') {
+    const aDead = !A || A.dead, bDead = !B || B.dead;
+    if (aDead || bDead) {
+      const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
+      if (winner) {
+        d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
+        d.last = { win: winner.name, lose: loser ? loser.name : '', w: d.streak[winner.id] };
+        if (winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
+      } else d.last = null;
+      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!d.queue.includes(loser.id)) d.queue.push(loser.id); }
+      if (!winner) { d.a = 0; d.b = 0; }
+      d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
+    }
+  } else if (d.st === 'over') {
+    if (t >= d.until) { d.st = 'wait'; changed = true; }
+  } else if (d.st === 'count') {
+    if (!A || !B || A.dead || B.dead) { d.st = 'wait'; changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; A.invuln = 0; B.invuln = 0; changed = true; }
+  }
+  if (d.st === 'wait') {
+    if (!d.a) { const id = duelNextAlive(room); if (id) { d.a = id; changed = true; } }
+    if (!d.b) { const id = duelNextAlive(room); if (id) { d.b = id; changed = true; } }
+    const A2 = d.a && room.players.get(d.a), B2 = d.b && room.players.get(d.b);
+    if (A2 && B2) {
+      duelClearCombat(room);
+      duelRefresh(room, A2); duelRefresh(room, B2);
+      const sa = duelSide('a'), sb = duelSide('b');
+      teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz);
+      A2.invuln = t + DUEL_COUNT_MS + 200; B2.invuln = t + DUEL_COUNT_MS + 200;
+      d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
+    }
+  }
+  /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
+  for (const p of room.players.values()) {
+    if (p.dead || t < (p.tpUntil || 0) + 150) continue;
+    const dx = p.x - ARENA.x, dz = p.z - ARENA.z, dist = Math.hypot(dx, dz) || 0.01;
+    const slot = d.a === p.id ? 'a' : (d.b === p.id ? 'b' : null);
+    if (slot && (d.st === 'fight' || d.st === 'count')) {
+      if (d.st === 'count') { const sd = duelSide(slot); if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); }
+      else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
+    } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3) {
+      const k = (ARENA.ringR + 3.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, dx / dist, dz / dist);
+    }
+  }
+  if (changed) duelBroadcast(room);
+}
+
 function removePlayer(room, p) {
   if (!room.players.has(p.id)) return;
   room.players.delete(p.id);
@@ -951,6 +1048,7 @@ function removePlayer(room, p) {
   for (const f of room.forts) { if (f.owner === p.id) setFortOwner(room, f, null); if (f.cap && f.cap.by === p.id) { f.cap = null; broadcast(room, { t: 'cap', fort: f.id, cancel: 1 }); } }
   broadcast(room, { t: 'pl', id: p.id });
   broadcast(room, { t: 'sc', s: scoreList(room) });
+  if (room.duel) { room.duel.queue = room.duel.queue.filter(id => id !== p.id); duelBroadcast(room); }
 }
 
 function onJoin(ws, m) {
@@ -973,7 +1071,7 @@ function onJoin(ws, m) {
   }
   if (room.players.size >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
 
-  const s = randomSpawn();
+  const s = room.duel ? standSpawn() : randomSpawn();
   const p = {
     id: room.nextPid++, uid, name, ch, ws, room,
     x: s.x, y: 0, z: s.z, fx: 0, fz: 1, m: 0, a: 0, sw: 0,
@@ -985,13 +1083,14 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick }, hour: roomHour(room), hp: p.hp,
+    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
     forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
     players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
   });
   broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } }, p.id);
   broadcast(room, { t: 'sc', s: scoreList(room) });
+  if (room.duel) { room.duel.queue.push(p.id); duelBroadcast(room); }
 }
 
 function onMessage(ws, text) {
@@ -1008,7 +1107,7 @@ function onMessage(ws, text) {
   const room = p.room;
   switch (m.t) {
     case 's': {
-      if (p.dead) break;
+      if (p.dead || now() < (p.tpUntil || 0)) break;
       const x = num(m.x, -200, 3100, null), y = num(m.y, -12, 80, null), z = num(m.z, -200, 200, null);
       if (x === null || y === null || z === null) break;
       p.x = x; p.y = y; p.z = z;
@@ -1018,11 +1117,13 @@ function onMessage(ws, text) {
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
     case 'atk': {
+      if (room.duel && !duelFighting(room, p)) break;
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
       doMelee(room, p, r2(fx), r2(fz), m.fy === undefined ? undefined : num(m.fy, -0.95, 0.95, 0));
       break;
     }
     case 'cast': {
+      if (room.duel && !duelFighting(room, p)) break;
       doCast(room, p, m.slot | 0, num(m.fx, -1, 1, 0), num(m.fy, -1, 1, 0), num(m.fz, -1, 1, 1));
       break;
     }
@@ -1060,10 +1161,12 @@ function onMessage(ws, text) {
       break;
     }
     case 'snipe': {
+      if (room.duel) break;
       doSnipe(room, p, num(m.fx, -1, 1, 0), 0, num(m.fz, -1, 1, 1));
       break;
     }
     case 'cap': {
+      if (room.duel) break;
       startCapture(room, p, m.fort | 0);
       break;
     }
@@ -1248,7 +1351,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1293,7 +1396,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, mode: b.mode === 'duel' ? 'duel' : 'world' };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1358,7 +1461,7 @@ const server = http.createServer(async (req, res) => {
       const r = DB.rooms.find(x => x.code === mm[1].toUpperCase());
       if (!r) return json(res, 404, { error: 'Room tidak ditemukan' });
       const v = roomView(r);
-      return json(res, 200, { name: v.name, max: v.max, count: v.count, voice: v.voice, pick: v.pick });
+      return json(res, 200, { name: v.name, max: v.max, count: v.count, voice: v.voice, pick: v.pick, mode: v.mode });
     }
     if (pathname === '/api/book') {
       if (!DB.settings.showBook) return json(res, 200, { enabled: false, techniques: [] });
@@ -1533,6 +1636,8 @@ button:disabled{opacity:.5}
     <div class="card">
       <h2>Buat room baru</h2>
       <label>Nama room</label><input id="rname" maxlength="30" placeholder="Misal: Duel Sabtu Malam">
+      <label>Mode room</label>
+      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel">Arena Duel 1 vs 1</option></select>
       <label>Maksimal pemain</label>
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
@@ -1621,7 +1726,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,mode:$('rmode').value}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -1634,7 +1739,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA DUEL 1v1':' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -1944,6 +2049,18 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 #uiShow span{display:flex;width:18px;height:18px}#uiShow svg{width:18px;height:18px}
 body.playing.uihide.uiask #uiShow{display:flex}
 body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar){display:none!important}
+#duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
+body.playing.duel #duelBox{display:block}
+#duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#duelBox .vs i{font-style:normal;color:#ffd84d;font-size:12px}
+#duelBox .vs span.w{color:#6cd4ff;font-weight:600;font-size:11px}
+#duelBox .q{margin-top:5px;display:inline-block;background:rgba(8,14,34,.7);border-radius:12px;padding:4px 12px;font-size:12px;color:#cfe3ff}
+#duelBox .me{color:#7dffae;font-weight:700}
+#duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
+#duelBig.show{display:block}
+#duelBig b{display:block;font-size:min(22vw,120px);line-height:1}
+#duelBig small{display:block;font-size:min(5vw,22px);font-weight:600;margin-top:6px;color:#cfe3ff}
+body.cine #duelBox,body.cine #duelBig{display:none!important}
 </style>
 </head>
 <body>
@@ -1977,6 +2094,7 @@ body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBt
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<div id="duelBox"></div><div id="duelBig"></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
@@ -2124,7 +2242,8 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const flats=[{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
+const ARENA={x:0,z:48,ringR:12};
+const flats=[{x:ARENA.x,z:ARENA.z,r:24,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
 [[62,34],[-70,-22],[18,-82]].forEach(([x,z],i)=>{houseSpecs.push({x,z,rot:i*Math.PI/2+0.4,far:true});flats.push({x,z,r:8,b:10});});
@@ -2389,9 +2508,10 @@ function stepKind(){
 }
 function nearestFort(){let best=null,bd=FORT_RANGE-0.5;for(const f of forts){const d=Math.hypot(f.x-pos.x,f.z-pos.z);if(d<bd){bd=d;best=f;}}return best;}
 function updForts(dt){
+  updArena();updDuel();
   for(const f of forts){
     f.flag.rotation.y=Math.sin(tAll*3+f.id)*0.25;
-    const d=Math.hypot(f.x-pos.x,f.z-pos.z);f.lab.visible=d<34&&!inCave;
+    const d=Math.hypot(f.x-pos.x,f.z-pos.z);f.lab.visible=d<34&&!inCave&&roomMode!=='duel';
   }
 }
 
@@ -2937,6 +3057,7 @@ function aim(){
 }
 function doAttack(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||attackT>0||atkCool>0)return;
+  if(duelBlock())return;
   if(sleeping)wakeUp();
   if(guarding)setGuard(false);
   if(fps&&started){
@@ -2959,6 +3080,7 @@ function castSlot(i){
   if(!started||dead||modalOpen||bookOpen||chatOpen||stunT>0||fade)return;
   if(sleeping)wakeUp();
   const s=slots[i];if(!s){cancelAim();openModal(i);return;}
+  if(duelBlock())return;
   if(aiming===i){fireAim();return;}
   if(slotCd[i]>0)return;
   if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
@@ -3672,6 +3794,8 @@ function onMsg(m){
       document.body.classList.add('playing');$('start').classList.add('hide');canvas.focus();
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
+      roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
+      if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
@@ -3699,6 +3823,8 @@ function onMsg(m){
     case 'clash':onClash(m);break;
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
     case 'die':onDie(m);break;
+    case 'duel':onDuel(m);break;
+    case 'tp':{pos.set(m.x,terrainH(m.x,m.z),m.z);vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;faceX=m.fx;faceZ=m.fz;cam.yaw=cam.yawT=Math.atan2(-m.fx,-m.fz);cam.tx=pos.x;cam.tz=pos.z;break;}
     case 'resp':{
       if(m.id===me.id){dead=false;$('ko').style.display='none';setHp(MAXHP);{const f=findFree(m.x,m.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;invuln=2;stunT=0;gbT=0;myRegenT=0;hasteT=0;sfx.respawn();toast('Kembali bertarung!',1.6);}
       else{const o=others.get(m.id);if(o){o.dead=false;o.hp=MAXHP;o.tx=o.x=m.x;o.tz=o.z=m.z;o.ty=o.y=0;drawLabel(o);}}break;}
@@ -4204,6 +4330,92 @@ function update(dt){
 /* ---------- loop ---------- */
 let last=performance.now();
 
+
+/* ---------- ARENA DUEL 1 vs 1 ---------- */
+let roomMode='world',arenaBuilt=false,duel=null,duelAt=0,duelPrevSt='';
+function buildArena(){
+  if(arenaBuilt)return;arenaBuilt=true;
+  const g=new THREE.Group();g.position.set(ARENA.x,0,ARENA.z);scene.add(g);
+  const R=ARENA.ringR;
+  const cv=document.createElement('canvas');cv.width=cv.height=512;const c=cv.getContext('2d');
+  const gr=c.createRadialGradient(256,256,20,256,256,256);gr.addColorStop(0,'#e6d3a3');gr.addColorStop(1,'#cdb47c');c.fillStyle=gr;c.fillRect(0,0,512,512);
+  for(let i=0;i<1400;i++){c.fillStyle='rgba(120,90,40,'+(0.05+Math.random()*0.08)+')';c.fillRect(Math.random()*512,Math.random()*512,2,2);}
+  c.strokeStyle='rgba(90,60,25,.7)';c.lineWidth=7;c.beginPath();c.arc(256,256,238,0,6.283);c.stroke();c.lineWidth=4;c.beginPath();c.arc(256,256,60,0,6.283);c.stroke();
+  c.beginPath();c.moveTo(256-238,256);c.lineTo(256+238,256);c.stroke();
+  c.fillStyle='rgba(60,120,255,.35)';c.beginPath();c.arc(256-(7/R)*256,256,34,0,6.283);c.fill();
+  c.fillStyle='rgba(255,70,70,.35)';c.beginPath();c.arc(256+(7/R)*256,256,34,0,6.283);c.fill();
+  const tex=new THREE.CanvasTexture(cv);
+  const fl=new THREE.Mesh(new THREE.CircleGeometry(R,48).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:tex,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));fl.position.y=0.05;g.add(fl);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(R+0.2,0.35,6,48).rotateX(Math.PI/2),mat('#8e7650'));rim.position.y=0.15;g.add(rim);
+  const wood=mat('#7a5233'),rope=mat('#d9c48a');
+  const N=52;
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2,px=Math.cos(a)*(R+0.5),pz=Math.sin(a)*(R+0.5);
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.2,1.7,6),wood);p.position.set(px,0.85,pz);g.add(p);
+    circles.push({x:ARENA.x+px,z:ARENA.z+pz,r:0.5});
+  }
+  [0.7,1.3].forEach(h=>{const t=new THREE.Mesh(new THREE.TorusGeometry(R+0.5,0.06,5,72).rotateX(Math.PI/2),rope);t.position.y=h;g.add(t);});
+  /* obor di empat penjuru */
+  [[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([dx,dz],i)=>{
+    const x=dx*(R+3.2)*0.707,z=dz*(R+3.2)*0.707;
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.3,3.2,8),mat('#5a4636'));post.position.set(x,1.6,z);g.add(post);
+    const bowl=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.3,0.4,8),mat('#3a3a44'));bowl.position.set(x,3.3,z);g.add(bowl);
+    const fire=new THREE.Mesh(new THREE.ConeGeometry(0.42,1.1,7),new THREE.MeshBasicMaterial({color:0xff9a2a}));fire.position.set(x,4.0,z);g.add(fire);
+    const inner=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.7,6),new THREE.MeshBasicMaterial({color:0xffe28a}));inner.position.set(x,3.85,z);g.add(inner);
+    circles.push({x:ARENA.x+x,z:ARENA.z+z,r:0.5});
+    arenaFires.push(fire,inner);
+  });
+  /* papan nama */
+  const lc=document.createElement('canvas');lc.width=512;lc.height=128;const lx=lc.getContext('2d');
+  lx.fillStyle='rgba(8,14,34,.85)';lx.fillRect(0,0,512,128);lx.strokeStyle='#6cd4ff';lx.lineWidth=6;lx.strokeRect(6,6,500,116);
+  lx.fillStyle='#ffffff';lx.font='800 54px Poppins,sans-serif';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('ARENA 1 vs 1',256,50);
+  lx.fillStyle='#ffd84d';lx.font='600 26px Poppins,sans-serif';lx.fillText('Menang lanjut, kalah antri',256,96);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(6,1.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc),side:THREE.DoubleSide}));sign.position.set(0,5.2,-(R+3.2));g.add(sign);
+  const sp1=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,6),wood),sp2=sp1.clone();sp1.position.set(-2.8,2.5,-(R+3.2));sp2.position.set(2.8,2.5,-(R+3.2));g.add(sp1,sp2);
+}
+const arenaFires=[];
+function updArena(){if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
+function duelMine(){if(!duel)return 0;if(duel.a&&duel.a.id===me.id)return 1;if(duel.b&&duel.b.id===me.id)return 2;return 0;}
+function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
+let duelWarnT=0;
+function duelBlock(){
+  if(duelCanFight())return false;
+  if(tAll-duelWarnT>1.5){duelWarnT=tAll;toast(duelMine()?'Tunggu hitungan mundur selesai':'Kamu penonton. Tunggu giliranmu masuk ring',1.6);}
+  return true;
+}
+function renderDuelBox(){
+  const el=$('duelBox');if(!duel||roomMode!=='duel'){el.innerHTML='';return;}
+  const nm=p=>p?esc(p.name)+(p.w>0?' <span class="w">'+p.w+'x menang</span>':''):'?';
+  let h='<div class="vs"><span>'+nm(duel.a)+'</span><i>VS</i><span>'+nm(duel.b)+'</span></div>';
+  const mine=duelMine();let q='';
+  if(mine)q='<span class="me">Kamu bertarung!</span>';
+  else{const i=duel.q.findIndex(x=>x.id===me.id);q=i>=0?'Antrianmu: <b>#'+(i+1)+'</b>':'';}
+  const names=duel.q.slice(0,5).map((x,i)=>(i+1)+'. '+esc(x.name)).join(' · ')+(duel.q.length>5?' +'+(duel.q.length-5):'');
+  h+='<div><span class="q">'+(names?'Antri: '+names:'Tidak ada antrian')+(q?' · '+q:'')+'</span></div>';
+  el.innerHTML=h;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function onDuel(m){
+  duel=m;duelAt=performance.now();
+  const prev=duelPrevSt;duelPrevSt=m.st;
+  renderDuelBox();
+  if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
+  if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
+  if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.win&&me.name===m.last.win)sfx.fanfare&&sfx.fanfare();}
+}
+let duelBigT=0;
+function duelBig(t,sub,ms){const el=$('duelBig');el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
+function updDuel(){
+  if(roomMode!=='duel')return;
+  const now=performance.now();
+  if(duelBigT&&now>duelBigT){$('duelBig').classList.remove('show');duelBigT=0;}
+  if(duel&&duel.st==='count'){
+    const rem=Math.max(0,duel.ms-(now-duelAt)),n=Math.ceil(rem/1000);
+    if(n>0&&n!==duelCntN){duelCntN=n;sfx.click&&sfx.click();}
+    $('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;
+  }else duelCntN=0;
+}
+let duelCntN=0;
 /* ---------- skenario pembuka: jalan FPS ke desa, ngobrol dengan warga ---------- */
 const INTRO_NPC=-999;
 const INTRO_LINES=[
