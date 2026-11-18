@@ -105,7 +105,7 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const ARENA = { x: 0, z: 48, ringR: 18, side: 10 };
+const ARENA = { x: 0, z: 48, ringR: 18, side: 10, height: 16 };
 const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 24, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
@@ -554,7 +554,8 @@ function doCast(room, p, slot, ax, ay, az) {
       break;
     }
     case 'beam': {
-      const len = tech.range || 28;
+      let len = tech.range || 28;
+      if (room.duel) { const ox = p.x - ARENA.x, oz = p.z - ARENA.z, bq = ox * fx + oz * fz, cq = ox * ox + oz * oz - ARENA.ringR * ARENA.ringR, disc = bq * bq - cq; if (disc >= 0) len = Math.min(len, Math.max(0, -bq + Math.sqrt(disc))); }
       broadcast(room, { t: 'fx', k: 'beam', id: p.id, fx: r2(fx), fz: r2(fz), len, c: tech.color });
       for (const v of victims(room)) {
         if (v === p || friendly(p.id, v)) continue;
@@ -833,7 +834,14 @@ function stepRoom(room, dt, t) {
     const br = pr.size ? 0.5 * pr.size : 0.15;
     const gy = Math.max(terrainH(pr.x, pr.z), terrainH(pr.x + pr.dx * br, pr.z + pr.dz * br));
     const ground = pr.y - br <= gy;
-    if (hit || ground) {
+    /* dinding dan langit-langit transparan arena: serangan meledak di dinding */
+    let wall = false;
+    if (room.duel && !hit && !ground) {
+      const wd = Math.hypot(pr.x - ARENA.x, pr.z - ARENA.z);
+      if (wd > ARENA.ringR - br * 0.5) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; }
+      else if (pr.y > ARENA.height) { wall = true; pr.y = ARENA.height; }
+    }
+    if (hit || ground || wall) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
       if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * 26, pr.dz * 26, { sx: -pr.dx, sz: -pr.dz, stun: pr.stun, hr: pr.hr || 1.35 });
       const bm = pr.boom || 0;
@@ -846,7 +854,7 @@ function stepRoom(room, dt, t) {
           hurt(room, v, pr.dmg * 0.6 * f, owner, dx / hl * 16 * f, dz / hl * 16 * f, { area: true, stun: pr.stun });
         }
       }
-      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(ground ? gy + 0.15 : pr.y), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0 });
+      broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(ground ? gy + 0.15 : pr.y), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0, wl: wall ? 1 : 0 });
       room.projs.splice(i, 1);
     } else if (pr.life <= 0) {
       broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1 });
@@ -857,7 +865,7 @@ function stepRoom(room, dt, t) {
   for (let i = room.orbs.length - 1; i >= 0; i--) {
     const o = room.orbs[i], owner = room.players.get(o.o);
     o.x += o.dx * o.sp * dt; o.y += o.dy * o.sp * dt; o.z += o.dz * o.sp * dt; o.life -= dt;
-    if (!owner || o.life <= 0) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
+    if (!owner || o.life <= 0 || (room.duel && (Math.hypot(o.x - ARENA.x, o.z - ARENA.z) > ARENA.ringR || o.y > ARENA.height))) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
     for (const v of victims(room)) {
       if (friendly(o.o, v)) continue;
       const dx = v.x - o.x, dy = v.y + 0.9 - o.y, dz = v.z - o.z;
@@ -1048,6 +1056,7 @@ function duelTick(room, t) {
     if (p.dead || t < (p.tpUntil || 0) + 150) continue;
     const dx = p.x - ARENA.x, dz = p.z - ARENA.z, dist = Math.hypot(dx, dz) || 0.01;
     const slot = d.a === p.id ? 'a' : (d.b === p.id ? 'b' : null);
+    if (slot && p.y > ARENA.height + 2) { teleportTo(p, p.x, p.z, p.fx, p.fz); continue; }
     if (slot && (d.st === 'fight' || d.st === 'count')) {
       if (d.st === 'count') { const sd = duelSide(slot); if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); }
       else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
@@ -2363,7 +2372,7 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const ARENA={x:0,z:48,ringR:18,side:10};
+const ARENA={x:0,z:48,ringR:18,side:10,h:16};
 const flats=[{x:ARENA.x,z:ARENA.z,r:24,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
@@ -2630,7 +2639,7 @@ function stepKind(){
 }
 function nearestFort(){let best=null,bd=FORT_RANGE-0.5;for(const f of forts){const d=Math.hypot(f.x-pos.x,f.z-pos.z);if(d<bd){bd=d;best=f;}}return best;}
 function updForts(dt){
-  updArena();updDuel();
+  updArena(dt);updDuel();
   for(const f of forts){
     f.flag.rotation.y=Math.sin(tAll*3+f.id)*0.25;
     const d=Math.hypot(f.x-pos.x,f.z-pos.z);f.lab.visible=d<34&&!inCave&&roomMode!=='duel';
@@ -3954,7 +3963,7 @@ function onMsg(m){
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
     case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
-    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
+    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'pong':{const r=performance.now()-m.ts;netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
@@ -4178,6 +4187,7 @@ function canMove(nx,nz,step,swim){
   return rise<=maxRise;
 }
 function resolve(){
+  if(roomMode==='duel'&&duel&&(duel.st==='fight'||duel.st==='count')&&duelMine()){const dx=pos.x-ARENA.x,dz=pos.z-ARENA.z,d=Math.hypot(dx,dz),lim=ARENA.ringR-0.7;if(d>lim){pos.x=ARENA.x+dx/d*lim;pos.z=ARENA.z+dz/d*lim;}if(pos.y>ARENA.h-1.2){pos.y=ARENA.h-1.2;if(vy>0)vy=0;}}
   for(const c of circles){const dx=pos.x-c.x,dz=pos.z-c.z,rr=c.r+PR,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||0.001;pos.x=c.x+dx/d*rr;pos.z=c.z+dz/d*rr;}}
   for(const p of platforms){if(pos.y>=p.top-0.35)continue;const dx=pos.x-p.x,dz=pos.z-p.z,rr=p.r+PR,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||0.001;pos.x=p.x+dx/d*rr;pos.z=p.z+dz/d*rr;}}
   for(const o of obbs){
@@ -4505,6 +4515,17 @@ function buildArena(){
     circles.push({x:ARENA.x+x,z:ARENA.z+z,r:0.5});
     arenaFires.push(fire,inner);
   });
+  /* dinding + langit-langit transparan (terlihat saat duel dimulai, lalu memudar) */
+  {
+    const wc=document.createElement('canvas');wc.width=256;wc.height=256;const w=wc.getContext('2d');
+    const gr=w.createLinearGradient(0,0,0,256);gr.addColorStop(0,'rgba(120,200,255,.05)');gr.addColorStop(0.5,'rgba(120,200,255,.3)');gr.addColorStop(1,'rgba(160,230,255,.7)');w.fillStyle=gr;w.fillRect(0,0,256,256);
+    w.strokeStyle='rgba(190,235,255,.85)';w.lineWidth=2;for(let i=0;i<=256;i+=32){w.beginPath();w.moveTo(i,0);w.lineTo(i,256);w.stroke();w.beginPath();w.moveTo(0,i);w.lineTo(256,i);w.stroke();}
+    const wt=new THREE.CanvasTexture(wc);wt.wrapS=wt.wrapT=THREE.RepeatWrapping;wt.repeat.set(18,5);
+    arenaWallMat=new THREE.MeshBasicMaterial({map:wt,color:0x7fd0ff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
+    const wall=new THREE.Mesh(new THREE.CylinderGeometry(R+0.2,R+0.2,ARENA.h,64,1,true),arenaWallMat);wall.position.y=ARENA.h/2;wall.visible=false;g.add(wall);
+    const cap=new THREE.Mesh(new THREE.CircleGeometry(R+0.2,48).rotateX(-Math.PI/2),arenaWallMat);cap.position.y=ARENA.h;cap.visible=false;g.add(cap);
+    arenaWallParts=[wall,cap];
+  }
   /* papan nama */
   const lc=document.createElement('canvas');lc.width=512;lc.height=128;const lx=lc.getContext('2d');
   lx.fillStyle='rgba(8,14,34,.85)';lx.fillRect(0,0,512,128);lx.strokeStyle='#6cd4ff';lx.lineWidth=6;lx.strokeRect(6,6,500,116);
@@ -4513,8 +4534,20 @@ function buildArena(){
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(6,1.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc),side:THREE.DoubleSide}));sign.position.set(0,5.2,-(R+3.2));g.add(sign);
   const sp1=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,6),wood),sp2=sp1.clone();sp1.position.set(-2.8,2.5,-(R+3.2));sp2.position.set(2.8,2.5,-(R+3.2));g.add(sp1,sp2);
 }
+let arenaWallMat=null,arenaWallParts=[],wallA=0,wallPulse=0,fightAt=0;
 const arenaFires=[];
-function updArena(){if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
+function updArena(dt){
+  if(arenaWallMat){
+    const sinceFight=(performance.now()-fightAt)/1000;
+    let tgt=0;
+    if(duel&&duel.st==='count')tgt=0.4;
+    else if(duel&&duel.st==='fight'&&sinceFight<1.6)tgt=0.4*Math.max(0,1-sinceFight/1.6);
+    wallPulse=Math.max(0,wallPulse-dt*2.2);
+    const goal=Math.max(tgt,wallPulse*0.5);
+    wallA+=(goal-wallA)*Math.min(1,dt*(goal>wallA?8:3));
+    arenaWallMat.opacity=wallA;arenaWallParts.forEach(m=>m.visible=wallA>0.012);
+  }
+  if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
 function duelMine(){if(!duel)return 0;if(duel.a&&duel.a.id===me.id)return 1;if(duel.b&&duel.b.id===me.id)return 2;return 0;}
 function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
 let duelWarnT=0;
@@ -4542,6 +4575,7 @@ function onDuel(m){
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
+  if(m.st==='fight'&&prev!=='fight')fightAt=performance.now();
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.win&&me.name===m.last.win)sfx.fanfare&&sfx.fanfare();}
 }
 let duelBigT=0;

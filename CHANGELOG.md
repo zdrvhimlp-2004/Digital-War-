@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Dinding dan langit-langit transparan di arena**: terlihat saat duel dimulai lalu memudar; serangan tidak keluar ring dan meledak di dinding.
 - **Tebasan tipis 3D**: jejak tabung bulan sabit yang meruncing (tebal di ujung depan, menipis ke belakang) dengan inti putih, menggantikan busur datar yang lebar.
 - **Menu Pengaturan: Tampilkan body fisika** (kerangka badan karakter 2D dan jangkauan tebasan).
 - **Elang menyerang sasaranmu**, bukan acak. **Menu pengaturan** (auto aim pedang, getar layar, efek kena, indikator jaringan), dan **damage pedang jadi 40** (2 kali lipat).
