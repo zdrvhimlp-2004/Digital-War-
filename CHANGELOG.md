@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Tebasan FPS** mengikuti arah + (atas/bawah) dan musuh hanya kena bila ada di arah itu; **dash** tanpa cooldown.
 - **Sembunyikan tombol**: tombol baru (ikon kotak-kotak) di kolom kiri, atau tekan `H`, menyembunyikan semua tombol (serang, lompat, slot teknik, buku, dll). Setelah kamera diputar sedikit, muncul tombol "Tampilkan tombol" di atas layar untuk mengembalikannya.
 - **Perbaikan visual**: z-fighting di bagian atas pintu dan kasur diperbaiki. Nama benteng hanya terlihat dalam jarak 34 unit (sebelumnya 150). Tombol silang buku teknik kini tepat di tengah lingkaran.
 - **Suara berjarak**: tiap jenis suara punya jarak dengar sendiri (tebasan dan pukulan sekitar 24-26 unit, ledakan 55, tanduk benteng 70), dengan penurunan volume lebih tajam dan batas 4 suara pelan per 150 ms.

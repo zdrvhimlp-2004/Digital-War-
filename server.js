@@ -416,7 +416,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   }
 }
 
-function doMelee(room, p, fx, fz) {
+function doMelee(room, p, fx, fz, ay) {
   const t = now();
   if (p.dead || t - p.atkAt < MELEE.cd - 60) return;
   if (p.guarding) setGuard(room, p, false);
@@ -426,8 +426,19 @@ function doMelee(room, p, fx, fz) {
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
     const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
-    if (d > MELEE.range || Math.abs(v.y - p.y) > 2.2) continue;
-    if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
+    if (ay !== undefined) {
+      /* mode FPS: kerucut 3D mengikuti arah + (atas/bawah) */
+      const dy = (v.y + 0.9) - (p.y + 1.45), d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d3 > MELEE.range + 0.6) continue;
+      if (d3 > 1.3) {
+        const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
+        const cs = (dx * fx * hl + dz * fz * hl + dy * ay) / d3;
+        if (cs < 0.8) continue;
+      }
+    } else {
+      if (d > MELEE.range || Math.abs(v.y - p.y) > 2.2) continue;
+      if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
+    }
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
     if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
       /* pedang beradu: keduanya terpental, tanpa damage */
@@ -457,8 +468,10 @@ function doCast(room, p, slot, ax, ay, az) {
   if (!tech) { p.slots[slot] = null; send(p.ws, { t: 'slotclear', slot }); return; }
   const t = now();
   if (t < p.stunUntil) return;
-  if ((p.cdUntil[code] || 0) > t + 120) return;
-  p.cdUntil[code] = t + tech.cd * 1000;
+  if (tech.kind !== 'dash') {            /* dash: tanpa cooldown */
+    if ((p.cdUntil[code] || 0) > t + 120) return;
+    p.cdUntil[code] = t + tech.cd * 1000;
+  }
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
   /* arah bidik 3D (ay = naik/turun) */
@@ -563,7 +576,8 @@ function doCast(room, p, slot, ax, ay, az) {
       break;
     }
     case 'dash': {
-      p.invuln = Math.max(p.invuln, t + 350);
+      if (t - (p.lastDash || 0) > 700) p.invuln = Math.max(p.invuln, t + 350);   /* spam dash tidak memberi kebal terus-menerus */
+      p.lastDash = t;
       broadcast(room, { t: 'fx', k: 'dash', id: p.id, fx: r2(fx), fz: r2(fz), pw: tech.speed, c: tech.color });
       break;
     }
@@ -976,7 +990,7 @@ function onMessage(ws, text) {
     }
     case 'atk': {
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
-      doMelee(room, p, r2(fx), r2(fz));
+      doMelee(room, p, r2(fx), r2(fz), m.fy === undefined ? undefined : num(m.fy, -0.95, 0.95, 0));
       break;
     }
     case 'cast': {
@@ -2637,16 +2651,16 @@ function updRings(dt){
 const slashGeo=new THREE.RingGeometry(0.7,2.3,28,1,-1.3,2.6).rotateX(-Math.PI/2);
 const slashGeo2=new THREE.RingGeometry(1.7,2.05,28,1,-1.15,2.3).rotateX(-Math.PI/2);
 const slashes=[];
-function slashFx(x,y,z,fx,fz,col,sc,flip){
+function slashFx(x,y,z,fx,fz,col,sc,flip,ay){
   const l=Math.hypot(fx,fz)||1;fx/=l;fz/=l;sc=sc||1;
-  const g=new THREE.Group();g.position.set(x+fx*0.3,y+1.15,z+fz*0.3);g.scale.setScalar(sc*1.4);
+  const g=new THREE.Group();const fp=ay!==undefined;g.position.set(x+fx*0.3,fp?y+1.4:y+1.15,z+fz*0.3);g.scale.setScalar(sc*1.4);if(fp){g.rotation.order='YZX';}
   const m1=new THREE.MeshBasicMaterial({color:col||0xffffff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
   const m2=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
-  const a=new THREE.Mesh(slashGeo,m1),b=new THREE.Mesh(slashGeo2,m2);a.rotation.x=b.rotation.x=0.25;
+  const a=new THREE.Mesh(slashGeo,m1),b=new THREE.Mesh(slashGeo2,m2);a.rotation.x=b.rotation.x=fp?(flip?-0.95:0.95):0.25;
   g.add(a,b);scene.add(g);
   const base=Math.atan2(-fz,fx),dir=flip?-1:1;
   slashes.push({g,m1,m2,t:0,base,dir});
-  g.rotation.y=base+dir*1.0;
+  g.rotation.y=base+dir*1.0;if(fp){const el=Math.asin(clamp(ay,-0.95,0.95));g.rotation.z=el;g.position.y+=ay*0.7;g.position.x+=fx*0.4;g.position.z+=fz*0.4;}
 }
 function updSlashes(dt){
   for(let i=slashes.length-1;i>=0;i--){
@@ -2890,6 +2904,11 @@ function doAttack(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||attackT>0||atkCool>0)return;
   if(sleeping)wakeUp();
   if(guarding)setGuard(false);
+  if(fps&&started){
+    const v=aimVec(),hl=Math.hypot(v.x,v.z)||1,ax=v.x/hl,az=v.z/hl;faceX=ax;faceZ=az;
+    attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
+    netSend({t:'atk',fx:+ax.toFixed(3),fz:+az.toFixed(3),fy:+v.y.toFixed(3)});return;
+  }
   const a=aim();faceX=a.x;faceZ=a.z;
   attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
   netSend({t:'atk',fx:a.x,fz:a.z});
@@ -2913,8 +2932,8 @@ function castSlot(i){
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
-  slotCd[i]=slotCdMax[i]=s.cd;
-  attackT=Math.max(attackT,0.32);
+  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?0:s.cd);
+  attackT=s.kind==='dash'?0:Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
 }
 
