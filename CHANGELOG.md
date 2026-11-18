@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Arena diperbesar 2 kali lipat luasnya** (radius 18 jadi 25, tinggi langit-langit 20) dan digeser sedikit ke selatan agar tidak menempel desa.
 - **Dinding dan langit-langit transparan di arena**: terlihat saat duel dimulai lalu memudar; serangan tidak keluar ring dan meledak di dinding.
 - **Tebasan tipis 3D**: jejak tabung bulan sabit yang meruncing (tebal di ujung depan, menipis ke belakang) dengan inti putih, menggantikan busur datar yang lebar.
 - **Menu Pengaturan: Tampilkan body fisika** (kerangka badan karakter 2D dan jangkauan tebasan).
