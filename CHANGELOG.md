@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Indikator jaringan** (ikon sinyal dan ping) di atas layar.
 - **Bola bisa ditebas** (hancur) dan **bola yang kena perisai dari depan dipantulkan balik** ke penembak.
 - **Musuh mengejar lebih jauh**: penyamun (34 unit, batas kejar 56), prajurit benteng (40 unit, batas 36), pengawal (30 unit).
 - **Tebasan FPS** mengikuti arah + (atas/bawah) dan musuh hanya kena bila ada di arah itu; **dash** tanpa cooldown.

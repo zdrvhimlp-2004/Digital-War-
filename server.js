@@ -1015,6 +1015,7 @@ function onMessage(ws, text) {
       p.m = clampN(m.m | 0, 0, 2); p.a = clampN(m.a | 0, 0, 2); p.sw = clampN(m.sw | 0, 0, 2);
       break;
     }
+    case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
     case 'atk': {
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
       doMelee(room, p, r2(fx), r2(fz), m.fy === undefined ? undefined : num(m.fy, -0.95, 0.95, 0));
@@ -1724,6 +1725,11 @@ body.playing .hudf{display:flex}
 #oxyBox small{display:block;text-align:center;font-size:11px;font-weight:700;text-shadow:0 1px 3px #000}
 #mini{cursor:pointer;position:fixed;left:max(10px,env(safe-area-inset-left));top:calc(max(10px,env(safe-area-inset-top)) + 52px);width:96px;height:96px;border-radius:50%;border:2px solid rgba(255,255,255,.65);box-shadow:0 2px 10px rgba(0,0,0,.3);pointer-events:auto;z-index:3}
 #roomTag{top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:12px;padding:4px 12px;white-space:nowrap}
+#net{top:max(10px,env(safe-area-inset-top));left:calc(50% - 62px);transform:translateX(-100%);font-size:12px;padding:4px 10px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+#net svg{width:16px;height:14px;display:block}
+#net.q4 .on{fill:#4de27a}#net.q3 .on{fill:#a6e04d}#net.q2 .on{fill:#ffd84d}#net.q1 .on{fill:#ff9a3c}#net.q0 .on{fill:#ff4d4d}
+#net .off{fill:rgba(255,255,255,.25)}
+#net.q0{color:#ff9d9d}
 #clock{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));font-size:12px;padding:4px 10px;right:calc(max(10px,env(safe-area-inset-right)) + 122px)}
 #sbBtn{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:34px;height:30px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;font-size:16px;z-index:4;cursor:pointer;padding:0}
 #fsBtn{position:fixed;top:max(8px,env(safe-area-inset-top));right:calc(max(10px,env(safe-area-inset-right)) + 40px);width:34px;height:30px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;font-size:17px;z-index:4;cursor:pointer;padding:0;line-height:1}
@@ -1919,7 +1925,7 @@ body.pickmode #mrow{grid-template-columns:1fr}
 #form .cbtn{display:block;margin:6px auto 0}
 @media (max-height:520px){#card{padding:14px 16px}#card h1{font-size:26px}#lore{min-height:110px;font-size:13px}.chr canvas{width:34px;height:49px}#chars{grid-template-columns:repeat(8,1fr)}}
 @media (max-width:700px) and (orientation:landscape){#hint{display:none}}
-@media (max-width:700px){body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 74px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{top:calc(max(10px,env(safe-area-inset-top)) + 40px);right:max(10px,env(safe-area-inset-right))}}
+@media (max-width:700px){#net{top:calc(max(10px,env(safe-area-inset-top)) + 106px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}body.playing #hint.hud{display:none!important}#roomTag{top:calc(max(10px,env(safe-area-inset-top)) + 74px);left:auto;right:max(10px,env(safe-area-inset-right));transform:none}#clock{top:calc(max(10px,env(safe-area-inset-top)) + 40px);right:max(10px,env(safe-area-inset-right))}}
 @media (pointer:coarse){body.playing #hint.hud{display:none!important}.key{display:none}#prompt{bottom:auto;top:40%}}
 
 #cine{display:none;position:fixed;inset:0;z-index:70;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
@@ -1962,6 +1968,7 @@ body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBt
 <div id="oxyBox" class="hud"><small>🫧 Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
 <canvas id="mini" class="hud" width="192" height="192"></canvas>
 <div id="roomTag" class="pill hud"></div>
+<div id="net" class="pill hud" title="Kualitas jaringan"></div>
 <div id="clock" class="pill hud">☀️ 09:00</div>
 <button id="bookBtn" class="hud off" aria-label="Buku teknik" title="Buku teknik (B)" data-ico="book"></button>
 <button id="fsBtn" class="hud" aria-label="Layar penuh" title="Layar penuh" data-ico="fs"></button>
@@ -3686,6 +3693,7 @@ function onMsg(m){
     case 'pr':addProj(m);if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
+    case 'pong':{const r=performance.now()-m.ts;netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
@@ -4276,6 +4284,24 @@ function updUiHide(){
 }
 $('uiBtn').addEventListener('click',()=>setUiHidden(true));$('uiBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('uiShow').addEventListener('click',e=>{e.stopPropagation();setUiHidden(false);});$('uiShow').addEventListener('pointerdown',e=>e.stopPropagation());
+
+/* ---------- indikator jaringan ---------- */
+let netRtt=-1,netLast=0,netPingT=0;
+function drawNet(){
+  const el=$('net');if(!el)return;
+  const lost=netLast&&performance.now()-netLast>6000;
+  let q,txt;
+  if(netRtt<0&&!lost){q=0;txt='...';}
+  else if(lost){q=0;txt='putus?';}
+  else{q=netRtt<70?4:netRtt<130?3:netRtt<220?2:1;txt=Math.round(netRtt)+' ms';}
+  let h='<svg viewBox="0 0 16 14">';
+  for(let i=0;i<4;i++){const bh=4+i*3;h+='<rect class="'+(i<q?'on':'off')+'" x="'+(i*4+0.5)+'" y="'+(14-bh)+'" width="3" height="'+bh+'" rx="0.8"/>';}
+  h+='</svg><span>'+txt+'</span>';
+  el.className='pill hud q'+q;el.innerHTML=h;
+  el.title=q>=3?'Jaringan bagus':q===2?'Jaringan lumayan':q===1?'Jaringan jelek':'Jaringan sangat jelek / terputus';
+}
+setInterval(()=>{if(!joined)return;netPingT=performance.now();netSend({t:'ping',ts:netPingT});drawNet();},2000);
+drawNet();
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
