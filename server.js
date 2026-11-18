@@ -1714,16 +1714,17 @@ body.playing .hudf{display:flex}
 .btn{position:fixed;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(10,16,32,.5);color:#fff;font-weight:800;font-size:22px;display:flex;align-items:center;justify-content:center;flex-direction:column;touch-action:none;cursor:pointer;z-index:3;font-family:inherit;padding:0;line-height:1}
 .btn small{font-size:10px;font-weight:700;opacity:.85;margin-top:2px}
 .btn.down{transform:scale(.92);background:rgba(255,255,255,.35)}
-#btnJump{width:62px;height:62px;right:calc(var(--s) + 18px);bottom:max(16px,env(safe-area-inset-bottom));font-size:20px}
-#btnAtk{width:54px;height:54px;right:calc(var(--s) + 88px);bottom:max(20px,env(safe-area-inset-bottom));background:rgba(180,40,50,.55);font-size:19px}
-#btnGuard{width:58px;height:58px;right:calc(var(--s) + 86px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 62px);background:rgba(40,90,170,.6);font-size:18px}
+#btnJump{width:62px;height:62px;right:calc(max(12px,env(safe-area-inset-right)) + 98px);bottom:max(18px,env(safe-area-inset-bottom));font-size:20px}
+#btnAtk{width:86px;height:86px;right:max(12px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));background:rgba(190,45,55,.7);font-size:26px}
+#btnAtk svg,#btnAtk i{width:38px;height:38px}
+#btnGuard{width:58px;height:58px;right:calc(max(12px,env(safe-area-inset-right)) + 100px);bottom:calc(max(18px,env(safe-area-inset-bottom)) + 72px);background:rgba(40,90,170,.6);font-size:18px}
 #btnGuard.on{background:rgba(110,200,255,.85);box-shadow:0 0 18px rgba(120,210,255,.9);color:#04223a}
 #btnGuard.broken{opacity:.45}
-#btnAct{width:44px;height:44px;right:calc(var(--s) + 150px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 10px);display:none;font-size:18px}
+#btnAct{width:48px;height:48px;right:calc(max(12px,env(safe-area-inset-right)) + 172px);bottom:calc(max(18px,env(safe-area-inset-bottom)) + 74px);display:none;font-size:18px}
 #btnAct.on{display:flex;background:rgba(255,200,60,.85);color:#3a2a00;box-shadow:0 0 22px rgba(255,210,80,.9)}
-#btnDive{width:58px;height:58px;right:calc(var(--s) + 20px);bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);display:none;background:rgba(30,120,200,.6);font-size:18px}
+#btnDive{width:58px;height:58px;right:calc(max(12px,env(safe-area-inset-right)) + 172px);bottom:max(18px,env(safe-area-inset-bottom));display:none;background:rgba(30,120,200,.6);font-size:18px}
 #btnDive.on{display:flex}
-#btnSnipe{width:58px;height:58px;right:calc(var(--s) + 156px);bottom:calc(max(20px,env(safe-area-inset-bottom)) + 66px);display:none;background:rgba(150,105,15,.7);font-size:18px}
+#btnSnipe{width:58px;height:58px;right:calc(max(12px,env(safe-area-inset-right)) + 236px);bottom:max(18px,env(safe-area-inset-bottom));display:none;background:rgba(150,105,15,.7);font-size:18px}
 #btnSnipe.on{display:flex}
 #btnSnipe i{width:24px;height:24px}
 #btnSnipe.broken{opacity:.45}
@@ -1748,16 +1749,11 @@ body.playing .hudf{display:flex}
 .mi svg{width:100%;height:100%}
 .clki{width:14px;height:14px;vertical-align:-2px}
 @media (orientation:portrait){
-#btnJump{right:12px;bottom:max(22px,env(safe-area-inset-bottom))}
-#btnAtk{right:82px;bottom:max(26px,env(safe-area-inset-bottom))}
-#btnGuard{right:80px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 84px)}
-#btnDive{right:14px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 88px)}
-#btnSnipe{right:146px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 88px)}
-#btnAct{right:146px;bottom:calc(max(22px,env(safe-area-inset-bottom)) + 30px)}
 body #slots{top:42%}
 }
 #slots{position:fixed;right:max(8px,env(safe-area-inset-right));top:50%;transform:translateY(-46%);display:none;flex-direction:column;gap:6px;z-index:3}
 body.playing #slots{display:flex}
+@media (orientation:landscape) and (max-height:520px){:root{--s:clamp(38px,7.4vh,52px)}#slots{top:62px;transform:none}#btnAtk{width:78px;height:78px}#btnAtk svg,#btnAtk i{width:32px;height:32px}#btnJump{right:calc(max(12px,env(safe-area-inset-right)) + 90px)}#btnGuard{right:calc(max(12px,env(safe-area-inset-right)) + 92px)}#btnAct,#btnDive{right:calc(max(12px,env(safe-area-inset-right)) + 164px)}#btnSnipe{right:calc(max(12px,env(safe-area-inset-right)) + 228px)}}
 .slot{position:relative;width:var(--s);height:var(--s);border-radius:14px;border:2px solid rgba(255,255,255,.6);background:rgba(10,16,32,.55);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;touch-action:none;font-family:inherit;padding:0}
 .slot .k{position:absolute;left:4px;top:1px;font-size:10px;font-weight:800;opacity:.75}
 .slot .ic{font-size:calc(var(--s)*.42);line-height:1}
@@ -1799,6 +1795,9 @@ body.playing #chatFeed.hud{display:flex!important}
 #chatFeed b,#chatList b{color:#4db8ff}
 #chatPanel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:70px;width:min(92vw,360px);max-height:52vh;display:none;flex-direction:column;background:rgba(5,10,22,.94);border:2px solid #1c3a66;border-radius:16px;z-index:12;touch-action:manipulation;-webkit-user-select:text;user-select:text}
 #chatPanel.show{display:flex}
+#chatHead{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 6px 14px;border-bottom:1px solid #1c3a66;font-weight:700;font-size:13px;color:#9fd0ff}
+#chatX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#chatX svg{width:16px;height:16px}
 #chatList{overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.45;min-height:120px;max-height:36vh;word-break:break-word}
 #chatList div{margin-bottom:3px}
 #chatForm{display:flex;gap:6px;padding:8px;border-top:1px solid #1c3a66}
@@ -1900,7 +1899,7 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
 </div>
 <div id="chatFeed" class="hud"></div>
-<div id="chatPanel"><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
+<div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
@@ -3357,6 +3356,7 @@ function openChat(){if(!started||modalOpen||bookOpen||chatOpen)return;chatOpen=t
 function closeChat(){chatOpen=false;$('chatPanel').classList.remove('show');$('chatIn').blur();canvas.focus();}
 $('chatBtn').addEventListener('click',()=>{if(chatOpen)closeChat();else openChat();});
 $('chatBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('chatX').addEventListener('click',e=>{e.stopPropagation();closeChat();});$('chatX').addEventListener('pointerdown',e=>e.stopPropagation());
 $('chatForm').addEventListener('submit',e=>{e.preventDefault();const t=$('chatIn').value.trim();if(t)netSend({t:'chat',text:t});sfx.click();$('chatIn').value='';});
 $('chatIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')closeChat();});
 $('chatIn').addEventListener('keyup',e=>e.stopPropagation());
@@ -3962,7 +3962,7 @@ function update(dt){
   for(const h of houses){const dx=pos.x-h.x,dz=pos.z-h.z,lx=dx*h.c-dz*h.s,lz=dx*h.s+dz*h.c;if(Math.abs(lx)<3.9&&Math.abs(lz)<3.4&&pos.y<2.6){insideHouse=h;break;}}
   for(const h of houses){
     const occ=h!==insideHouse&&occludes(h);
-    const rt=h===insideHouse?0:(occ?0.18:1),wt=(occ||h===insideHouse)?0.3:1;
+    const solid=fps&&started;const rt=solid?1:(h===insideHouse?0:(occ?0.18:1)),wt=solid?1:((occ||h===insideHouse)?0.3:1);
     h.roofOp+=(rt-h.roofOp)*damp(9,dt);h.wallOp+=(wt-h.wallOp)*damp(9,dt);
     const vis=h.roofOp>0.03;h.roofParts.forEach(m=>m.visible=vis);
     h.roofMats.forEach(m=>{m.opacity=h.roofOp;m.transparent=h.roofOp<0.99;});
