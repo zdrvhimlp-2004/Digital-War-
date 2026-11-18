@@ -284,7 +284,7 @@ function newRoomCode() {
 function makeRuntime(r) {
   return {
     code: r.code, name: r.name, max: r.max, created: r.created,
-    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false, pick: r.pick === true,
+    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true,
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
@@ -419,6 +419,27 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   }
 }
 
+const MELEE_CONE = 0.64;   /* kerucut FPS: cos 50 derajat */
+function vName(v) { return v.name || (v.isSol ? (v.bandit ? 'Penyamun' : 'Prajurit') : (v.isMob ? 'Elang' : '?')); }
+/* apakah tebasan p (arah fx,fz, ay = arah vertikal bila FPS) mengenai v? */
+function meleeCheck(p, v, fx, fz, ay) {
+  const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
+  if (ay !== undefined) {
+    /* mode FPS: kerucut 3D mengikuti arah + (atas/bawah) */
+    const dy = (v.y + 0.9) - (p.y + 1.45), d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d3 > MELEE.range + 0.6) return { ok: false, d: d3, why: 'terlalu jauh (' + d3.toFixed(1) + ' > ' + (MELEE.range + 0.6).toFixed(1) + ')' };
+    if (d3 > 1.3) {
+      const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
+      const cs = (dx * fx * hl + dz * fz * hl + dy * ay) / d3;
+      if (cs < MELEE_CONE) return { ok: false, d: d3, why: 'di luar arah + (' + Math.round(Math.acos(Math.min(1, cs)) * 180 / Math.PI) + '° dari + , batas 50°)' };
+    }
+    return { ok: true, d, dx, dz, d3 };
+  }
+  if (d > MELEE.range) return { ok: false, d, why: 'terlalu jauh (' + d.toFixed(1) + ' > ' + MELEE.range + ')' };
+  if (Math.abs(v.y - p.y) > 2.8) return { ok: false, d, why: 'selisih tinggi ' + Math.abs(v.y - p.y).toFixed(1) + ' (batas 2.8)' };
+  if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) return { ok: false, d, why: 'ada di belakangmu' };
+  return { ok: true, d, dx, dz };
+}
 function doMelee(room, p, fx, fz, ay) {
   const t = now();
   if (p.dead || t - p.atkAt < MELEE.cd - 60) return;
@@ -426,31 +447,26 @@ function doMelee(room, p, fx, fz, ay) {
   if (p.sleeping) setSleep(room, p, false);
   p.atkAt = t; p.atkFx = fx; p.atkFz = fz;
   broadcast(room, { t: 'atk', id: p.id, fx, fz });
+  let landed = 0, nearMiss = null;
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
-    const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
-    if (ay !== undefined) {
-      /* mode FPS: kerucut 3D mengikuti arah + (atas/bawah) */
-      const dy = (v.y + 0.9) - (p.y + 1.45), d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      if (d3 > MELEE.range + 0.6) continue;
-      if (d3 > 1.3) {
-        const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
-        const cs = (dx * fx * hl + dz * fz * hl + dy * ay) / d3;
-        if (cs < 0.8) continue;
-      }
-    } else {
-      if (d > MELEE.range || Math.abs(v.y - p.y) > 2.8) continue;
-      if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) continue;
-    }
+    const ck = meleeCheck(p, v, fx, fz, ay);
+    if (!ck.ok) { if (room.debug && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
+    const dx = ck.dx, dz = ck.dz, d = ck.d;
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
     if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
       /* pedang beradu: keduanya terpental, tanpa damage */
       broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8), az: r2(-nz * MELEE.knock * 0.8), bx: r2(nx * MELEE.knock * 0.8), bz: r2(nz * MELEE.knock * 0.8) });
       v.atkAt = 0;
+      if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
+      landed++;
       continue;
     }
+    landed++;
+    if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
     hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
   }
+  if (room.debug && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
   /* tebasan menghancurkan bola yang melintas di depan */
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
@@ -952,13 +968,14 @@ function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, last: null }; }
+function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null }; }
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && (d.a === p.id || d.b === p.id); }
 function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
 function duelState(room) {
   const d = room.duel;
   const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
-  return { t: 'duel', st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+  const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
+  return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
 }
 function duelBroadcast(room) { broadcast(room, duelState(room)); }
 function teleportTo(p, x, z, fx, fz) {
@@ -998,6 +1015,7 @@ function duelTick(room, t) {
       const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
       if (winner) {
         d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
+        d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
         d.last = { win: winner.name, lose: loser ? loser.name : '', w: d.streak[winner.id] };
         if (winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
       } else d.last = null;
@@ -1084,7 +1102,7 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
+    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
     forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
     players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
@@ -1352,7 +1370,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1397,7 +1415,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, mode: b.mode === 'duel' ? 'duel' : 'world' };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : 'world' };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1410,8 +1428,9 @@ async function handleAdmin(req, res, pathname) {
       if (b.name !== undefined) r.name = cleanName(b.name, 30) || r.name;
       if (b.voice !== undefined) r.voice = !!b.voice;
       if (b.pick !== undefined) r.pick = !!b.pick;
+      if (b.debug !== undefined) r.debug = !!b.debug;
       if (b.max !== undefined) { const mx = Math.round(Number(b.max)); if (!isFinite(mx) || mx < 2 || mx > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT }); r.max = mx; }
-      const rt = rooms.get(r.code); if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; }
+      const rt = rooms.get(r.code); if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; rt.debug = r.debug === true; }
       saveDBNow();
       return json(res, 200, { room: roomView(r) });
     }
@@ -1428,6 +1447,36 @@ async function handleAdmin(req, res, pathname) {
     if (b.showBook !== undefined) DB.settings.showBook = !!b.showBook;
     saveDBNow();
     return json(res, 200, { showBook: !!DB.settings.showBook });
+  }
+  /* cadangan data (tanpa password admin) */
+  if (pathname === '/api/admin/backup' && method === 'GET') {
+    return json(res, 200, { app: 'digital-war', version: 1, at: new Date().toISOString(), rooms: DB.rooms, techniques: DB.techniques, settings: DB.settings });
+  }
+  if (pathname === '/api/admin/restore' && method === 'POST') {
+    const b = await readBody(req, 1024 * 1024);
+    if (!b || b.app !== 'digital-war' || !Array.isArray(b.rooms) || !Array.isArray(b.techniques)) return json(res, 400, { error: 'File cadangan tidak dikenali' });
+    if (b.rooms.length > 200 || b.techniques.length > 100) return json(res, 400, { error: 'Isi cadangan terlalu banyak' });
+    const techs = [], seenT = new Set();
+    for (const t of b.techniques) {
+      const st = sanitizeTech(t);
+      if (!st || st.error) return json(res, 400, { error: 'Teknik di cadangan tidak valid' + (st && st.error ? ': ' + st.error : '') });
+      if (seenT.has(st.code)) return json(res, 400, { error: 'Kode teknik dobel di cadangan: ' + st.code });
+      seenT.add(st.code); techs.push(st);
+    }
+    const rs = [], seenR = new Set();
+    for (const r of b.rooms) {
+      if (!r || typeof r.code !== 'string' || !/^[A-Z0-9]{4,10}$/.test(r.code) || seenR.has(r.code)) return json(res, 400, { error: 'Data room di cadangan tidak valid' });
+      const max = Math.round(Number(r.max));
+      if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
+      seenR.add(r.code);
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : 'world' });
+    }
+    for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
+    DB.rooms = rs; DB.techniques = techs;
+    DB.settings = Object.assign({ showBook: true }, { showBook: !(b.settings && b.settings.showBook === false) });
+    for (const r of DB.rooms) rooms.set(r.code, newRuntime(r));
+    saveDBNow();
+    return json(res, 200, { ok: true, rooms: DB.rooms.length, techniques: DB.techniques.length });
   }
   if (pathname === '/api/admin/techniques' && method === 'GET') return json(res, 200, { techniques: DB.techniques });
   if (pathname === '/api/admin/techniques' && method === 'PUT') {
@@ -1644,6 +1693,7 @@ button:disabled{opacity:.5}
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
       <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
+      <label class="chk"><input type="checkbox" id="rdebug"> Mode uji hit: tampilkan alasan serangan meleset di layar penyerang (untuk mencari bug)</label>
       <div id="rmsg"></div>
       <button class="pri" id="rcreate" style="margin-top:12px">Buat room</button>
     </div>
@@ -1669,6 +1719,15 @@ button:disabled{opacity:.5}
       <label>Ulangi password baru</label><input id="pnew2" type="password" autocomplete="new-password">
       <div id="pmsg"></div>
       <button class="pri" id="pgo" style="margin-top:12px">Simpan password</button>
+    </div>
+    <div class="card">
+      <h2>Cadangan data</h2>
+      <p class="hint">Unduh semua room dan buku teknik (tanpa password admin) ke satu file. Pulihkan akan mengganti semua room dan teknik yang ada, dan mengeluarkan pemain yang sedang online.</p>
+      <div id="bmsg"></div>
+      <button class="pri" id="bdl" style="margin-top:10px">Unduh cadangan</button>
+      <label>Pulihkan dari file cadangan</label>
+      <input id="bfile" type="file" accept="application/json,.json">
+      <button class="bad" id="brs" style="margin-top:10px">Pulihkan</button>
     </div>
   </div>
 </div>
@@ -1727,7 +1786,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,mode:$('rmode').value}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -1740,7 +1799,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA DUEL 1v1':' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA DUEL 1v1':' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -1751,11 +1810,12 @@ async function loadRooms(){
     const mx=document.createElement('input');mx.type='number';mx.min=2;mx.max=100;mx.value=r.max;mx.dataset.edit=1;mx.style.maxWidth='110px';
     const vl=document.createElement('label');vl.className='chk';vl.style.gridColumn='1 / -1';vl.style.margin='0';const vc=document.createElement('input');vc.type='checkbox';vc.checked=r.voice!==false;vc.dataset.edit=1;vl.appendChild(vc);vl.appendChild(document.createTextNode('Voice chat aktif'));
     const pl2=document.createElement('label');pl2.className='chk';pl2.style.gridColumn='1 / -1';pl2.style.margin='0';const pc=document.createElement('input');pc.type='checkbox';pc.checked=r.pick===true;pc.dataset.edit=1;pl2.appendChild(pc);pl2.appendChild(document.createTextNode('Mode pilih teknik (tanpa ketik kode)'));
+    const dgl=document.createElement('label');dgl.className='chk';dgl.style.gridColumn='1 / -1';dgl.style.margin='0';const dgc=document.createElement('input');dgc.type='checkbox';dgc.checked=r.debug===true;dgc.dataset.edit=1;dgl.appendChild(dgc);dgl.appendChild(document.createTextNode('Mode uji hit (alasan meleset tampil di layar)'));
     const sv=document.createElement('button');sv.textContent='Ubah';
-    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked}});sv.textContent='Tersimpan ✓';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
+    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked}});sv.textContent='Tersimpan ✓';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
     const dl=document.createElement('button');dl.className='bad';dl.textContent='Hapus';
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
-    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
+    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
     if(r.players.length){const p=document.createElement('div');p.className='pl';p.appendChild(document.createTextNode('Online: '));r.players.forEach(n=>{const b=document.createElement('b');b.textContent=n;p.appendChild(b);});d.appendChild(p);}
     box.appendChild(d);
   });
@@ -1789,6 +1849,26 @@ $('techSave').addEventListener('click',async()=>{try{const j=await api('/techniq
 $('techReset').addEventListener('click',async()=>{if(!confirm('Kembalikan semua teknik ke default?'))return;try{const j=await api('/techniques/reset',{method:'POST'});techs=j.techniques;renderTech();msg($('tmsg'),'Dikembalikan ke default','ok');}catch(e){msg($('tmsg'),e.message);}});
 
 /* account */
+$('bdl').addEventListener('click',async()=>{
+  try{
+    const j=await api('/backup');
+    const blob=new Blob([JSON.stringify(j,null,2)],{type:'application/json'});
+    const u=URL.createObjectURL(blob);const el=document.createElement('a');
+    const d=new Date();const pad=n=>String(n).padStart(2,'0');
+    el.href=u;el.download='digital-war-cadangan-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+'.json';
+    document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+    msg($('bmsg'),'Cadangan diunduh: '+j.rooms.length+' room, '+j.techniques.length+' teknik','ok');
+  }catch(e){msg($('bmsg'),e.message,'err');}
+});
+$('brs').addEventListener('click',async()=>{
+  const f=$('bfile').files[0];if(!f){msg($('bmsg'),'Pilih file cadangan dulu','err');return;}
+  if(!confirm('Pulihkan dari "'+f.name+'"? Semua room dan teknik sekarang akan diganti dan pemain online dikeluarkan.'))return;
+  try{
+    const txt=await f.text();let j;try{j=JSON.parse(txt);}catch(e){throw new Error('File bukan JSON yang valid');}
+    const r=await api('/restore',{method:'POST',body:j});
+    msg($('bmsg'),'Dipulihkan: '+r.rooms+' room, '+r.techniques+' teknik','ok');loadRooms();
+  }catch(e){msg($('bmsg'),e.message,'err');}
+});
 $('pgo').addEventListener('click',async()=>{
   if($('pnew').value!==$('pnew2').value){msg($('pmsg'),'Password baru tidak sama');return;}
   try{await api('/password',{method:'POST',body:{current:$('pcur').value,next:$('pnew').value}});$('pcur').value=$('pnew').value=$('pnew2').value='';msg($('pmsg'),'Password diganti. Sesi lain dikeluarkan.','ok');$('warnPw').classList.add('hidden');}
@@ -2062,6 +2142,19 @@ body.playing.duel #duelBox{display:block}
 #duelBig b{display:block;font-size:min(22vw,120px);line-height:1}
 #duelBig small{display:block;font-size:min(5vw,22px);font-weight:600;margin-top:6px;color:#cfe3ff}
 body.cine #duelBox,body.cine #duelBig{display:none!important}
+#dbgBox{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:96px;align-items:center;z-index:6;pointer-events:none;flex-direction:column;gap:4px;font-family:Poppins,system-ui,sans-serif;max-width:min(70vw,420px)}
+body.playing.dbg #dbgBox{display:flex}
+#dbgBox div{background:rgba(8,14,34,.82);border-left:4px solid #ff6a6a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;color:#ffe3e3;animation:dbgf 4s forwards}
+#dbgBox div.ok{border-left-color:#4de27a;color:#dcffe8}
+@keyframes dbgf{0%,80%{opacity:1}100%{opacity:0}}
+#duelHelp{display:none;position:fixed;inset:0;z-index:60;background:rgba(2,6,18,.78);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
+#duelHelp.show{display:flex}
+#duelHelp .card{width:min(92vw,460px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:18px 20px 16px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#duelHelp h3{margin:0 0 10px;font-size:18px;color:#6cd4ff}
+#duelHelp ol{margin:0;padding-left:20px;font-size:14px;line-height:1.55;color:#dfeaff}
+#duelHelp li{margin-bottom:8px}
+#duelHelp b{color:#ffd84d}
+#duelHelp button{margin-top:6px;width:100%;border:0;border-radius:12px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font:700 15px Poppins,system-ui,sans-serif;padding:11px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -2095,7 +2188,8 @@ body.cine #duelBox,body.cine #duelBig{display:none!important}
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
-<div id="duelBox"></div><div id="duelBig"></div>
+<div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
+<div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
@@ -3797,7 +3891,8 @@ function onMsg(m){
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
       roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
-      if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);renderBoard();break;}
+      document.body.classList.toggle('dbg',!!(m.room&&m.room.debug));
+      if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
@@ -3826,6 +3921,7 @@ function onMsg(m){
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
     case 'die':onDie(m);break;
     case 'duel':onDuel(m);break;
+    case 'dbg':addDbg(m);break;
     case 'tp':{pos.set(m.x,terrainH(m.x,m.z),m.z);vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;faceX=m.fx;faceZ=m.fz;cam.yaw=cam.yawT=Math.atan2(-m.fx,-m.fz);cam.tx=pos.x;cam.tz=pos.z;break;}
     case 'resp':{
       if(m.id===me.id){dead=false;$('ko').style.display='none';setHp(MAXHP);{const f=findFree(m.x,m.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;invuln=2;stunT=0;gbT=0;myRegenT=0;hasteT=0;sfx.respawn();toast('Kembali bertarung!',1.6);}
@@ -4393,6 +4489,7 @@ function renderDuelBox(){
   if(mine)q='<span class="me">Kamu bertarung!</span>';
   else{const i=duel.q.findIndex(x=>x.id===me.id);q=i>=0?'Antrianmu: <b>#'+(i+1)+'</b>':'';}
   const names=duel.q.slice(0,5).map((x,i)=>(i+1)+'. '+esc(x.name)).join(' · ')+(duel.q.length>5?' +'+(duel.q.length-5):'');
+  if(duel.top&&duel.top.length)h+='<div><span class="q">Juara: '+duel.top.map(x=>esc(x.name)+' '+x.n+'x'+(x.best>1?' (terbaik '+x.best+' beruntun)':'')).join(' · ')+'</span></div>';
   h+='<div><span class="q">'+(names?'Antri: '+names:'Tidak ada antrian')+(q?' · '+q:'')+'</span></div>';
   el.innerHTML=h;
 }
@@ -4418,6 +4515,20 @@ function updDuel(){
   }else duelCntN=0;
 }
 let duelCntN=0;
+
+/* ---------- uji hit (admin) + bantuan arena ---------- */
+function addDbg(m){
+  const box=$('dbgBox');if(!box)return;
+  const d=document.createElement('div');if(m.ok)d.className='ok';d.textContent=m.msg;box.appendChild(d);
+  while(box.children.length>4)box.removeChild(box.firstChild);
+  setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},4000);
+}
+function showDuelHelp(){
+  let seen=false;try{seen=localStorage.getItem('dw_duel_help')==='1';}catch(e){}
+  if(seen)return;$('duelHelp').classList.add('show');
+}
+$('duelHelpOk').addEventListener('click',()=>{$('duelHelp').classList.remove('show');try{localStorage.setItem('dw_duel_help','1');}catch(e){}});
+$('duelHelp').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ---------- skenario pembuka: jalan FPS ke desa, ngobrol dengan warga ---------- */
 const INTRO_NPC=-999;
 const INTRO_LINES=[
