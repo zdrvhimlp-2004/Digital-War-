@@ -85,7 +85,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 10;
+const TECH_VERSION = 11;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -110,9 +110,10 @@ const DEFAULT_TECHS = [
   { code: '777', name: 'Tembok Kode', kind: 'wall', emoji: '🧱', color: '#b8a27a', hp: 120, dur: 6, len: 8, cd: 20 },
   { code: '8181', name: 'Loncat Tinggi', kind: 'jump', emoji: '🦘', color: '#9dffb0', power: 30, cd: 12 },
   { code: '2929', name: 'Kedip Teleport', kind: 'blink', emoji: '🌀', color: '#c79bff', range: 14, cd: 16 },
+  { code: '6464', name: 'Bola Pengejar', kind: 'homing', emoji: '🧿', color: '#ff7ad9', damage: 30, cd: 10, count: 2, life: 7, size: 1.3, boom: 2.6, turn: 2.5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 6 }
 ];
-const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink'];
+const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing'];
 
 /* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
 function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
@@ -202,6 +203,7 @@ function loadDB() {
       if (ver < 10) {   /* Bola Biru: cooldown 20 dtk, satu hantaman 150 (5x Byte Bolt) */
         for (const t of j.techniques) if (t.code === '858' && t.kind === 'orb') { if ([3, 5].includes(Number(t.damage))) t.damage = 150; if ([8, 2].includes(Number(t.cd))) t.cd = 20; }
       }
+      if (ver < 11) for (const d of DEFAULT_TECHS) if (d.code === '6464' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -279,6 +281,9 @@ function sanitizeTech(t) {
     out.dur = num(t.dur, 3, 300, 10); out.speed = num(t.speed, 6, 60, 24);
   } else if (kind === 'orb') {
     out.damage = num(t.damage, 0, 300, 150); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
+  } else if (kind === 'homing') {
+    out.damage = num(t.damage, 0, 100, 30); out.count = Math.round(num(t.count, 1, 4, 2)); out.life = num(t.life, 1, 10, 7);
+    out.size = num(t.size, 0.5, 3, 1.3); out.boom = num(t.boom, 0, 8, 2.6); out.turn = num(t.turn, 0.5, 6, 2.5);
   } else if (kind === 'wall') {
     out.hp = num(t.hp, 10, 500, 120); out.dur = num(t.dur, 2, 15, 6); out.len = num(t.len, 3, 16, 8);
   } else if (kind === 'jump') {
@@ -308,6 +313,7 @@ function techDesc(t) {
     case 'regen': return 'Pulih ' + t.damage + ' HP selama ' + t.dur + ' dtk';
     case 'ride': return 'Tunggangi elang terbang ' + t.dur + ' dtk (Lompat naik, Selam turun)';
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
+    case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
     case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, memblokir bola & tebasan angin (bisa dilompati)';
     case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
     case 'blink': return 'Teleport ' + t.range + ' m ke depan';
@@ -640,6 +646,17 @@ function doCast(room, p, slot, ax, ay, az) {
       }
       break;
     }
+    case 'homing': {
+      const n = tech.count || 2;
+      for (let i = 0; i < n; i++) {
+        const ang = (i - (n - 1) / 2) * 0.7, cs = Math.cos(ang), sn = Math.sin(ang);
+        const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs, size = tech.size || 1.3;
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by, dz, sp: BALL_SPEED, life: tech.life || 7, dmg: tech.damage, stun: 0, c: tech.color, hr: 0.9 + 0.55 * size, boom: tech.boom == null ? 2.6 : tech.boom, size, grav: 0, home: tech.turn || 2.5 };
+        room.projs.push(pr);
+        broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(pr.dy), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
+      }
+      break;
+    }
     case 'orb': {
       const r = tech.radius || 5.5;
       const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: BALL_SPEED, life: (tech.life || 4) * (tech.speed || 11) / BALL_SPEED, r, dmg: tech.damage, c: tech.color, hit: new Map() };
@@ -956,6 +973,17 @@ function stepRoom(room, dt, t) {
   }
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
+    if (pr.home) {   /* bola pengejar: membelok ke musuh terdekat */
+      let tg = null, bd = 45;
+      for (const v of victims(room)) { if (friendly(pr.o, v) || v.isMob) continue; const dd = Math.hypot(v.x - pr.x, v.y + 0.9 - pr.y, v.z - pr.z); if (dd < bd) { bd = dd; tg = v; } }
+      if (tg) {
+        const ex = tg.x - pr.x, ey = tg.y + 0.9 - pr.y, ez = tg.z - pr.z, el = Math.hypot(ex, ey, ez) || 1, k = Math.min(1, pr.home * dt);
+        let nx = pr.dx + (ex / el - pr.dx) * k, ny = (pr.dy || 0) + (ey / el - (pr.dy || 0)) * k, nz = pr.dz + (ez / el - pr.dz) * k;
+        const nl = Math.hypot(nx, ny, nz) || 1; pr.dx = nx / nl; pr.dy = ny / nl; pr.dz = nz / nl;
+      }
+      pr.hn = (pr.hn || 0) + 1;
+      if (pr.hn % 3 === 0) broadcast(room, { t: 'prd', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(pr.dx), dy: r2(pr.dy), dz: r2(pr.dz) });
+    }
     if (pr.grav) pr.dy -= pr.grav / Math.max(1, pr.sp) * dt;
     pr.x += pr.dx * pr.sp * dt; pr.y += (pr.dy || 0) * pr.sp * dt; pr.z += pr.dz * pr.sp * dt; pr.life -= dt;
     {
@@ -2124,7 +2152,7 @@ button:disabled{opacity:.5}
 const $=id=>document.getElementById(id);
 let token=null;try{token=localStorage.getItem('dw_admin')}catch(e){}
 let techs=[],pollT=null;
-const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)',wall:'Dinding (wall)',jump:'Loncat tinggi (jump)',blink:'Teleport (blink)'};
+const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)',wall:'Dinding (wall)',jump:'Loncat tinggi (jump)',blink:'Teleport (blink)',homing:'Bola pengejar (homing)'};
 const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
   orb:[['damage','Damage (sekali hantam)'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
@@ -2141,7 +2169,8 @@ const FIELDS={ // kind -> [field,label]
   dash:[['speed','Daya lesat'],['cd','Cooldown (dtk)']],
   wall:[['hp','Kekuatan dinding (HP)'],['cd','Cooldown (dtk)'],['dur','Lama bertahan (dtk)'],['len','Lebar dinding (m)']],
   jump:[['power','Daya lompat'],['cd','Cooldown (dtk)']],
-  blink:[['range','Jarak teleport (m)'],['cd','Cooldown (dtk)']]
+  blink:[['range','Jarak teleport (m)'],['cd','Cooldown (dtk)']],
+  homing:[['damage','Damage per bola'],['cd','Cooldown (dtk)'],['count','Jumlah bola'],['life','Lama mengejar (dtk)'],['size','Ukuran bola'],['boom','Radius ledakan'],['turn','Ketajaman belok']]
 };
 async function api(path,opt){
   opt=opt||{};const h={'Content-Type':'application/json'};if(token)h.Authorization='Bearer '+token;
@@ -4456,6 +4485,7 @@ function onMsg(m){
     case 'learnerr':if(restoreN>0){restoreN--;break;}if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);saveSlots();toast('Teknik itu sudah tidak tersedia',2);break;}
+    case 'prd':{const q=projs.find(p=>p.id===m.id);if(q){q.x=m.x;q.y=m.y;q.z=m.z;q.dx=m.dx;q.dy=m.dy;q.dz=m.dz;}break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
