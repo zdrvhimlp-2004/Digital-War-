@@ -94,15 +94,13 @@ Teknik bawaan (semua bisa diubah di admin):
 | 246 | Firewall | perisai sementara |
 | 1357 | Overclock | lari lebih cepat |
 | 753 | Lag Dash | lesat ke arah gerakmu tanpa bidik (tekan kiri lalu dash, maka melesat ke kiri; tanpa input, ke arah hadap karakter) |
-| 6464 | Tembok Kode | tembok bata solid 3,4 unit di depanmu (darah 150, lebar 6, bertahan 15 detik). Menghalangi pemain, bola, tebasan, sinar, dan sniper. Tiap serangan yang kena mengurangi darahnya, retak bertahap, lalu hancur. Maksimal 2 tembok per pemain |
-| 3939 | Singa Rimba | panggil singa yang **berjalan di tanah** selama 14 detik (darah 60), 14 dmg per serangan, cooldown 12 detik. Perilakunya seperti elang: menunggu sekitar 10 unit darimu dan mengejar musuh yang kamu serang. Jangan dipakai di laga yang ada kawan |
 
 ### Tips & trik
 
 - **Jangan gunakan Elang atau Singa Rimba (teknik pemanggil) di laga yang ada kawanmu di sekitar**, karena mereka bisa ikut menyerang kawan.
 - Elang mengejar musuh yang **kamu** serang. Serang dulu lawan yang kamu mau dikejar, lalu panggil elang.
 - Tekan teknik: bunyi klik kaca berarti tekniknya jalan. Diam berarti masih cooldown atau terkunci.
-- Dinding Tembok Kode (6464) menahan bola, tebasan, sinar, dan sniper. Pasang di depan lawan yang menembak dari jauh.
+- Tembok Kode (777) menahan bola dan sinar lawan. Pasang di depan lawan yang menembak dari jauh.
 
 ### Mekanik lain
 
