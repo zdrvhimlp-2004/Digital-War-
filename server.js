@@ -2455,6 +2455,8 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
 <label class="srow"><span><b>Pesan notifikasi di tengah layar</b><small>Tulisan info yang muncul di tengah layar (misal "Naik elang!", "Tunggu hitungan mundur"). Mati secara bawaan.</small></span><input type="checkbox" data-set="toast"><i class="sw"></i></label>
 <label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
+<label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
+<label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
@@ -3212,6 +3214,7 @@ function updSlashes(dt){
 /* floating text */
 const floats=[];
 function floatText(x,y,z,txt,col){
+  {let on=true;try{on=/^[-+]?\d/.test(String(txt))?SET.dmgText:SET.fxText;}catch(e){}if(on===false)return;}
   const cv=document.createElement('canvas');cv.width=128;cv.height=48;const c=cv.getContext('2d');
   c.font='bold 34px sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=6;c.strokeStyle='rgba(10,10,30,.9)';c.strokeText(txt,64,24);c.fillStyle=col;c.fillText(txt,64,24);
   const tex=new THREE.CanvasTexture(cv);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true,fog:false}));
@@ -4855,7 +4858,7 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
