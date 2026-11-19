@@ -2517,6 +2517,7 @@ body.playing.duel #duelBox{display:block}
 body.noduelbar #duelBox{display:none!important}
 #trainBox{display:none;position:fixed;left:calc(max(10px,env(safe-area-inset-left)) + 120px);top:calc(max(10px,env(safe-area-inset-top)) + 52px);z-index:6;width:min(200px,40vw);background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:14px;padding:8px 10px;color:#fff;font:600 12px Poppins,system-ui,sans-serif}
 body.playing.train #trainBox{display:block}
+body:not(.train) #trainBox{display:none!important}
 #trainBox b{display:block;color:#ffd84d;margin-bottom:4px}
 #trainBox label{display:block;margin:5px 0 0}#trainBox label span{float:right;color:#6cd4ff}
 #trainBox input{width:100%;accent-color:#4de1ff;margin:2px 0 0}
@@ -2548,6 +2549,19 @@ body.playing.dbg #dbgBox{display:flex}
 #setBox .card{width:min(92vw,440px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 8px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
 #setBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 #setBox h3{margin:0;font-size:18px;color:#6cd4ff}
+#tipBox{display:none;position:fixed;inset:0;z-index:55;background:rgba(2,6,18,.7);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
+#tipBox.show{display:flex}
+#tipBox .card{width:min(92vw,460px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 16px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#tipBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#tipBox h3{margin:0;font-size:18px;color:#ffd84d}
+#tipBox .tp{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(120,190,255,.15)}
+#tipBox .tp i{flex:0 0 34px;height:34px;border-radius:10px;background:#10264a;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:19px}
+#tipBox .tp b{display:block;font-size:14px;color:#6cd4ff}
+#tipBox .tp small{display:block;margin-top:2px;font-size:12.5px;line-height:1.45;color:#cfe0f6}
+#tipX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+#tipX svg{width:16px;height:16px}
+#tipOk{margin-top:10px;width:100%;border:0;border-radius:12px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font:700 15px Poppins,system-ui,sans-serif;padding:11px;cursor:pointer}
+body.cine #tipBox{display:none!important}
 #setX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
 #setX svg{width:16px;height:16px}
 .srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid rgba(120,190,255,.15);cursor:pointer}
@@ -2570,6 +2584,7 @@ body.cine #setBox{display:none!important}
 <div id="lcol" class="hud">
   <button id="camBtn" data-ico="eye" title="Kamera FPS (C)" aria-label="Kamera FPS"></button>
   <button id="uiBtn" data-ico="hideui" title="Sembunyikan tombol (H)" aria-label="Sembunyikan tombol"></button>
+  <button id="tipBtn" title="Tips &amp; trik" aria-label="Tips dan trik" style="font-size:17px">💡</button>
   <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
@@ -2594,6 +2609,14 @@ body.cine #setBox{display:none!important}
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<div id="tipBox"><div class="card"><div class="sh"><h3>📖 Tips &amp; Trik</h3><button id="tipX" type="button" aria-label="Tutup" data-ico="close"></button></div>
+<div class="tp"><i>⚔️</i><div><b>Pedang bisa menebas bola</b><small>Tebas bola yang meluncur ke arahmu: bola hancur atau terpukul balik ke penembaknya. Tebasan angin juga memukul balik bola yang dilewatinya.</small></div></div>
+<div class="tp"><i>🛡️</i><div><b>Perisai bisa memantulkan bola</b><small>Tahan perisai menghadap bola yang datang dan bola itu dipantulkan balik ke penembak. Awas: perisai hanya menahan serangan dari depan dan bisa pecah kalau dihantam terus.</small></div></div>
+<div class="tp"><i>💥</i><div><b>Tebasan pedang itu besar sekali</b><small>Satu tebasan 50 damage. Tebas 3 kali berturut-turut untuk kombo: tebasan ketiga (penutup) 80 damage, jangkauannya lebih jauh, dan angin tebasannya melesat lebih jauh.</small></div></div>
+<div class="tp"><i>⚡</i><div><b>Dash itu kebal sesaat</b><small>Lesat saat bola atau tebasan lawan hampir kena, kamu kebal sebentar dan lolos.</small></div></div>
+<div class="tp"><i>🧱</i><div><b>Dinding dan lompat tinggi</b><small>Tembok Kode memblokir bola dan sinar lawan. Loncat Tinggi membuatmu bisa melompati dinding.</small></div></div>
+<button id="tipOk" type="button">Mengerti</button>
+</div></div>
 <div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
 <div class="sens"><b><span>Sensitivitas kamera</span><span id="sensVal">1.0x</span></b><small>Seberapa cepat kamera menoleh saat layar digeser (atau tombol Q/R). Geser ke kanan untuk lebih cepat.</small><input type="range" id="sensIn" min="0.5" max="3" step="0.1" value="1"></div>
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
@@ -3810,7 +3833,7 @@ function openBook(){
     $('book').classList.add('show');renderBook();sfx.plop();
   }).catch(()=>toast('Gagal memuat buku',2));
 }
-function closeBook(){if(typeof setOpen!=='undefined'&&setOpen){closeSet();return;}bookOpen=false;$('book').classList.remove('show');}
+function closeBook(){if(typeof tipOpen!=='undefined'&&tipOpen){closeTips();return;}if(typeof setOpen!=='undefined'&&setOpen){closeSet();return;}bookOpen=false;$('book').classList.remove('show');}
 function bookGo(d){bookPage+=d;renderBook();sfx.plop();}
 $('bookBtn').addEventListener('click',()=>{if(bookOpen)closeBook();else openBook();});
 $('bookBtn').addEventListener('pointerdown',e=>e.stopPropagation());
@@ -5056,6 +5079,15 @@ function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}
 function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
 let setOpen=false;
+/* popup buku tips & trik */
+let tipOpen=false;
+function openTips(){if(!started||modalOpen||chatOpen||setOpen||tipOpen)return;tipOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);$('tipBox').classList.add('show');try{localStorage.setItem('dw_tips_seen','1');}catch(e){}}
+function closeTips(){if(!tipOpen)return;tipOpen=false;bookOpen=false;$('tipBox').classList.remove('show');}
+$('tipBtn').addEventListener('click',openTips);$('tipBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('tipX').addEventListener('click',closeTips);$('tipOk').addEventListener('click',closeTips);$('tipBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('tipBox'))closeTips();});
+/* tampil otomatis satu kali di awal: tunggu intro & bantuan arena selesai */
+(function(){let seen=false;try{seen=localStorage.getItem('dw_tips_seen')==='1';}catch(e){}if(seen)return;
+  const iv=setInterval(()=>{if(!started)return;if(document.body.classList.contains('cine')||$('duelHelp').classList.contains('show')||modalOpen||chatOpen||setOpen)return;clearInterval(iv);setTimeout(openTips,600);},1500);})();
 document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
 $('sensIn').addEventListener('input',()=>{SET.sens=parseFloat($('sensIn').value)||1;$('sensVal').textContent=SET.sens.toFixed(1)+'x';saveSet();});
 {
