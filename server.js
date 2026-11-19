@@ -294,7 +294,7 @@ function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
 function broadcast(room, obj, exceptId) {
   const s = JSON.stringify(obj);
-  for (const p of room.players.values()) if (p.id !== exceptId && !p.ws.closed) p.ws.send(s);
+  for (const p of room.players.values()) if (p.id !== exceptId && p.ws && !p.ws.closed) p.ws.send(s);
 }
 function scoreList(room) { return [...room.players.values()].map(p => [p.id, p.k, p.d]); }
 
@@ -404,6 +404,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   dmg = Math.max(1, Math.round(dmg));
   victim.hp = Math.max(0, victim.hp - dmg);
   broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0), hr: opt.hr ? r2(opt.hr) : 0 });
+  if (victim.bot) { victim.kx += kx || 0; victim.kz += kz || 0; }
   if (victim.hp <= 0) {
     victim.dead = true;
     victim.respawnAt = t + RESPAWN_MS;
@@ -984,7 +985,7 @@ function stepRoom(room, dt, t) {
       if (p.regenAcc >= 1) { const h = Math.floor(p.regenAcc); p.regenAcc -= h; if (p.hp < MAXHP) { p.hp = Math.min(MAXHP, p.hp + h); broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); } }
     }
     if (p.rideUntil && (t >= p.rideUntil || p.dead)) { p.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: p.id }); }
-    if (p.dead && t >= p.respawnAt) {
+    if (p.dead && !p.bot && t >= p.respawnAt) {
       const s = room.duel ? standSpawn() : randomSpawn();
       p.dead = false; p.hp = MAXHP; p.x = s.x; p.z = s.z; p.y = 0; p.invuln = t + SPAWN_PROTECT_MS; p.shield = 0; p.regenUntil = 0; p.stunUntil = 0; p.gbUntil = 0; p.sleeping = false;
       broadcast(room, { t: 'resp', id: p.id, x: s.x, z: s.z });
@@ -1027,7 +1028,7 @@ function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fi
 function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
 function duelState(room) {
   const d = room.duel;
-  const P = id => { const q = id && room.players.get(id); if (d.bot && id === d.bot.id) return { id, name: 'Komputer', w: 0 }; return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
+  const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
   return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
 }
@@ -1056,44 +1057,124 @@ function duelNextAlive(room) {
   for (let i = 0; i < d.queue.length; i++) { const q = room.players.get(d.queue[i]); if (q && !q.dead) { d.queue.splice(i, 1); return q.id; } }
   return 0;
 }
-const DUELBOT = { id: -2, name: 'Komputer' };
+/* ---- lawan komputer: pemain virtual (tanpa koneksi) yang memakai tebasan/kombo, teknik, lompat, dash, dan perisai seperti pemain ---- */
 function duelBotSpawn(room) {
   const sb = duelSide('b');
-  const s = { id: solSeq++, isSol: true, bandit: true, duelBot: true, nm: 'Komputer', camp: -1, fort: -1, owner: DUELBOT.id, ch: 0, kind: 'sword', x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, hp: 100, max: 100, atkAt: 0, dead: false, atkFlag: 0, hx: sb.x, hz: sb.z, windupAt: 0, retreatUntil: 0 };
-  room.sols.push(s);
-  broadcast(room, { t: 'sol', s: solPublic(s) });
-  return s;
+  const p = {
+    id: room.nextPid++, uid: 'bot', name: 'Komputer', ch: Math.floor(Math.random() * 4), ws: null, room, bot: true,
+    x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, m: 0, a: 0, sw: 0, hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
+    invuln: 0, shield: 0, atkAt: 0, slots: ['637', '8472', '753', '481', '5551'], cdUntil: {},
+    guarding: false, gh: [], gbUntil: 0, stunUntil: 0, regenUntil: 0, regenRate: 0, regenAcc: 0, rideUntil: 0, sleeping: false, ammo: 0, snipeAt: 0,
+    vy: 0, kx: 0, kz: 0, ai: { style: 'melee', styleAt: 0, guardUntil: 0, lastAx: 0, lastAz: 0, avx: 0, avz: 0, lastAt: 0, seen: 0, strafe: 1, strafeAt: 0 }
+  };
+  room.players.set(p.id, p);
+  broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } });
+  broadcast(room, { t: 'sc', s: scoreList(room) });
+  return p;
 }
 function duelBotRemove(room, d) {
   if (!d.bot) return;
-  const i = room.sols.indexOf(d.bot);
-  if (i >= 0) { room.sols.splice(i, 1); broadcast(room, { t: 'solx', id: d.bot.id }); }
-  if (d.b === d.bot.id) d.b = 0;
-  d.bot = null;
+  const bot = d.bot; d.bot = null;
+  if (d.b === bot.id) d.b = 0;
+  removePlayer(room, bot);
 }
-/* lawan komputer: mendekat, ancang-ancang 0,35 dtk (bisa dihindari/ditangkis), menebas, lalu mundur sebentar */
+function botReady(p, code, t) { return (p.cdUntil[code] || 0) <= t + 120; }
+function botCast(room, p, code, ax, ay, az) { p.slots[4] = code; doCast(room, p, 4, ax, ay, az); }
+function botDash(room, p, dx, dz, t) {
+  if (!botReady(p, '753', t) || t < p.stunUntil) return false;
+  const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  botCast(room, p, '753', dx, 0, dz);
+  p.kx += dx * 60; p.kz += dz * 60;
+  return true;
+}
+/* bidikan bola (bolt) dengan prediksi gerak dan kompensasi gravitasi */
+function botAim(bot, A, ai, spd) {
+  const dist0 = Math.hypot(A.x - bot.x, A.z - bot.z) || 1, tt = dist0 / spd;
+  const px = A.x + ai.avx * tt * 0.8, pz = A.z + ai.avz * tt * 0.8;
+  const dx = px - bot.x, dz = pz - bot.z, d = Math.hypot(dx, dz) || 1;
+  const dy = (A.y + 0.9) - (bot.y + 1.55), t2 = d / spd;
+  return { ax: dx / d, az: dz / d, ay: clampN((dy + 0.5 * BOLT_GRAVITY * t2 * t2) / d - 0.06, -0.6, 0.6) };
+}
 function duelBotStep(room, bot, A, dt, t) {
-  if (bot.dead || !A || A.dead) return;
+  if (bot.dead || A.dead) return;
+  const ai = bot.ai;
+  if (ai.lastAt) { const dd = (t - ai.lastAt) / 1000; if (dd > 0.001) { ai.avx = ai.avx * 0.6 + (A.x - ai.lastAx) / dd * 0.4; ai.avz = ai.avz * 0.6 + (A.z - ai.lastAz) / dd * 0.4; } }
+  ai.lastAx = A.x; ai.lastAz = A.z; ai.lastAt = t;
   const dx = A.x - bot.x, dz = A.z - bot.z, dist = Math.hypot(dx, dz) || 0.01, nx = dx / dist, nz = dz / dist;
-  bot.fx = nx; bot.fz = nz;
-  let mx = 0, mz = 0, sp = 5.2;
-  if (bot.windupAt) {
-    if (t >= bot.windupAt) {
-      bot.windupAt = 0;
-      if (dist < 3.2 && Math.abs(A.y - bot.y) < 2.6) hurt(room, A, 13, DUELBOT, nx * 8, nz * 8, { sx: -nx, sz: -nz });
-      bot.atkAt = t + 900 + Math.random() * 700; bot.retreatUntil = t + 450;
+  const stunned = t < bot.stunUntil;
+  bot.focus = { v: A, until: t + 7000 };
+  if (!stunned) { bot.fx = nx; bot.fz = nz; }
+  if (t > ai.styleAt) { ai.style = Math.random() < 0.6 ? 'melee' : 'ranged'; ai.styleAt = t + 3000 + Math.random() * 3500; }
+  if (t > ai.strafeAt) { ai.strafe = Math.random() < 0.5 ? 1 : -1; ai.strafeAt = t + 900 + Math.random() * 1400; }
+  let mx = 0, mz = 0, sp = 6.3;
+  const grounded = bot.y <= terrainH(bot.x, bot.z) + 0.05;
+  if (!stunned) {
+    /* 1. ancaman: bola/sinar/orb dari lawan yang mengarah ke komputer */
+    let eta = 9, thr = null;
+    const scan = (o, rad) => {
+      const rx = bot.x - o.x, ry = bot.y + 0.9 - o.y, rz = bot.z - o.z, dy = o.dy || 0;
+      const along = rx * o.dx + ry * dy + rz * o.dz;
+      if (along < 0 || along > o.sp * 0.7) return;
+      const qx = rx - along * o.dx, qy = ry - along * dy, qz = rz - along * o.dz;
+      if (Math.hypot(qx, qy, qz) > rad) return;
+      const e = along / o.sp; if (e < eta) { eta = e; thr = o; }
+    };
+    for (const pr of room.projs) if (pr.o === A.id) scan(pr, (pr.hr || 1.35) + 0.8 + (pr.boom || 0) * 0.3);
+    for (const o of room.orbs) if (o.o === A.id) scan(o, o.r + 0.8);
+    if (thr) {
+      if (!ai.seen) ai.seen = t + 70 + Math.random() * 90;   /* waktu reaksi */
+      if (t >= ai.seen && eta < 0.42) {
+        const side = ai.strafe, px = -thr.dz * side, pz = thr.dx * side;
+        if (eta < 0.3 && botDash(room, bot, px, pz, t)) { /* dash menyamping: kebal sesaat */ }
+        else if (!thr.r && !thr.wv && grounded) ai.guardUntil = Math.max(ai.guardUntil, t + eta * 1000 + 220);
+        else if (grounded) { bot.vy = 18.5; }
+      }
+    } else ai.seen = 0;
+    /* 2. lawan baru saja menebas dari dekat: tangkis atau mundur */
+    if (dist < 4.4 && t - A.atkAt < 260 && t - (ai.lastDef || 0) > 500 && Math.random() < 0.8) {
+      ai.lastDef = t;
+      if (Math.random() < 0.3 && botDash(room, bot, -nx - nz * 0.6 * ai.strafe, -nz + nx * 0.6 * ai.strafe, t)) { }
+      else ai.guardUntil = t + 520;
     }
-  } else if (t < bot.retreatUntil) { mx = -nx; mz = -nz; sp = 4.2; }
-  else if (dist > 2.5) { const w = Math.sin(t / 450 + bot.id) * 0.4; mx = nx - nz * w; mz = nz + nx * w; }
-  else if (t >= bot.atkAt) { bot.windupAt = t + 350; bot.atkFlag = 1; }
-  else { mx = -nz * 0.6; mz = nx * 0.6; sp = 3.2; }   /* mengitari sambil menunggu */
-  const ml = Math.hypot(mx, mz);
-  if (ml > 0.01) {
-    let x = bot.x + mx / ml * sp * dt, z = bot.z + mz / ml * sp * dt;
-    const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.5;
-    if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; }
-    if (Math.hypot(x - A.x, z - A.z) > 1.4) { bot.x = x; bot.z = z; }
-  }
+    const wantG = t < ai.guardUntil && t >= bot.gbUntil;
+    if (wantG !== !!bot.guarding) setGuard(room, bot, wantG);
+    if (bot.guarding) sp *= 0.5;
+    else {
+      /* 3. serangan */
+      const cast = (code, d2) => { const k = { '637': 24, '8472': 38 }[code] || 24; const a = botAim(bot, A, ai, k); botCast(room, bot, code, a.ax, a.ay, a.az); };
+      if (bot.hp < 42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
+      else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
+      else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
+      else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
+      else if (dist > 4 && botReady(bot, '637', t) && Math.random() < (ai.style === 'ranged' ? 0.5 : 0.2)) cast('637');
+      else if (dist > 11 && ai.style === 'melee' && Math.random() < 0.03 && botDash(room, bot, nx, nz, t)) { }
+      if (dist < 3.1 && Math.random() < 0.92) doMelee(room, bot, r2(nx), r2(nz));
+      if (grounded && (Math.random() < 0.004 || (dist < 5 && A.y > bot.y + 0.8 && Math.random() < 0.05))) bot.vy = 18.5;
+    }
+    /* 4. gerak */
+    const perp = ai.strafe;
+    if (ai.style === 'ranged') {
+      if (dist < 8) { mx = -nx - nz * 0.4 * perp; mz = -nz + nx * 0.4 * perp; }
+      else if (dist > 13) { mx = nx; mz = nz; }
+      else { mx = -nz * perp; mz = nx * perp; sp = 4.5; }
+    } else {
+      const retreat = bot.combo === 3 && t - bot.atkAt < 450;
+      if (retreat) { mx = -nx; mz = -nz; sp = 5; }
+      else if (dist > 2.4) { mx = nx - nz * 0.25 * perp; mz = nz + nx * 0.25 * perp; }
+      else if (dist < 1.7) { mx = -nx; mz = -nz; sp = 3.5; }
+      else { mx = -nz * perp * 0.7; mz = nx * perp * 0.7; sp = 3.5; }
+    }
+  } else if (bot.guarding) setGuard(room, bot, false);
+  const ml = Math.hypot(mx, mz) || 1;
+  let vx = (mx / ml) * (mx || mz ? sp : 0) + bot.kx, vz = (mz / ml) * (mx || mz ? sp : 0) + bot.kz;
+  let x = bot.x + vx * dt, z = bot.z + vz * dt;
+  const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.2;
+  if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; }
+  if (Math.hypot(x - A.x, z - A.z) > 1.3 || Math.hypot(x - A.x, z - A.z) > dist) { bot.x = x; bot.z = z; }
+  const kd = Math.exp(-9 * dt); bot.kx *= kd; bot.kz *= kd;
+  const g = terrainH(bot.x, bot.z);
+  if (bot.y > g + 0.001 || bot.vy > 0) { bot.vy -= 30 * dt; bot.y += bot.vy * dt; if (bot.y <= g) { bot.y = g; bot.vy = 0; } }
+  bot.m = (mx || mz) ? (sp > 5 ? 2 : 1) : 0; bot.a = bot.y > g + 0.05 ? (bot.vy > 0 ? 1 : 2) : 0;
 }
 function duelTick(room, t, dt) {
   const d = room.duel;
@@ -1107,15 +1188,15 @@ function duelTick(room, t, dt) {
     if (aDead || bDead) {
       const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
       if (winner) {
-        if (winner.isSol) d.last = loser ? { win: 'Komputer', lose: loser.name, w: 0 } : null;
+        if (winner.bot) d.last = loser ? { win: 'Komputer', lose: loser.name, w: 0 } : null;
         else {
           d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
           d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
           d.last = { win: winner.name, lose: loser ? loser.name : 'Komputer', w: d.streak[winner.id] };
         }
-        if (!winner.isSol && winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
+        if (!winner.bot && winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
       } else d.last = null;
-      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!loser.isSol && !d.queue.includes(loser.id)) d.queue.push(loser.id); }
+      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!loser.bot && !d.queue.includes(loser.id)) d.queue.push(loser.id); }
       if (!winner) { d.a = 0; d.b = 0; }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
     }
@@ -1138,12 +1219,12 @@ function duelTick(room, t, dt) {
       duelClearCombat(room);
       const sa = duelSide('a'), sb = duelSide('b');
       duelRefresh(room, A2); teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); A2.invuln = t + DUEL_COUNT_MS + 200;
-      if (B2.isSol) { B2.hp = B2.max; B2.x = sb.x; B2.z = sb.z; B2.fx = sb.fx; B2.fz = sb.fz; B2.atkAt = t + DUEL_COUNT_MS + 600; B2.windupAt = 0; broadcast(room, { t: 'sh', id: B2.id, hp: B2.hp, dmg: 0 }); }
-      else { duelRefresh(room, B2); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz); B2.invuln = t + DUEL_COUNT_MS + 200; }
+      duelRefresh(room, B2); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz); B2.invuln = t + DUEL_COUNT_MS + 200;
+      if (B2.bot) { B2.vy = 0; B2.kx = B2.kz = 0; B2.combo = 0; }
       d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
     }
   }
-  if (d.st === 'fight' && d.bot && B === d.bot) duelBotStep(room, B, A, dt || 0.033, t);
+  if (d.st === 'fight' && d.bot && B === d.bot && A) duelBotStep(room, B, A, dt || 0.033, t);
   /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
   for (const p of room.players.values()) {
     if (p.dead || t < (p.tpUntil || 0) + 150) continue;
