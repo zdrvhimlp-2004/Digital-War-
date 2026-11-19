@@ -2075,11 +2075,9 @@ body.playing .hudf{display:flex}
 #uw{position:fixed;inset:0;background:rgba(20,100,170,.5);opacity:0;transition:opacity .15s;pointer-events:none;z-index:2}
 #fxScr{position:fixed;inset:0;pointer-events:none;z-index:2}
 #fxScr .fl{position:absolute;inset:0;opacity:0;transition:opacity .6s}
-#fxIce{background:radial-gradient(ellipse at center,rgba(120,190,255,.2) 25%,rgba(80,160,255,.52) 62%,rgba(160,220,255,.9) 100%);background-size:100% 100%;animation:fxFrost 1.3s ease-in-out infinite}
-@keyframes fxFrost{0%,100%{filter:brightness(1)}50%{filter:brightness(1.22)}}
+#fxIce{background:radial-gradient(ellipse at center,rgba(120,190,255,.2) 25%,rgba(80,160,255,.52) 62%,rgba(160,220,255,.9) 100%)}
 #fxShield{box-shadow:inset 0 0 100px 22px rgba(108,212,255,.5);border:4px solid rgba(190,240,255,.45)}
-#fxHaste{background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,242,122,0) 0 5deg,rgba(255,242,122,.2) 5deg 6deg);-webkit-mask-image:radial-gradient(circle at center,transparent 32%,#000 88%);mask-image:radial-gradient(circle at center,transparent 32%,#000 88%);animation:fxSpin 3s linear infinite}
-@keyframes fxSpin{to{transform:rotate(360deg) scale(1.15)}}
+#fxHaste{box-shadow:inset 0 0 110px 20px rgba(255,235,90,.5)}
 #fxRegen{box-shadow:inset 0 0 120px 24px rgba(80,255,150,.5);animation:fxPulse 1.4s ease-in-out infinite}
 @keyframes fxPulse{0%,100%{filter:brightness(.7)}50%{filter:brightness(1.3)}}
 #fxGuard{box-shadow:inset 0 0 70px 6px rgba(150,205,255,.38)}
@@ -4401,23 +4399,8 @@ function resolve(){
   }
 }
 /* ---------- efek layar saat mode FPS (karakter tidak terlihat, jadi status ditampilkan di layar) ---------- */
-let fxFrostMade=false;const fxCache={};
-function mkFrostBg(){
-  const cv=document.createElement('canvas');cv.width=cv.height=512;const c=cv.getContext('2d');c.lineCap='round';
-  const branch=(x,y,ang,L,w,d)=>{c.beginPath();c.moveTo(x,y);const n=5;let px=x,py=y;
-    for(let k=0;k<n;k++){ang+=(Math.random()-0.5)*0.7;px+=Math.cos(ang)*L/n;py+=Math.sin(ang)*L/n;c.lineTo(px,py);
-      if(d<2&&Math.random()<0.5)branch(px,py,ang+(Math.random()<0.5?-1:1)*(0.5+Math.random()*0.5),L*0.5,w*0.65,d+1);}
-    c.strokeStyle='rgba(225,244,255,'+(0.3+Math.random()*0.35)+')';c.lineWidth=w;c.stroke();};
-  for(let i=0;i<150;i++){
-    const side=Math.floor(Math.random()*4),t=Math.random()*512;let x=0,y=0,ang=0;
-    if(side===0){x=t;y=0;ang=Math.PI/2;}else if(side===1){x=t;y=512;ang=-Math.PI/2;}else if(side===2){x=0;y=t;ang=0;}else{x=512;y=t;ang=Math.PI;}
-    branch(x,y,ang+(Math.random()-0.5)*0.6,24+Math.random()*56,1.2+Math.random()*1.6,0);
-  }
-  for(let k=0;k<260;k++){c.fillStyle='rgba(255,255,255,'+(Math.random()*0.22)+')';const e=Math.random()<0.5?Math.random()*60:512-Math.random()*60,f=Math.random()*512;if(Math.random()<0.5)c.fillRect(e,f,2,2);else c.fillRect(f,e,2,2);}
-  return cv.toDataURL('image/png');
-}
+const fxCache={};
 function updFxScr(){
-  if(!fxFrostMade){fxFrostMade=true;try{$('fxIce').style.backgroundImage='url('+mkFrostBg()+'), radial-gradient(ellipse at center,rgba(120,190,255,.2) 25%,rgba(80,160,255,.52) 62%,rgba(160,220,255,.9) 100%)';}catch(e){}}
   const on=started&&fps&&!dead;
   const want={fxIce:on&&stunT>0,fxShield:on&&myShieldT>0,fxHaste:on&&hasteT>0,fxRegen:on&&myRegenT>0,fxGuard:on&&guarding&&gbT<=0,fxBreak:on&&gbT>0,fxRide:on&&rideT>0};
   for(const id in want){
