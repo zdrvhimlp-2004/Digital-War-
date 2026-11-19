@@ -3218,7 +3218,8 @@ function floatText(x,y,z,txt,col){
   const cv=document.createElement('canvas');cv.width=128;cv.height=48;const c=cv.getContext('2d');
   c.font='bold 34px sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=6;c.strokeStyle='rgba(10,10,30,.9)';c.strokeText(txt,64,24);c.fillStyle=col;c.fillText(txt,64,24);
   const tex=new THREE.CanvasTexture(cv);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true,fog:false}));
-  sp.scale.set(2,0.75,1);sp.renderOrder=22;sp.position.set(x,y,z);scene.add(sp);floats.push({sp,tex,t:0});
+  const wk=/^[-+]?\d/.test(String(txt))?1:0.5;   /* tulisan efek (MANTUL, dll) 2x lebih kecil dari angka damage */
+  sp.scale.set(2*wk,0.75*wk,1);sp.renderOrder=22;sp.position.set(x,y,z);scene.add(sp);floats.push({sp,tex,t:0});
 }
 function updFloats(dt){
   for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.t+=dt;f.sp.position.y+=dt*1.7;f.sp.material.opacity=clamp(1.2-f.t,0,1);
