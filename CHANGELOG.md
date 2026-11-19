@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Tebasan angin ketemu tebasan angin lawan: keduanya hancur** (muncul BENTROK!). Tebasan yang mengenai bola tetap memukulnya balik dan tebasannya tidak hancur.
 - **Tembok Kode tidak bisa ditembus** oleh badan: pemain, prajurit, penyamun, dan singa kini ditahan tembok di sisi server (bukan hanya di layar pemain). Pemain yang memaksa menembus ditarik balik; tembok tetap bisa dilompati. Unit server meluncur di sepanjang tembok.
 - **Bola ketemu bola, keduanya hancur**: bola lempar, bola pengejar, dan Bola Biru dari pemilik berbeda saling menghancurkan saat bersentuhan (muncul tulisan BENTROK!). Bola satu pemilik dan satu tim di arena tim tidak saling hancur. Tebasan angin dan panah tidak ikut.
 - **Serangan biasa lebih cepat**: cooldown tebasan 0,38 jadi 0,25 detik, dan penutup kombo 0,72 jadi 0,48 detik (server dan layar pemain). Damage tidak berubah. Atur lewat `meleeCd` di `TUNING`.

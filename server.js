@@ -1044,6 +1044,20 @@ function stepRoom(room, dt, t) {
       if (dx * dx + dy * dy + dz * dz < rr * rr) deflectProj(room, b, ow);
     }
   }
+  /* tebasan angin ketemu tebasan angin lawan: keduanya hancur (bola tetap dipukul balik, tebasannya tidak hancur) */
+  {
+    const ws = room.projs.filter(q => q.wv);
+    if (ws.length > 1) {
+      const dead = new Set();
+      for (let a = 0; a < ws.length; a++) for (let b = a + 1; b < ws.length; b++) {
+        const w1 = ws[a], w2 = ws[b];
+        if (dead.has(w1) || dead.has(w2) || !ballFoes(room, w1.o, w2.o)) continue;
+        if ((w1.x - w2.x) ** 2 + (w1.y - w2.y) ** 2 + (w1.z - w2.z) ** 2 > 2.2 * 2.2) continue;
+        dead.add(w1); dead.add(w2); ballBurst(room, w1.x, w1.y, w1.z, w1.c, w1.id); ballBurst(room, w2.x, w2.y, w2.z, w2.c, w2.id);
+      }
+      if (dead.size) room.projs = room.projs.filter(q => !dead.has(q));
+    }
+  }
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
     if (pr.home) {   /* bola pengejar: membelok ke musuh terdekat */
