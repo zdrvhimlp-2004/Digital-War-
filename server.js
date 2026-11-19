@@ -338,6 +338,8 @@ function twFirst(room, x0, z0, y, x1, z1, r) {
   }
   return best ? { w: best, t: bt } : null;
 }
+/* apakah ada tembok teknik di antara dua titik? (menahan ledakan, nova, bola biru) */
+function twBlocked(room, x0, z0, y, x1, z1) { return room.twalls.length > 0 && !!twFirst(room, x0, z0, y, x1, z1, 0); }
 function twRemove(room, w, destroyed) {
   const i = room.twalls.indexOf(w); if (i < 0) return;
   room.twalls.splice(i, 1);
@@ -568,6 +570,7 @@ function areaHit(room, p, radius, dmg, kb, stun) {
     if (v === p || friendly(p.id, v)) continue;
     const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
     if (d > radius || Math.abs(v.y - p.y) > 3) continue;
+    if (twBlocked(room, p.x, p.z, p.y + 1, v.x, v.z)) continue;
     const nx = d > 0.01 ? dx / d : 1, nz = d > 0.01 ? dz / d : 0;
     hurt(room, v, dmg, p, nx * kb, nz * kb, { area: true, stun });
   }
@@ -956,6 +959,7 @@ function stepRoom(room, dt, t) {
       if (bm > 0) {
         for (const v of victims(room)) {
           if (v === hit || friendly(pr.o, v)) continue;
+          if (twBlocked(room, pr.x, pr.z, pr.y, v.x, v.z)) continue;
           const dx = v.x - pr.x, dy = v.y + 0.9 - pr.y, dz = v.z - pr.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
           if (d > bm) continue;
           const f = 1 - d / bm * 0.6, hl = Math.hypot(dx, dz) || 1;
@@ -974,13 +978,19 @@ function stepRoom(room, dt, t) {
   /* bola biru raksasa */
   for (let i = room.orbs.length - 1; i >= 0; i--) {
     const o = room.orbs[i], owner = room.players.get(o.o);
+    const ox0 = o.x, oz0 = o.z;
     o.x += o.dx * o.sp * dt; o.y += o.dy * o.sp * dt; o.z += o.dz * o.sp * dt; o.life -= dt;
+    if (room.twalls.length) {
+      const f = twFirst(room, ox0, oz0, o.y, o.x, o.z, 1.0);
+      if (f) { twHit(room, f.w, Math.max(20, o.dmg * 8)); room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
+    }
     if (!owner || o.life <= 0 || (room.duel && (Math.hypot(o.x - ARENA.x, o.z - ARENA.z) > ARENA.ringR || o.y > ARENA.height))) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
     for (const v of victims(room)) {
       if (friendly(o.o, v)) continue;
       const dx = v.x - o.x, dy = v.y + 0.9 - o.y, dz = v.z - o.z;
       if (dx * dx + dy * dy + dz * dz > (o.r + 0.5) * (o.r + 0.5)) continue;
       if (t < (o.hit.get(v.id) || 0)) continue;
+      if (twBlocked(room, o.x, o.z, o.y, v.x, v.z)) continue;
       o.hit.set(v.id, t + 450);
       hurt(room, v, o.dmg, owner, o.dx * 5, o.dz * 5, { area: true });
     }
