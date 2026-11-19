@@ -4018,10 +4018,11 @@ const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH
     const lg=f?1:0;
     const legsSide=()=>{E(16-lg*2,13,2,4,fd);E(13+lg*2,13,2,3,fur);E(6+lg*2,13,2,4,fd);E(9-lg*2,13,2,3,fur);E(16-lg*2,16,2,1,md);E(6+lg*2,16,2,1,md);};
     const tail=()=>{E(2,8,4,1,fd);E(1,6,2,4,md);E(2,7,1,2,mane);};
-    if(row===0){   /* samping, menghadap kanan */
-      E(5,8,13,6,fur);E(6,12,11,2,fl);legsSide();tail();
-      E(14,3,7,11,mane);E(14,3,2,11,md);E(17,4,3,1,md);
-      E(19,6,6,6,fur);E(23,8,3,3,fl);E(25,8,1,1,nose);E(21,7,1,1,eye);E(18,3,2,3,fur);E(23,11,3,1,nose);E(22,6,2,1,md);
+    if(row===0){   /* samping, menghadap kanan: kepala besar dengan wajah jelas */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,3,6,11,mane);E(11,3,2,11,md);E(14,4,3,1,md);
+      E(15,4,9,9,fur);E(16,4,7,1,fl);E(21,8,5,4,fl);E(25,8,2,2,nose);E(21,12,5,1,nose);
+      E(18,6,4,3,wh);E(20,7,2,2,eye);E(17,5,5,1,md);E(15,2,3,3,fur);E(16,3,1,1,fd);
     }else if(row===1){   /* depan */
       E(6,2,16,14,mane);E(6,2,16,2,md);E(6,13,16,3,md);E(7,1,3,3,fur);E(18,1,3,3,fur);E(8,2,1,1,md);E(19,2,1,1,md);
       E(9,5,10,9,fur);E(10,6,8,1,fl);
@@ -4035,16 +4036,17 @@ const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH
       E(8,10,12,5,fur);E(8,10,5,5,fd);E(15,10,5,5,fd);E(13,9,2,6,fur);
       E(13,10,2,5,fd);E(12,14,4,3,md);E(13,13,2,1,mane);
       E(8,15-lg,4,3,md);E(16,15-(1-lg),4,3,md);E(9,15-lg,2,1,fd);E(17,15-(1-lg),2,1,fd);
+      E(19,3,7,8,fur);E(19,3,7,1,fl);E(20,2,3,2,fur);E(22,5,4,3,wh);E(24,6,2,2,eye);E(23,8,4,3,fl);E(26,8,1,2,nose);E(21,5,2,1,md);   /* kepala menoleh ke belakang: wajah tetap terlihat */
     }else if(row===3){   /* 3/4 depan, menghadap kanan */
       E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
       E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(20,2,2,3,fur);
       E(13,5,9,8,fur);
       E(14,6,3,3,wh);E(15,7,2,2,eye);E(19,6,3,3,wh);E(19,7,2,2,eye);
       E(15,10,6,3,fl);E(17,9,3,2,nose);E(16,12,5,1,nose);
-    }else{   /* 3/4 belakang, menghadap kanan (kepala berpaling: telinga, pipi, ekor) */
+    }else{   /* 3/4 belakang, menghadap kanan (kepala menoleh: pipi, satu mata, hidung) */
       E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
-      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(19,2,2,3,fur);E(14,5,6,6,md);
-      E(21,6,3,5,fur);E(23,8,2,2,fl);E(24,8,1,1,nose);E(22,7,1,1,eye);
+      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(19,2,2,3,fur);E(13,5,6,6,md);
+      E(19,4,7,8,fur);E(22,6,4,3,wh);E(24,7,2,2,eye);E(23,9,4,3,fl);E(26,9,1,2,nose);E(20,3,3,2,fur);
     }
   }
   for(let r=0;r<5;r++)for(let f=0;f<2;f++)draw(r,f);
