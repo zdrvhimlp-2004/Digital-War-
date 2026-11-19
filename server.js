@@ -78,24 +78,24 @@ const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "42
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
 const DEFAULT_TECHS = [
-  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 0.6, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
-  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 2,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
-  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 2.5, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
-  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 3,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
-  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 3,  cd: 2,   speed: 11, life: 4, radius: 5.5 },
-  { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 3,   radius: 6 },
-  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 5,   radius: 5.5, stun: 2 },
-  { code: '3735', name: 'Laser Beam',    kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 3,   range: 28 },
-  { code: '2718', name: 'Stack Overflow', kind: 'slam',  emoji: '🔨', color: '#ffb84d', damage: 40, cd: 4,   radius: 5 },
-  { code: '1618', name: 'Landmine',      kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 3,   radius: 2.2, stun: 0.6 },
-  { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 7,   count: 1, dur: 12, speed: 12 },
-  { code: '1928', name: 'Elang Kembar',  kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 10,  count: 2, dur: 10, speed: 13 },
-  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 70, speed: 24, cd: 15 },
-  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 4 },
-  { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 6,   dur: 6 },
-  { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 5 },
-  { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
-  { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 }
+  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   color: '#4de1ff', damage: 20, cd: 0.6, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
+  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   color: '#b57bff', damage: 12, cd: 2,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
+  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   color: '#ff5d5d', damage: 38, cd: 2.5, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
+  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   color: '#ff9a3c', damage: 9,  cd: 3,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
+  { code: '858', name: 'Bola Biru',      kind: 'orb',    color: '#2f8fff', damage: 3,  cd: 2,   speed: 11, life: 4, radius: 5.5 },
+  { code: '519', name: 'Overflow Nova',  kind: 'nova',   color: '#ffd84d', damage: 30, cd: 3,   radius: 6 },
+  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   color: '#aee6ff', damage: 8,  cd: 5,   radius: 5.5, stun: 2 },
+  { code: '3735', name: 'Laser Beam',    kind: 'beam',   color: '#ff4de1', damage: 30, cd: 3,   range: 28 },
+  { code: '2718', name: 'Stack Overflow', kind: 'slam',  color: '#ffb84d', damage: 40, cd: 4,   radius: 5 },
+  { code: '1618', name: 'Landmine',      kind: 'trap',   color: '#ff6a4d', damage: 35, cd: 3,   radius: 2.2, stun: 0.6 },
+  { code: '481', name: 'Elang Digital',  kind: 'summon', color: '#ffd9a0', damage: 9,  cd: 7,   count: 1, dur: 12, speed: 12 },
+  { code: '1928', name: 'Elang Kembar',  kind: 'summon', color: '#ffe9c0', damage: 7,  cd: 10,  count: 2, dur: 10, speed: 13 },
+  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', color: '#ffe0b0', dur: 70, speed: 24, cd: 15 },
+  { code: '918', name: 'Patch Heal',     kind: 'heal',   color: '#5dff9e', damage: 35, cd: 4 },
+  { code: '9876', name: 'Auto Backup',   kind: 'regen',  color: '#8affc0', damage: 40, cd: 6,   dur: 6 },
+  { code: '246', name: 'Firewall',       kind: 'shield', color: '#6cd4ff', dur: 4,     cd: 5 },
+  { code: '1357', name: 'Overclock',     kind: 'haste',  color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
+  { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 1.5 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb'];
 
@@ -207,7 +207,6 @@ function sanitizeTech(t) {
     code,
     name: cleanName(t.name, 24) || 'Teknik',
     kind,
-    emoji: String(t.emoji || '✨').slice(0, 4),
     color: /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#4de1ff',
     cd: num(t.cd, 0.2, 120, 2)
   };
@@ -245,7 +244,7 @@ function sanitizeTech(t) {
   return out;
 }
 const techByCode = code => DB.techniques.find(t => t.code === code);
-const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, emoji: t.emoji, color: t.color, cd: t.cd });
+const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, color: t.color, cd: t.cd });
 function techDesc(t) {
   if (t.desc) return t.desc;
   const st = t.stun ? ', beku ' + t.stun + ' dtk' : '';
@@ -1683,7 +1682,6 @@ button:disabled{opacity:.5}
 .tech .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .tech .g label{margin:0 0 3px}
 .tech .hd{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.tech .hd .em{width:56px;flex:0 0 56px;text-align:center}
 .tech .hd .nm{flex:1}
 .tech .code{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px}
 .hint{font-size:12px;color:var(--mut);margin:0 0 10px;line-height:1.5}
@@ -1715,7 +1713,7 @@ button:disabled{opacity:.5}
 
 <div id="app" class="hidden">
   <div class="top"><h1>Digital War <small>Admin</small></h1><button id="logout">Keluar</button></div>
-  <div id="warnPw" class="msg warn hidden">⚠️ Password masih default (admin). Ganti di tab Akun supaya tidak sembarang orang bisa membuat room.</div>
+  <div id="warnPw" class="msg warn hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg> Password masih default (admin). Ganti di tab Akun supaya tidak sembarang orang bisa membuat room.</div>
   <div class="tabs">
     <button data-tab="rooms" class="on">Room</button>
     <button data-tab="tech">Buku Teknik</button>
@@ -1843,7 +1841,7 @@ async function loadRooms(){
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
-    cp.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(i.value);}catch(e){i.select();document.execCommand('copy');}cp.textContent='Tersalin ✓';setTimeout(()=>cp.textContent='Salin',1500);});
+    cp.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(i.value);}catch(e){i.select();document.execCommand('copy');}cp.textContent='Tersalin';setTimeout(()=>cp.textContent='Salin',1500);});
     l.appendChild(i);l.appendChild(cp);d.appendChild(l);
     const row=document.createElement('div');row.className='row';
     const nm=document.createElement('input');nm.value=r.name;nm.maxLength=30;nm.dataset.edit=1;
@@ -1852,7 +1850,7 @@ async function loadRooms(){
     const pl2=document.createElement('label');pl2.className='chk';pl2.style.gridColumn='1 / -1';pl2.style.margin='0';const pc=document.createElement('input');pc.type='checkbox';pc.checked=r.pick===true;pc.dataset.edit=1;pl2.appendChild(pc);pl2.appendChild(document.createTextNode('Mode pilih teknik (tanpa ketik kode)'));
     const dgl=document.createElement('label');dgl.className='chk';dgl.style.gridColumn='1 / -1';dgl.style.margin='0';const dgc=document.createElement('input');dgc.type='checkbox';dgc.checked=r.debug===true;dgc.dataset.edit=1;dgl.appendChild(dgc);dgl.appendChild(document.createTextNode('Mode uji hit (alasan meleset tampil di layar)'));
     const sv=document.createElement('button');sv.textContent='Ubah';
-    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked}});sv.textContent='Tersimpan ✓';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
+    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked}});sv.textContent='Tersimpan';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
     const dl=document.createElement('button');dl.className='bad';dl.textContent='Hapus';
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
     row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
@@ -1864,15 +1862,15 @@ async function loadRooms(){
 /* techniques */
 async function loadTech(){const j=await api('/techniques');techs=j.techniques;renderTech();const st=await api('/settings');$('showBook').checked=!!st.showBook;}
 $('showBook').addEventListener('change',async()=>{try{await api('/settings',{method:'PUT',body:{showBook:$('showBook').checked}});msg($('tmsg'),$('showBook').checked?'Buku tampil di game':'Buku disembunyikan dari game','ok');}catch(e){msg($('tmsg'),e.message);}});
+const XSVG='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function renderTech(){
   const box=$('techList');box.innerHTML='';
   techs.forEach((t,idx)=>{
     const d=document.createElement('div');d.className='tech';
     const hd=document.createElement('div');hd.className='hd';
-    const em=document.createElement('input');em.className='em';em.value=t.emoji||'✨';em.maxLength=4;em.addEventListener('input',()=>t.emoji=em.value);
-    const nm=document.createElement('input');nm.className='nm';nm.value=t.name;nm.maxLength=24;nm.placeholder='Nama teknik';nm.addEventListener('input',()=>t.name=nm.value);
-    const rm=document.createElement('button');rm.className='bad';rm.textContent='✕';rm.addEventListener('click',()=>{techs.splice(idx,1);renderTech();});
-    hd.appendChild(em);hd.appendChild(nm);hd.appendChild(rm);d.appendChild(hd);
+        const nm=document.createElement('input');nm.className='nm';nm.value=t.name;nm.maxLength=24;nm.placeholder='Nama teknik';nm.addEventListener('input',()=>t.name=nm.value);
+    const rm=document.createElement('button');rm.className='bad';rm.innerHTML=XSVG;rm.addEventListener('click',()=>{techs.splice(idx,1);renderTech();});
+    hd.appendChild(nm);hd.appendChild(rm);d.appendChild(hd);
     const g=document.createElement('div');g.className='g';
     function field(label,el){const w=document.createElement('div');const l=document.createElement('label');l.textContent=label;w.appendChild(l);w.appendChild(el);g.appendChild(w);}
     const code=document.createElement('input');code.className='code';code.value=t.code;code.maxLength=12;code.inputMode='numeric';code.addEventListener('input',()=>{code.value=code.value.replace(/[^1-9]/g,'');t.code=code.value;});field('Kode (1-9)',code);
@@ -1884,7 +1882,7 @@ function renderTech(){
     d.appendChild(g);box.appendChild(d);
   });
 }
-$('techAdd').addEventListener('click',()=>{techs.push({code:'',name:'Teknik baru',kind:'bolt',emoji:'✨',color:'#4db8ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0});renderTech();});
+$('techAdd').addEventListener('click',()=>{techs.push({code:'',name:'Teknik baru',kind:'bolt',color:'#4db8ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0});renderTech();});
 $('techSave').addEventListener('click',async()=>{try{const j=await api('/techniques',{method:'PUT',body:{techniques:techs}});techs=j.techniques;renderTech();msg($('tmsg'),'Buku tersimpan ('+techs.length+' teknik)','ok');}catch(e){msg($('tmsg'),e.message);}});
 $('techReset').addEventListener('click',async()=>{if(!confirm('Kembalikan semua teknik ke default?'))return;try{const j=await api('/techniques/reset',{method:'POST'});techs=j.techniques;renderTech();msg($('tmsg'),'Dikembalikan ke default','ok');}catch(e){msg($('tmsg'),e.message);}});
 
@@ -2234,11 +2232,11 @@ body.cine #setBox{display:none!important}
 <div id="hurt"></div>
 
 <div id="hpBox" class="hud"><div id="hpName"><span id="myName"></span><span id="kd"></span></div><div class="bar"><i id="hpFill"></i></div></div>
-<div id="oxyBox" class="hud"><small>🫧 Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
+<div id="oxyBox" class="hud"><small><span data-ico="bubble" class="clki"></span> Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
 <canvas id="mini" class="hud" width="192" height="192"></canvas>
 <div id="roomTag" class="pill hud"></div>
 <div id="net" class="pill hud" title="Kualitas jaringan"></div>
-<div id="clock" class="pill hud">☀️ 09:00</div>
+<div id="clock" class="pill hud"><span data-ico="sun" class="clki"></span> 09:00</div>
 <button id="bookBtn" class="hud off" aria-label="Buku teknik" title="Buku teknik (B)" data-ico="book"></button>
 <button id="fsBtn" class="hud" aria-label="Layar penuh" title="Layar penuh" data-ico="fs"></button>
 <button id="sbBtn" class="hud" aria-label="Papan skor" data-ico="trophy"></button>
@@ -2370,7 +2368,8 @@ const ICO={
  regen:'<path d="M20 12a8 8 0 1 1-2.700-6"/><path d="M20 3.500v4.500h-4.500"/><path d="M12 9v6M9 12h6"/>',
  haste:'<path d="M4.500 5l7 7-7 7M12.500 5l7 7-7 7"/>',
  dash:'<path d="M13.500 2L4.500 14h7l-1 8 9-12h-7z" fill="currentColor" fill-opacity=".2"/>',
- spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
+ spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
+ bubble:'<circle cx="9" cy="15" r="5"/><circle cx="17" cy="8" r="3"/><circle cx="16" cy="18" r="1.500"/>'
 };
 function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO.spark)+'</svg>';}
 function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('dead',null,'kdi')+' '+d;}
@@ -3401,8 +3400,8 @@ bindBtn($('btnSnipe'),()=>fireSniper());
 })();
 
 /* ---------- tameng, buku, elang, ranjau, sinar ---------- */
-function emojiTex(ch){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.font='44px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(ch,32,34);return new THREE.CanvasTexture(c);}
-const guardMat=new THREE.SpriteMaterial({map:emojiTex('🛡️'),depthTest:false,transparent:true,fog:false});
+function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO.spark)+'</svg>');return t;}
+const guardMat=new THREE.SpriteMaterial({map:iconTex('shield','#6cd4ff'),depthTest:false,transparent:true,fog:false});
 let myGuardSp=null;
 function setGuard(on){
   if(on&&!(started&&!dead&&!modalOpen&&!bookOpen&&stunT<=0&&gbT<=0&&rideT<=0&&!sleeping&&!swimNow))on=false;
@@ -3995,8 +3994,8 @@ function onMsg(m){
       if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
-    case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
-    case 'pl':{closePeer(m.id);const o=others.get(m.id);if(o){feed('➖ '+o.name+' keluar');removeOther(m.id);renderBoard();}break;}
+    case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed(m.p.name+' bergabung');renderBoard();}break;}
+    case 'pl':{closePeer(m.id);const o=others.get(m.id);if(o){feed(o.name+' keluar');removeOther(m.id);renderBoard();}break;}
     case 'sc':{m.s.forEach(r=>{if(r[0]===me.id){me.k=r[1];me.d=r[2];}else{const o=others.get(r[0]);if(o){o.k=r[1];o.d=r[2];}}});renderBoard();break;}
     case 'ps':{
       m.p.forEach(r=>{const o=others.get(r[0]);if(!o)return;
@@ -4008,7 +4007,7 @@ function onMsg(m){
     case 'atk':{const o=others.get(m.id);if(o){o.atkT=0.32;o.fx=m.fx;o.fz=m.fz;sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,o.y,o.z,m.fx,m.fz,0xffd9a0,1,o.side);}break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
-      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
+      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.name+' siap dipakai!',2);break;}
     case 'learnerr':if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
@@ -4027,8 +4026,8 @@ function onMsg(m){
       if(m.id===me.id){dead=false;$('ko').style.display='none';setHp(MAXHP);{const f=findFree(m.x,m.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;invuln=2;stunT=0;gbT=0;myRegenT=0;hasteT=0;sfx.respawn();toast('Kembali bertarung!',1.6);}
       else{const o=others.get(m.id);if(o){o.dead=false;o.hp=MAXHP;o.tx=o.x=m.x;o.tz=o.z=m.z;o.ty=o.y=0;drawLabel(o);}}break;}
     case 'guard':{if(m.id===me.id){guarding=!!m.on;$('btnGuard').classList.toggle('on',!!m.on);}else{const o=others.get(m.id);if(o){o.guard=!!m.on;if(m.on)sfxAt('shield',o.x,o.z);}}break;}
-    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah! 💥',1.6);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
-    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku! ❄️',1.4);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
+    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah!',1.6);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
+    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku!',1.4);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
     case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
     case 'mh':{const o=mobs.get(m.id);if(o){showHitbox(o,0,0);o.hp=m.hp;drawMobLabel(o);o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
@@ -4095,7 +4094,7 @@ function onHit(m){
   }else{const o=others.get(m.id);if(o){o.hp=m.hp;o.flash=0.18;drawLabel(o);if(m.kx||m.kz){o.x+=m.kx*0.05;o.z+=m.kz*0.05;}}sfxAt('hit',v.x,v.z);if(m.by===me.id){shake=Math.max(shake,0.2);burst(v.x,v.y+1.1,v.z,'#ffffff',8,4);}}
 }
 function onDie(m){
-  feed('✖ '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
+  feed(m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
   if(m.by===me.id&&m.id!==me.id)sfx.kill();
   if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display='flex';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
   else{const o=others.get(m.id);if(o){o.ride=false;o.dead=true;o.hp=0;drawLabel(o);burst(o.x,o.y+1,o.z,'#ffffff',16,5);}}
