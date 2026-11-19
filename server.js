@@ -85,7 +85,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 9;
+const TECH_VERSION = 10;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -94,7 +94,7 @@ const DEFAULT_TECHS = [
   { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 18, cd: 8,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
   { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 57, cd: 10, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
   { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 14, cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
-  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 5,  cd: 8,   speed: 11, life: 4, radius: 5.5 },
+  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 150, cd: 20,   speed: 11, life: 4, radius: 5.5 },
   { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 12,   radius: 6 },
   { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 20,   radius: 5.5, stun: 2 },
   { code: '3735', name: 'Laser Beam',    kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 12,   range: 28 },
@@ -199,6 +199,9 @@ function loadDB() {
           if (d && OLD_DMG[t.code] !== undefined && Number(t.damage) === OLD_DMG[t.code]) t.damage = d.damage;
         }
       }
+      if (ver < 10) {   /* Bola Biru: cooldown 20 dtk, satu hantaman 150 (5x Byte Bolt) */
+        for (const t of j.techniques) if (t.code === '858' && t.kind === 'orb') { if ([3, 5].includes(Number(t.damage))) t.damage = 150; if ([8, 2].includes(Number(t.cd))) t.cd = 20; }
+      }
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -275,7 +278,7 @@ function sanitizeTech(t) {
   } else if (kind === 'ride') {
     out.dur = num(t.dur, 3, 300, 10); out.speed = num(t.speed, 6, 60, 24);
   } else if (kind === 'orb') {
-    out.damage = num(t.damage, 0, 50, 3); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
+    out.damage = num(t.damage, 0, 300, 150); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
   } else if (kind === 'wall') {
     out.hp = num(t.hp, 10, 500, 120); out.dur = num(t.dur, 2, 15, 6); out.len = num(t.len, 3, 16, 8);
   } else if (kind === 'jump') {
@@ -304,7 +307,7 @@ function techDesc(t) {
     case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
     case 'regen': return 'Pulih ' + t.damage + ' HP selama ' + t.dur + ' dtk';
     case 'ride': return 'Tunggangi elang terbang ' + t.dur + ' dtk (Lompat naik, Selam turun)';
-    case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg per sentuhan, bisa diarahkan ke atas, bawah, samping';
+    case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
     case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, memblokir bola & tebasan angin (bisa dilompati)';
     case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
     case 'blink': return 'Teleport ' + t.range + ' m ke depan';
@@ -1027,7 +1030,7 @@ function stepRoom(room, dt, t) {
       const dx = v.x - o.x, dy = v.y + 0.9 - o.y, dz = v.z - o.z;
       if (dx * dx + dy * dy + dz * dz > (o.r + 0.5) * (o.r + 0.5)) continue;
       if (t < (o.hit.get(v.id) || 0)) continue;
-      o.hit.set(v.id, t + 450);
+      o.hit.set(v.id, Infinity);   /* satu hantaman besar per target */
       hurt(room, v, o.dmg, owner, o.dx * 5, o.dz * 5, { area: true });
     }
   }
@@ -2117,7 +2120,7 @@ let techs=[],pollT=null;
 const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)',wall:'Dinding (wall)',jump:'Loncat tinggi (jump)',blink:'Teleport (blink)'};
 const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
-  orb:[['damage','Damage per sentuhan'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
+  orb:[['damage','Damage (sekali hantam)'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
   beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
   slam:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius']],
