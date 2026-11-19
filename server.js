@@ -33,6 +33,7 @@ const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
 const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
+const KNOCK_MULT = 2;   /* pengali semua dorongan (tebasan, bola, ledakan, nova, sinar, dll.) */
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -329,6 +330,7 @@ function damageMob(room, m, dmg, attacker) {
   }
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
+  kx *= KNOCK_MULT; kz *= KNOCK_MULT;
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
@@ -471,7 +473,7 @@ function doMelee(room, p, fx, fz, ay) {
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
     if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
       /* pedang beradu: keduanya terpental, tanpa damage */
-      broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8), az: r2(-nz * MELEE.knock * 0.8), bx: r2(nx * MELEE.knock * 0.8), bz: r2(nz * MELEE.knock * 0.8) });
+      broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8 * KNOCK_MULT), az: r2(-nz * MELEE.knock * 0.8 * KNOCK_MULT), bx: r2(nx * MELEE.knock * 0.8 * KNOCK_MULT), bz: r2(nz * MELEE.knock * 0.8 * KNOCK_MULT) });
       v.atkAt = 0;
       if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
       landed++;

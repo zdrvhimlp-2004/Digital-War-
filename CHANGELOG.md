@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Semua dorongan (knockback) dikali 2**: tebasan, gelombang angin, bola, ledakan, nova, slam, sinar, sniper, elang, bentrok pedang, dan serangan penyamun/prajurit. Pengalinya satu konstanta `KNOCK_MULT` di `server.js`.
 - **Tebasan angin miring bergantian**: kiri, kanan, kiri, dan seterusnya untuk tiap penyerang.
 - **Busur tebasan 2D dihapus** (efeknya kini hanya gelombang angin). **Bola/panah yang terkena tebasan atau gelombang dipukul balik ke penembaknya.**
 - **Tebasan angin**: gelombang bulan sabit pendek yang menyertai tebasan pedang, jangkauan bertambah sedikit (sekitar 8 unit), 20 damage.
