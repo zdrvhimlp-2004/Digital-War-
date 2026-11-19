@@ -341,12 +341,13 @@ function victims(room) {
   for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
 }
+const FRIENDLY_FIRE = true;   /* arena tim: teman satu tim bisa saling serang */
 let CUR = null;   /* room yang sedang diproses (untuk cek satu tim di arena) */
 function sameTeam(room, aId, bId) { const tm = room && room.duel && room.duel.team; return !!tm && !!tm[aId] && tm[aId] === tm[bId]; }
 function friendly(ownerId, v) {
   if (v.isMob) { if (v.o === ownerId) return true; }
   else if (v.id === ownerId || (v.isSol && v.owner === ownerId)) return true;
-  return sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
+  return !FRIENDLY_FIRE && sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
 }
 function damageMob(room, m, dmg, attacker) {
   if (m.hp <= 0) return;
@@ -361,7 +362,7 @@ function damageMob(room, m, dmg, attacker) {
   }
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
-  if (room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
+  if (!FRIENDLY_FIRE && room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
