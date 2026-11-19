@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Logo folder Gerak diganti jejak kaki** (sebelumnya petir) di menu pilih teknik.
 - **Menu pilih teknik (ketuk slot) berbentuk folder**: yang pertama muncul kartu kategori (Semua teknik, Serangan, Ledakan, Pemanggil, Pertahanan, Gerak) beserta jumlah tekniknya. Ketuk satu folder untuk melihat isinya, tombol "‹ Folder" untuk kembali. Berlaku di room dengan mode pilih teknik dari admin.
 - **Buku teknik punya tombol kategori**: Semua, Serangan, Ledakan, Pemanggil, Pertahanan, dan Gerak, masing-masing menampilkan jumlah tekniknya. Ketuk satu untuk menyaring daftar; halaman kembali ke awal.
 - **Tebasan angin ketemu tebasan angin lawan: keduanya hancur** (muncul BENTROK!). Tebasan yang mengenai bola tetap memukulnya balik dan tebasannya tidak hancur.

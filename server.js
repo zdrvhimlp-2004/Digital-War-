@@ -2984,6 +2984,7 @@ const ICO={
  regen:'<path d="M20 12a8 8 0 1 1-2.700-6"/><path d="M20 3.500v4.500h-4.500"/><path d="M12 9v6M9 12h6"/>',
  haste:'<path d="M4.500 5l7 7-7 7M12.500 5l7 7-7 7"/>',
  dash:'<path d="M13.500 2L4.500 14h7l-1 8 9-12h-7z" fill="currentColor" fill-opacity=".2"/>',
+ foot:'<ellipse cx="8" cy="7.500" rx="2.600" ry="3.800" fill="currentColor" fill-opacity=".25"/><circle cx="8" cy="14.500" r="1.700"/><ellipse cx="16" cy="11" rx="2.600" ry="3.800" fill="currentColor" fill-opacity=".25"/><circle cx="16" cy="18" r="1.700"/>',
  wall:'<path d="M3 5h18v4H3zM3 9h18v5H3zM3 14h18v5H3zM9 5v4M15 9v5M9 14v5"/>',
  blink:'<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="12" r="2.500" fill="currentColor" fill-opacity=".3"/><path d="M9.500 12h5M12.500 9l3 3-3 3"/>',
  homing:'<circle cx="6" cy="7" r="3" fill="currentColor" fill-opacity=".25"/><circle cx="6" cy="17" r="3" fill="currentColor" fill-opacity=".25"/><path d="M9 7c5 0 7 3 9 5M9 17c5 0 7-3 9-5"/><circle cx="20" cy="12" r="1.500"/>',
@@ -3933,7 +3934,7 @@ function castSlot(i){
 /* ---------- code modal ---------- */
 function renderCode(){$('codeBox').textContent=typed||'· · · · · ·';$('mOk').disabled=typed.length<2||pendingLearn;}
 let pickList=[],pickCat=null;
-const PICK_ICON={all:'book',atk:'bolt',boom:'nova',sum:'summon',def:'shield',move:'dash'};
+const PICK_ICON={all:'book',atk:'bolt',boom:'nova',sum:'summon',def:'shield',move:'foot'};
 function renderPick(list){
   if(list)pickList=list;
   const tb=$('pickTabs'),box=$('pickBox');tb.innerHTML='';box.innerHTML='';
