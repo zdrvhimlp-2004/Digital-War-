@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Dinding arena duel kini solid dan bisa dihancurkan**: dinding batu bata tidak transparan lagi, terdiri dari 32 bagian dengan darah 100 per bagian. Tebasan pedang (40), gelombang angin, bola dan ledakan, sinar, nova, dan slam melukai bagian yang kena (ledakan juga melukai bagian di sebelahnya). Makin rusak makin banyak retakan (3 tahap), lalu bagian itu hancur jadi lubang (bola dan sinar bisa lewat). Dinding pulih penuh tiap ronde baru. Petarung tetap tertahan di dalam ring. Kamera pemain di dalam ring tidak keluar menembus dinding.
 - **Semua dorongan (knockback) dikali 2**: tebasan, gelombang angin, bola, ledakan, nova, slam, sinar, sniper, elang, bentrok pedang, dan serangan penyamun/prajurit. Pengalinya satu konstanta `KNOCK_MULT` di `server.js`.
 - **Tebasan angin miring bergantian**: kiri, kanan, kiri, dan seterusnya untuk tiap penyerang.
 - **Busur tebasan 2D dihapus** (efeknya kini hanya gelombang angin). **Bola/panah yang terkena tebasan atau gelombang dipukul balik ke penembaknya.**

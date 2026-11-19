@@ -107,6 +107,7 @@ function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 +
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
 const ARENA = { x: 0, z: 58, ringR: 25, side: 14, height: 20 };
+const WALL_SEGS = 32, WALL_HP = 100;   /* dinding arena: 32 bagian, masing-masing punya darah dan bisa hancur */
 const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 33, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
@@ -483,6 +484,11 @@ function doMelee(room, p, fx, fz, ay) {
     if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
     hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
   }
+  /* tebasan mengenai dinding arena */
+  if (room.duel) {
+    const ox = p.x - ARENA.x, oz = p.z - ARENA.z, bq = ox * fx + oz * fz, cq = ox * ox + oz * oz - ARENA.ringR * ARENA.ringR, disc = bq * bq - cq;
+    if (disc >= 0) { const sd = -bq + Math.sqrt(disc); if (sd >= 0 && sd <= MELEE.range + 0.6) wallHit(room, p.x + fx * sd, p.z + fz * sd, MELEE.dmg, 0); }
+  }
   /* tebasan angin: gelombang pendek yang meluncur sedikit lebih jauh dari jangkauan pedang */
   {
     const ay2 = ay === undefined ? 0 : ay, hl = Math.sqrt(Math.max(0.0001, 1 - ay2 * ay2));
@@ -518,6 +524,10 @@ function areaHit(room, p, radius, dmg, kb, stun) {
     if (d > radius || Math.abs(v.y - p.y) > 3) continue;
     const nx = d > 0.01 ? dx / d : 1, nz = d > 0.01 ? dz / d : 0;
     hurt(room, v, dmg, p, nx * kb, nz * kb, { area: true, stun });
+  }
+  if (room.duel) {
+    const dx = p.x - ARENA.x, dz = p.z - ARENA.z, dist = Math.hypot(dx, dz) || 0.01, gap = ARENA.ringR - dist;
+    if (gap < radius) wallHit(room, ARENA.x + dx / dist * ARENA.ringR, ARENA.z + dz / dist * ARENA.ringR, dmg, radius - gap);
   }
 }
 
@@ -579,7 +589,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'beam': {
       let len = tech.range || 28;
-      if (room.duel) { const ox = p.x - ARENA.x, oz = p.z - ARENA.z, bq = ox * fx + oz * fz, cq = ox * ox + oz * oz - ARENA.ringR * ARENA.ringR, disc = bq * bq - cq; if (disc >= 0) len = Math.min(len, Math.max(0, -bq + Math.sqrt(disc))); }
+      if (room.duel) { const ox = p.x - ARENA.x, oz = p.z - ARENA.z, bq = ox * fx + oz * fz, cq = ox * ox + oz * oz - ARENA.ringR * ARENA.ringR, disc = bq * bq - cq; if (disc >= 0) { const wl = Math.max(0, -bq + Math.sqrt(disc)); if (wl < len) { const wx = p.x + fx * wl, wz = p.z + fz * wl; if (wallAlive(room, wx, wz)) { len = wl; wallHit(room, wx, wz, tech.damage, 0); } } } }
       broadcast(room, { t: 'fx', k: 'beam', id: p.id, fx: r2(fx), fz: r2(fz), len, c: tech.color });
       for (const v of victims(room)) {
         if (v === p || friendly(p.id, v)) continue;
@@ -870,7 +880,7 @@ function stepRoom(room, dt, t) {
     let wall = false;
     if (room.duel && !hit && !ground) {
       const wd = Math.hypot(pr.x - ARENA.x, pr.z - ARENA.z);
-      if (wd > ARENA.ringR - br * 0.5) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; }
+      if (wd > ARENA.ringR - br * 0.5) { if (wallAlive(room, pr.x, pr.z)) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; } }
       else if (pr.y > ARENA.height) { wall = true; pr.y = ARENA.height; }
     }
     if (hit || ground || wall) {
@@ -886,6 +896,7 @@ function stepRoom(room, dt, t) {
           hurt(room, v, pr.dmg * 0.6 * f, owner, dx / hl * 16 * f, dz / hl * 16 * f, { area: true, stun: pr.stun });
         }
       }
+      if (wall && pr.y <= ARENA.height - 0.3) wallHit(room, pr.x, pr.z, pr.dmg, bm);
       broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(ground ? gy + 0.15 : pr.y), z: r2(pr.z), boom: bm, c: pr.c, g: ground ? 1 : 0, wl: wall ? 1 : 0 });
       room.projs.splice(i, 1);
     } else if (pr.life <= 0) {
@@ -1009,14 +1020,30 @@ function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null }; }
+function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, walls: new Array(WALL_SEGS).fill(WALL_HP) }; }
+function wallIdx(x, z) { let a = Math.atan2(z - ARENA.z, x - ARENA.x); if (a < 0) a += Math.PI * 2; return Math.min(WALL_SEGS - 1, Math.floor(a / (Math.PI * 2) * WALL_SEGS)); }
+function wallAlive(room, x, z) { const d = room.duel; return !d || !d.walls || d.walls[wallIdx(x, z)] > 0; }
+/* kerusakan ke dinding arena (hanya saat bertarung). radius > 0: bagian di sebelahnya ikut kena lebih lemah */
+function wallHit(room, x, z, dmg, radius) {
+  const d = room.duel;
+  if (!d || !d.walls || d.st !== 'fight' || dmg <= 0) return;
+  const i0 = wallIdx(x, z), arc = Math.PI * 2 * ARENA.ringR / WALL_SEGS, span = radius > 0 ? Math.min(3, Math.ceil(radius / arc)) : 0;
+  for (let k = -span; k <= span; k++) {
+    const i = (i0 + k + WALL_SEGS) % WALL_SEGS;
+    if (d.walls[i] <= 0) continue;
+    const dm = Math.round(k === 0 ? dmg : dmg * 0.5 / Math.abs(k));
+    if (dm <= 0) continue;
+    d.walls[i] = Math.max(0, d.walls[i] - dm);
+    broadcast(room, { t: 'wall', i, hp: d.walls[i] });
+  }
+}
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && (d.a === p.id || d.b === p.id); }
 function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
 function duelState(room) {
   const d = room.duel;
   const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
-  return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+  return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last, w: d.walls };
 }
 function duelBroadcast(room) { broadcast(room, duelState(room)); }
 function teleportTo(p, x, z, fx, fz) {
@@ -1080,6 +1107,7 @@ function duelTick(room, t) {
       const sa = duelSide('a'), sb = duelSide('b');
       teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz);
       A2.invuln = t + DUEL_COUNT_MS + 200; B2.invuln = t + DUEL_COUNT_MS + 200;
+      d.walls.fill(WALL_HP);
       d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
     }
   }
@@ -4017,11 +4045,12 @@ function onMsg(m){
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
-    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
+    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){if(m.y>ARENA.h-0.6)wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'pong':{const r=performance.now()-m.ts;netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
+    case 'wall':setWallHp(m.i,m.hp,true);break;
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
     case 'die':onDie(m);break;
     case 'duel':onDuel(m);break;
@@ -4518,6 +4547,8 @@ function update(dt){
   cam.tx+=(pos.x-cam.tx)*damp(9,dt);cam.tz+=(pos.z-cam.tz)*damp(9,dt);cam.ty+=(Math.max(pos.y,SURF_Y)-cam.ty)*damp(5,dt);
   const cosP=Math.cos(cam.pitch);
   let cx=cam.tx+Math.sin(cam.yaw)*cosP*cam.dist,cz=cam.tz+Math.cos(cam.yaw)*cosP*cam.dist,cy=cam.ty+1.2+Math.sin(cam.pitch)*cam.dist;
+  /* dinding arena kini solid: kamera yang sedang di dalam ring tidak boleh keluar menembus dinding */
+  if(roomMode==='duel'&&started&&arenaSegs.length&&Math.hypot(pos.x-ARENA.x,pos.z-ARENA.z)<ARENA.ringR-0.5){const ddx=cx-ARENA.x,ddz=cz-ARENA.z,r0=Math.hypot(ddx,ddz),lim=ARENA.ringR-0.9;if(r0>lim){cx=ARENA.x+ddx/r0*lim;cz=ARENA.z+ddz/r0*lim;}}
   cy=Math.max(cy,Math.max(terrainH(cx,cz),WATER_Y-0.0)+1.5-(swim?0.0:0));
   if(inCave){const ddx=cx-CX,ddz=cz-CZ,r0=Math.hypot(ddx,ddz);if(r0>CAVE_R-2){const k0=(CAVE_R-2)/r0;cx=CX+ddx*k0;cz=CZ+ddz*k0;}cy=clamp(cy,1.5,13);}
   if(!started){/* menu orbit above the village */cx=Math.sin(cam.yaw)*38;cz=Math.cos(cam.yaw)*38+10;cy=terrainH(cx,cz)+16;}
@@ -4569,16 +4600,47 @@ function buildArena(){
     circles.push({x:ARENA.x+x,z:ARENA.z+z,r:0.5});
     arenaFires.push(fire,inner);
   });
-  /* dinding + langit-langit transparan (terlihat saat duel dimulai, lalu memudar) */
+  /* dinding batu arena: 32 bagian, tiap bagian punya darah, retak bertahap lalu hancur */
   {
+    const bc=document.createElement('canvas');bc.width=bc.height=256;const b=bc.getContext('2d');
+    b.fillStyle='#4a4c54';b.fillRect(0,0,256,256);
+    for(let r=0;r<8;r++)for(let q=-1;q<5;q++){const x=q*64+(r%2?32:0),y=r*32,sh=104+Math.floor(Math.random()*36);b.fillStyle='rgb('+sh+','+(sh+3)+','+(sh+10)+')';b.fillRect(x+2,y+2,60,28);b.fillStyle='rgba(255,255,255,.07)';b.fillRect(x+2,y+2,60,4);b.fillStyle='rgba(0,0,0,.12)';b.fillRect(x+2,y+26,60,4);}
+    for(let k=0;k<500;k++){b.fillStyle='rgba(0,0,0,'+(Math.random()*0.12)+')';b.fillRect(Math.random()*256,Math.random()*256,2,2);}
+    const bt=new THREE.CanvasTexture(bc);bt.wrapS=bt.wrapT=THREE.RepeatWrapping;bt.repeat.set(1,4);
+    const stoneMat=new THREE.MeshLambertMaterial({map:bt,side:THREE.DoubleSide});
+    /* sprite retakan: 3 tahap x 3 variasi, transparan */
+    const crackTex=[[],[],[]];
+    const mkCrack=(n,len)=>{
+      const cc=document.createElement('canvas');cc.width=cc.height=256;const q=cc.getContext('2d');q.lineCap='round';q.lineJoin='round';
+      const ox=128+(Math.random()-0.5)*50,oy=128+(Math.random()-0.5)*50;
+      const draw=(x,y,ang,L,w,depth)=>{
+        q.beginPath();q.moveTo(x,y);const st=7+Math.floor(Math.random()*4);
+        for(let k=0;k<st;k++){ang+=(Math.random()-0.5)*1.1;x+=Math.cos(ang)*L/st;y+=Math.sin(ang)*L/st;q.lineTo(x,y);
+          if(depth<2&&Math.random()<0.22)draw(x,y,ang+(Math.random()<0.5?-1:1)*(0.6+Math.random()*0.6),L*0.45,w*0.6,depth+1);}
+        q.strokeStyle='rgba(225,225,235,.38)';q.lineWidth=w+3.2;q.stroke();
+        q.strokeStyle='rgba(8,6,5,.97)';q.lineWidth=w;q.stroke();
+      };
+      for(let k=0;k<n;k++)draw(ox,oy,Math.random()*6.283,len*(0.7+Math.random()*0.6),5.6,0);
+      const t=new THREE.CanvasTexture(cc);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,4);return t;
+    };
+    for(let v=0;v<3;v++){crackTex[0].push(mkCrack(3,85));crackTex[1].push(mkCrack(6,120));crackTex[2].push(mkCrack(10,165));}
+    const dA=Math.PI*2/WALL_SEGS,H=ARENA.h;
+    for(let i=0;i<WALL_SEGS;i++){
+      const th=Math.PI/2-(i+1)*dA;
+      const mk=rr=>new THREE.CylinderGeometry(rr,rr,H,3,1,true,th,dA);
+      const wall=new THREE.Mesh(mk(R+0.2),stoneMat);wall.position.y=H/2;g.add(wall);
+      const cm=new THREE.MeshBasicMaterial({map:crackTex[0][i%3],transparent:true,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,fog:false});
+      const inn=new THREE.Mesh(mk(R+0.16),cm),out=new THREE.Mesh(mk(R+0.24),cm);inn.position.y=out.position.y=H/2;inn.visible=out.visible=false;g.add(inn,out);
+      arenaSegs.push({wall,inn,out,cm,hp:WALL_HP,stage:0,cx:ARENA.x+Math.cos((i+0.5)*dA)*R,cz:ARENA.z+Math.sin((i+0.5)*dA)*R,tex:crackTex});
+    }
+    /* langit-langit transparan (terlihat saat duel dimulai, lalu memudar) */
     const wc=document.createElement('canvas');wc.width=256;wc.height=256;const w=wc.getContext('2d');
     const gr=w.createLinearGradient(0,0,0,256);gr.addColorStop(0,'rgba(120,200,255,.05)');gr.addColorStop(0.5,'rgba(120,200,255,.3)');gr.addColorStop(1,'rgba(160,230,255,.7)');w.fillStyle=gr;w.fillRect(0,0,256,256);
     w.strokeStyle='rgba(190,235,255,.85)';w.lineWidth=2;for(let i=0;i<=256;i+=32){w.beginPath();w.moveTo(i,0);w.lineTo(i,256);w.stroke();w.beginPath();w.moveTo(0,i);w.lineTo(256,i);w.stroke();}
     const wt=new THREE.CanvasTexture(wc);wt.wrapS=wt.wrapT=THREE.RepeatWrapping;wt.repeat.set(18,5);
     arenaWallMat=new THREE.MeshBasicMaterial({map:wt,color:0x7fd0ff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
-    const wall=new THREE.Mesh(new THREE.CylinderGeometry(R+0.2,R+0.2,ARENA.h,64,1,true),arenaWallMat);wall.position.y=ARENA.h/2;wall.visible=false;g.add(wall);
     const cap=new THREE.Mesh(new THREE.CircleGeometry(R+0.2,48).rotateX(-Math.PI/2),arenaWallMat);cap.position.y=ARENA.h;cap.visible=false;g.add(cap);
-    arenaWallParts=[wall,cap];
+    arenaWallParts=[cap];
   }
   /* papan nama */
   const lc=document.createElement('canvas');lc.width=512;lc.height=128;const lx=lc.getContext('2d');
@@ -4589,6 +4651,23 @@ function buildArena(){
   const sp1=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,6),wood),sp2=sp1.clone();sp1.position.set(-2.8,2.5,-(R+3.2));sp2.position.set(2.8,2.5,-(R+3.2));g.add(sp1,sp2);
 }
 let arenaWallMat=null,arenaWallParts=[],wallA=0,wallPulse=0,fightAt=0;
+const WALL_SEGS=32,WALL_HP=100,arenaSegs=[];
+/* darah dinding arena: perbarui retakan, dan efek bila baru kena atau hancur */
+function setWallHp(i,hp,fx){
+  const s=arenaSegs[i];if(!s)return;const prev=s.hp;s.hp=hp;
+  const st=hp<=0?-1:hp<=WALL_HP*0.25?3:hp<=WALL_HP*0.5?2:hp<=WALL_HP*0.75?1:0;
+  if(st!==s.stage){
+    s.stage=st;
+    if(st<0){s.wall.visible=s.inn.visible=s.out.visible=false;}
+    else{s.wall.visible=true;const on=st>0;s.inn.visible=s.out.visible=on;if(on)s.cm.map=s.tex[st-1][i%3];s.cm.needsUpdate=true;}
+  }
+  if(!fx||hp>=prev)return;
+  const gy=terrainH(s.cx,s.cz);
+  if(hp<=0){
+    for(let k=0;k<7;k++)burst(s.cx,gy+1+k*2.6,s.cz,k%2?'#8b8d96':'#c9c3b4',10,6);
+    sfxAt('boom',s.cx,s.cz);feed('🧱 Dinding arena hancur');
+  }else{burst(s.cx,gy+1.5+Math.random()*5,s.cz,'#b8b6ae',8,3.5);sfxAt('block',s.cx,s.cz);}
+}
 const arenaFires=[];
 function updArena(dt){
   if(arenaWallMat){
@@ -4625,6 +4704,7 @@ function renderDuelBox(){
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function onDuel(m){
   duel=m;duelAt=performance.now();
+  if(m.w&&arenaSegs.length)m.w.forEach((h,i)=>setWallHp(i,h,false));
   const prev=duelPrevSt;duelPrevSt=m.st;
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
