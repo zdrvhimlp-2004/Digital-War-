@@ -330,6 +330,9 @@ function damageMob(room, m, dmg, attacker) {
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
+  /* pembalasan: saat kamu (atau elangmu) diserang, elangmu langsung mengincar penyerangnya */
+  const src = (opt && opt.src) || attacker, defender = v.isMob ? room.players.get(v.o) : (v.ws ? v : null);
+  if (defender && src && src !== BANDIT && src !== defender && !friendly(defender.id, src)) defender.focus = { v: src, until: now() + 7000 };
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
@@ -702,7 +705,7 @@ function stepBandits(room, dt, t) {
         if (d > sp.range * 0.8) { tx = best.x; tz = best.z; speed = sp.speed; }
         else {
           tx = s.x; tz = s.z;
-          if (t >= s.atkAt && Math.abs(best.y - s.y) < 2.6) { s.atkAt = t + sp.cd; s.atkFlag = 1; hurt(room, best, sp.dmg, BANDIT, s.fx * 5, s.fz * 5, { sx: -s.fx, sz: -s.fz }); }
+          if (t >= s.atkAt && Math.abs(best.y - s.y) < 2.6) { s.atkAt = t + sp.cd; s.atkFlag = 1; hurt(room, best, sp.dmg, BANDIT, s.fx * 5, s.fz * 5, { sx: -s.fx, sz: -s.fz, src: s }); }
         }
       } else {
         if (d > sp.range) { tx = best.x; tz = best.z; speed = sp.speed; }
@@ -805,7 +808,7 @@ function stepForts(room, dt, t) {
         if (d > sp.range * 0.8) { tx = best.x; tz = best.z; speed = sp.speed; }
         else {
           tx = s.x; tz = s.z;
-          if (t >= s.atkAt && Math.abs(best.y - s.y) < 2.6) { s.atkAt = t + sp.cd; s.atkFlag = 1; hurt(room, best, sp.dmg, owner, s.fx * 5, s.fz * 5, { sx: -s.fx, sz: -s.fz }); }
+          if (t >= s.atkAt && Math.abs(best.y - s.y) < 2.6) { s.atkAt = t + sp.cd; s.atkFlag = 1; hurt(room, best, sp.dmg, owner, s.fx * 5, s.fz * 5, { sx: -s.fx, sz: -s.fz, src: s }); }
         }
       } else {
         if (d > sp.range) { tx = best.x; tz = best.z; speed = sp.speed; }
