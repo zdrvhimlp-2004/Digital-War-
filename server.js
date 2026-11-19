@@ -2772,6 +2772,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Notifikasi hasil tebasan</b><small>Pesan kecil di bawah layar: kena siapa atau kenapa meleset. Untuk menguji serangan. Default mati.</small></span><input type="checkbox" data-set="hitDbg"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
+<label class="srow"><span><b>Tampilkan body fisika objek 3D</b><small>Garis kerangka collider semua objek di sekitarmu (radius 60): pohon, batu, tiang, tembok, rumah, dan pagar arena. Oranye = tabung, kuning = batu/pijakan, magenta = kotak (rumah, pintu tertutup).</small></span><input type="checkbox" data-set="physObj"><i class="sw"></i></label>
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
 <label class="srow"><span><b>Teks besar di tengah layar</b><small>Hitung mundur, FIGHT!, pengumuman pemenang, dan layar KO di arena.</small></span><input type="checkbox" data-set="bigText"><i class="sw"></i></label>
 <label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
@@ -5405,7 +5406,7 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({physObj:false,joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}
@@ -5451,7 +5452,23 @@ function phBody(i,mat){
   if(!b){b=new THREE.LineSegments(phCylGeo,mat);b.renderOrder=25;b.frustumCulled=false;scene.add(b);phBodies[i]=b;}
   b.material=mat;b.visible=true;return b;
 }
+/* body fisika objek 3D: tabung (circles/platforms) dan kotak (obbs), hanya yang dalam 60 unit */
+let phoCyl=[],phoBox=[];
+const phoMat={cyl:new THREE.LineBasicMaterial({color:0xffa63d,depthTest:false,fog:false}),plat:new THREE.LineBasicMaterial({color:0xffe14d,depthTest:false,fog:false}),box:new THREE.LineBasicMaterial({color:0xff4de1,depthTest:false,fog:false})};
+const phoCylGeo=(()=>{const pts=[],N=12;for(let i=0;i<N;i++){const a=i/N*6.2832,b=(i+1)/N*6.2832,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b);pts.push(ca,0,sa,cb,0,sb,ca,1,sa,cb,1,sb);if(i%3===0)pts.push(ca,0,sa,ca,1,sa);}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));return g;})();
+const phoBoxGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(1,1,1).translate(0,0.5,0));
+function phoGet(pool,i,geo,mat){let b=pool[i];if(!b){b=new THREE.LineSegments(geo,mat);b.renderOrder=24;b.frustumCulled=false;scene.add(b);pool[i]=b;}b.material=mat;b.visible=true;return b;}
+function updPhysObj(){
+  if(!SET.physObj){phoCyl.forEach(b=>b.visible=false);phoBox.forEach(b=>b.visible=false);return;}
+  const R2=60*60,px=pos.x,pz=pos.z;let nc=0,nb=0;
+  for(const c of circles){const dx=c.x-px,dz=c.z-pz;if(dx*dx+dz*dz>R2)continue;const gy=terrainH(c.x,c.z),h=c.top!==undefined?Math.max(0.5,c.top-gy):3.5,r=c.r+PR,b=phoGet(phoCyl,nc++,phoCylGeo,phoMat.cyl);b.position.set(c.x,gy,c.z);b.scale.set(r,h,r);}
+  for(const p of platforms){const dx=p.x-px,dz=p.z-pz;if(dx*dx+dz*dz>R2)continue;const gy=terrainH(p.x,p.z),r=p.r+PR,b=phoGet(phoCyl,nc++,phoCylGeo,phoMat.plat);b.position.set(p.x,gy,p.z);b.scale.set(r,Math.max(0.5,p.top-gy),r);}
+  for(const o of obbs){if(!o.enabled)continue;const dx=o.cx-px,dz=o.cz-pz;if(dx*dx+dz*dz>R2)continue;const gy=terrainH(o.cx,o.cz),b=phoGet(phoBox,nb++,phoBoxGeo,phoMat.box);b.position.set(o.cx,gy,o.cz);b.rotation.y=Math.atan2(o.s,o.c);b.scale.set((o.hx+PR)*2,WALLH,(o.hz+PR)*2);}
+  for(let i=nc;i<phoCyl.length;i++)phoCyl[i].visible=false;
+  for(let i=nb;i<phoBox.length;i++)phoBox[i].visible=false;
+}
 function updPhysics(){
+  updPhysObj();
   if(!SET.physics){phBodies.forEach(b=>b.visible=false);if(phRing)phRing.visible=false;return;}
   if(!phRing){const pts=[];for(let i=0;i<48;i++){const a=i/48*6.2832,b=(i+1)/48*6.2832;pts.push(Math.cos(a),0,Math.sin(a),Math.cos(b),0,Math.sin(b));}const gm=new THREE.BufferGeometry();gm.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));phRing=new THREE.LineSegments(gm,new THREE.LineBasicMaterial({color:0xffe14d,depthTest:false,fog:false}));phRing.renderOrder=25;phRing.frustumCulled=false;scene.add(phRing);}
   phRing.visible=true;phRing.position.set(pos.x,pos.y+0.08,pos.z);phRing.scale.setScalar(3.3);
