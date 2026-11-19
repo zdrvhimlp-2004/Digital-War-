@@ -2756,6 +2756,7 @@ body.cine #setBox{display:none!important}
 <div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
 <div class="sens"><b><span>Sensitivitas kamera</span><span id="sensVal">1.0x</span></b><small>Seberapa cepat kamera menoleh saat layar digeser (atau tombol Q/R). Geser ke kanan untuk lebih cepat.</small><input type="range" id="sensIn" min="0.5" max="3" step="0.1" value="1"></div>
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
+<label class="srow"><span><b>Analog kiri selalu kecepatan penuh</b><small>Hidup: analog kiri digeser sedikit pun karakter tetap lari kecepatan penuh (hanya arah yang berubah). Mati: kecepatan mengikuti seberapa jauh analog digeser.</small></span><input type="checkbox" data-set="joyFull"><i class="sw"></i></label>
 <label class="srow"><span><b>Auto aim bola</b><small>Di mode non-FPS, teknik bola (bola lempar dan bola biru) langsung dilempar ke musuh terdekat dalam 40 unit. Tidak ada musuh: bidik manual seperti biasa. Mode FPS tetap bidik sendiri.</small></span><input type="checkbox" data-set="autoAimBall"><i class="sw"></i></label>
 <label class="srow"><span><b>Notifikasi hasil tebasan</b><small>Pesan kecil di bawah layar: kena siapa atau kenapa meleset. Untuk menguji serangan. Default mati.</small></span><input type="checkbox" data-set="hitDbg"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
@@ -4957,13 +4958,13 @@ function update(dt){
   if(!swim&&wasSwim&&vy>0){}
   wasSwim=swim;
   let speed;
-  if(joy.id!==null&&mag>0.02)speed=mag>=0.9?SPEED_RUN:SPEED_WALK*mag/0.9;
+  if(joy.id!==null&&mag>0.02)speed=(mag>=0.9||SET.joyFull)?SPEED_RUN:SPEED_WALK*mag/0.9;
   else speed=run?SPEED_RUN:SPEED_WALK;
   if(swim)speed*=0.55;
   if(guarding)speed*=0.5;
   if(hasteT>0)speed*=hastePw;
   speed*=trainSpd;
-  if(riding)speed=(joy.id!==null&&mag>0.02?ridePw*Math.min(1,mag/0.9):ridePw);
+  if(riding)speed=(joy.id!==null&&mag>0.02&&!SET.joyFull?ridePw*Math.min(1,mag/0.9):ridePw);
   if(attackT>0)speed*=0.55;
   if(!live||sleeping)speed=0;
   if(mag>0.1){const mx=rgt.x*ix+fwd.x*iy,mz=rgt.z*ix+fwd.z*iy,ml=Math.hypot(mx,mz)||1;moveDirX=mx/ml;moveDirZ=mz/ml;moveDirT=tAll;}
@@ -5358,7 +5359,7 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}

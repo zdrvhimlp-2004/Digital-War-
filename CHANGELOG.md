@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Analog kiri default-nya kecepatan penuh**: digeser sedikit pun karakter (dan elang tunggangan) tetap lari penuh, hanya arahnya yang berubah. Bisa dimatikan di Pengaturan ("Analog kiri selalu kecepatan penuh") untuk kecepatan sesuai jarak geser.
 - **Elang dan Singa Rimba membalas penyerang**: saat kamu atau hewanmu diserang (pemain, prajurit, penyamun), penyerangnya langsung jadi sasaran. Antara musuh yang kamu serang dan yang menyerangmu, yang paling baru menang (7 detik).
 - **Pesan teknik jadi teks saja dan tampil 3 detik**: "... siap dipakai!", "Tameng pecah!", "Kamu membeku!", "Naik elang!", dan pesan teknik sejenis tidak lagi memakai emoji, dan semuanya muncul selama 3 detik. Timer semua pesan kecil di layar kini memakai jam nyata (bukan jam game), jadi tetap pas walau frame rate rendah.
 - **Efek layar saat mode FPS** (karakter tidak terlihat, jadi statusnya ditampilkan di layar; mode orang ketiga tidak berubah): **beku** (layar biru), **Firewall** (cahaya biru muda dan bingkai), **Overclock** (cahaya kuning), **Auto Backup** (denyut hijau), **tahan/tameng** (cahaya biru lembut), **tameng pecah** (cahaya jingga), dan **terbang dengan elang** (cahaya hangat). Hanya warna polos, tanpa tekstur. Muncul cepat saat efek mulai dan memudar saat habis.
