@@ -105,8 +105,8 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const ARENA = { x: 0, z: 58, ringR: 25, side: 14, height: 20 };
-const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 33, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
+const ARENA = { x: -85, z: 85, ringR: 38, side: 22, height: 24 };
+const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: ARENA.ringR + 8, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
   { x: 88, z: 0, r: 16, b: 8 }, { x: -90, z: 0, r: 16, b: 8 }, { x: 0, z: -92, r: 16, b: 8 }];
@@ -117,7 +117,9 @@ function terrainH(x, z) {
   const hills = (fbm(x * 0.018, z * 0.018) - 0.5) * 22 + (fbm(x * 0.06 + 50, z * 0.06 + 50) - 0.5) * 3;
   const e = clampN((Math.hypot(x, z) - 100) / 42, 0, 1);
   const ld = 5.5 * (1 - sstep(LAKE.R - 5, LAKE.R + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z)));
-  return hills * m + e * e * (3 - 2 * e) * 38 - ld;
+  const da = Math.hypot(x - ARENA.x, z - ARENA.z), fa = ARENA.ringR + 8; let ma = 1;   /* lantai arena tidak ikut terangkat oleh pegunungan tepi peta */
+  if (da < fa + 12) { const t = da <= fa ? 0 : (da - fa) / 12; ma = t * t * (3 - 2 * t); }
+  return hills * m + e * e * (3 - 2 * e) * 38 * ma - ld;
 }
 const BOLT_GRAVITY = 2.6;
 
@@ -288,7 +290,7 @@ function makeRuntime(r) {
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(); else initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3)); else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
@@ -315,7 +317,13 @@ function victims(room) {
   for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
 }
-function friendly(ownerId, v) { if (v.isMob) return v.o === ownerId; return v.id === ownerId || (v.isSol && v.owner === ownerId); }
+let CUR = null;   /* room yang sedang diproses (untuk cek satu tim di arena) */
+function sameTeam(room, aId, bId) { const tm = room && room.duel && room.duel.team; return !!tm && !!tm[aId] && tm[aId] === tm[bId]; }
+function friendly(ownerId, v) {
+  if (v.isMob) { if (v.o === ownerId) return true; }
+  else if (v.id === ownerId || (v.isSol && v.owner === ownerId)) return true;
+  return sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
+}
 function damageMob(room, m, dmg, attacker) {
   if (m.hp <= 0) return;
   if (attacker && attacker.id === m.o) return;
@@ -329,6 +337,7 @@ function damageMob(room, m, dmg, attacker) {
   }
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
+  if (room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
@@ -842,6 +851,7 @@ function stepForts(room, dt, t) {
 }
 
 function stepRoom(room, dt, t) {
+  CUR = room;
   /* peluru / bola / anak panah */
   /* gelombang angin memukul balik bola yang dilewatinya */
   for (const w of room.projs.filter(q => q.wv)) {
@@ -1023,25 +1033,36 @@ function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null }; }
-function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && (d.a === p.id || d.b === p.id); }
-function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
+function duelNew(size) { return { size: size || 1, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
+function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
+function duelRebuild(room) {
+  const d = room.duel; d.team = {};
+  for (const side of ['teamA', 'teamB']) { d[side] = d[side].filter(id => room.players.has(id)); for (const id of d[side]) d.team[id] = side === 'teamA' ? 'a' : 'b'; }
+  for (const id of Object.keys(d.out)) if (!d.team[id]) delete d.out[id];
+}
 function duelState(room) {
   const d = room.duel;
-  const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
+  const P = id => { const q = room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0, o: d.out[id] ? 1 : 0, bot: q.bot ? 1 : 0 } : null; };
+  const ta = d.teamA.map(P).filter(Boolean), tb = d.teamB.map(P).filter(Boolean);
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
-  return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+  return { t: 'duel', size: d.size, top, st: d.st, ta, tb, a: ta[0] || null, b: tb[0] || null, q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
 }
 function duelBroadcast(room) { broadcast(room, duelState(room)); }
 function teleportTo(p, x, z, fx, fz) {
   p.x = x; p.y = 0; p.z = z; p.fx = fx; p.fz = fz; p.tpUntil = now() + 350;
   send(p.ws, { t: 'tp', x: r2(x), z: r2(z), fx: r2(fx), fz: r2(fz) });
 }
-function duelSide(which) { return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z, fx: -1, fz: 0 }; }
+/* posisi awal: tim a di kiri, tim b di kanan, berjajar menurut jumlah anggota */
+function duelSide(which, idx, n) {
+  const zo = ((idx || 0) - ((n || 1) - 1) / 2) * 4.5;
+  return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z + zo, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z + zo, fx: -1, fz: 0 };
+}
+/* bersihkan peluru/bola/ranjau; elang pemilik yang ikut bertanding tetap ada */
 function duelClearCombat(room) {
+  const d = room.duel;
   room.projs = [];
-  for (const m of room.mobs) broadcast(room, { t: 'mobx', id: m.id });
-  room.mobs = [];
+  room.mobs = room.mobs.filter(m => { if (d.team[m.o]) return true; broadcast(room, { t: 'mobx', id: m.id }); return false; });
   for (const o of room.orbs) broadcast(room, { t: 'orbx', id: o.id });
   room.orbs = [];
   for (const tr of room.traps) broadcast(room, { t: 'trapx', id: tr.id, x: r2(tr.x), y: r2(tr.y), z: r2(tr.z) });
@@ -1058,8 +1079,8 @@ function duelNextAlive(room) {
   return 0;
 }
 /* ---- lawan komputer: pemain virtual (tanpa koneksi) yang memakai tebasan/kombo, teknik, lompat, dash, dan perisai seperti pemain ---- */
-function duelBotSpawn(room) {
-  const sb = duelSide('b');
+function duelBotSpawn(room, side) {
+  const sb = duelSide(side === 'teamA' ? 'a' : 'b', 0, 1);
   const p = {
     id: room.nextPid++, uid: 'bot', name: 'Komputer', ch: Math.floor(Math.random() * 4), ws: null, room, bot: true,
     x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, m: 0, a: 0, sw: 0, hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
@@ -1068,15 +1089,14 @@ function duelBotSpawn(room) {
     vy: 0, kx: 0, kz: 0, ai: { style: 'melee', styleAt: 0, guardUntil: 0, lastAx: 0, lastAz: 0, avx: 0, avz: 0, lastAt: 0, seen: 0, strafe: 1, strafeAt: 0 }
   };
   room.players.set(p.id, p);
+  room.duel[side].push(p.id);
   broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } });
   broadcast(room, { t: 'sc', s: scoreList(room) });
   return p;
 }
-function duelBotRemove(room, d) {
-  if (!d.bot) return;
-  const bot = d.bot; d.bot = null;
-  if (d.b === bot.id) d.b = 0;
-  removePlayer(room, bot);
+function duelBotsClear(room) {
+  const d = room.duel;
+  for (const p of [...room.players.values()]) if (p.bot) { delete d.team[p.id]; delete d.out[p.id]; d.teamA = d.teamA.filter(i => i !== p.id); d.teamB = d.teamB.filter(i => i !== p.id); removePlayer(room, p); }
 }
 function botReady(p, code, t) { return (p.cdUntil[code] || 0) <= t + 120; }
 function botCast(room, p, code, ax, ay, az) { p.slots[4] = code; doCast(room, p, 4, ax, ay, az); }
@@ -1095,9 +1115,14 @@ function botAim(bot, A, ai, spd) {
   const dy = (A.y + 0.9) - (bot.y + 1.55), t2 = d / spd;
   return { ax: dx / d, az: dz / d, ay: clampN((dy + 0.5 * BOLT_GRAVITY * t2 * t2) / d - 0.06, -0.6, 0.6) };
 }
-function duelBotStep(room, bot, A, dt, t) {
-  if (bot.dead || A.dead) return;
+function duelBotStep(room, bot, enemies, dt, t) {
+  if (bot.dead) return;
+  let A = null, bd = 1e9;
+  for (const e of enemies) { if (e.dead) continue; const dd = Math.hypot(e.x - bot.x, e.z - bot.z); if (dd < bd) { bd = dd; A = e; } }
+  if (!A) return;
   const ai = bot.ai;
+  if (ai.tgt !== A.id) { ai.tgt = A.id; ai.lastAt = 0; ai.avx = ai.avz = 0; }
+  const tm = room.duel.team, myT = tm[bot.id], isFoe = id => tm[id] && tm[id] !== myT;
   if (ai.lastAt) { const dd = (t - ai.lastAt) / 1000; if (dd > 0.001) { ai.avx = ai.avx * 0.6 + (A.x - ai.lastAx) / dd * 0.4; ai.avz = ai.avz * 0.6 + (A.z - ai.lastAz) / dd * 0.4; } }
   ai.lastAx = A.x; ai.lastAz = A.z; ai.lastAt = t;
   const dx = A.x - bot.x, dz = A.z - bot.z, dist = Math.hypot(dx, dz) || 0.01, nx = dx / dist, nz = dz / dist;
@@ -1119,8 +1144,8 @@ function duelBotStep(room, bot, A, dt, t) {
       if (Math.hypot(qx, qy, qz) > rad) return;
       const e = along / o.sp; if (e < eta) { eta = e; thr = o; }
     };
-    for (const pr of room.projs) if (pr.o === A.id) scan(pr, (pr.hr || 1.35) + 0.8 + (pr.boom || 0) * 0.3);
-    for (const o of room.orbs) if (o.o === A.id) scan(o, o.r + 0.8);
+    for (const pr of room.projs) if (isFoe(pr.o)) scan(pr, (pr.hr || 1.35) + 0.8 + (pr.boom || 0) * 0.3);
+    for (const o of room.orbs) if (isFoe(o.o)) scan(o, o.r + 0.8);
     if (thr) {
       if (!ai.seen) ai.seen = t + 70 + Math.random() * 90;   /* waktu reaksi */
       if (t >= ai.seen && eta < 0.42) {
@@ -1176,65 +1201,93 @@ function duelBotStep(room, bot, A, dt, t) {
   if (bot.y > g + 0.001 || bot.vy > 0) { bot.vy -= 30 * dt; bot.y += bot.vy * dt; if (bot.y <= g) { bot.y = g; bot.vy = 0; } }
   bot.m = (mx || mz) ? (sp > 5 ? 2 : 1) : 0; bot.a = bot.y > g + 0.05 ? (bot.vy > 0 ? 1 : 2) : 0;
 }
+
+function duelToWait(room, d) { duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
 function duelTick(room, t, dt) {
   const d = room.duel;
-  d.queue = d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
-  const A = d.a && room.players.get(d.a), B = d.b && (d.bot && d.b === d.bot.id ? d.bot : room.players.get(d.b));
-  if (d.a && !A) d.a = 0;
-  if (d.b && !B) d.b = 0;
+  d.queue = d.queue.filter(id => room.players.has(id) && !d.team[id]);
+  duelRebuild(room);
   let changed = false;
+  const mA = duelMembers(room, 'teamA'), mB = duelMembers(room, 'teamB');
+  const alive = ms => ms.some(p => !p.dead && !d.out[p.id]);
+  for (const p of [...mA, ...mB]) if (p.dead && d.st === 'fight' && !d.out[p.id]) { d.out[p.id] = 1; changed = true; }
   if (d.st === 'fight') {
-    const aDead = !A || A.dead, bDead = !B || B.dead;
-    if (aDead || bDead) {
-      const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
-      if (winner) {
-        if (winner.bot) d.last = loser ? { win: 'Komputer', lose: loser.name, w: 0 } : null;
-        else {
-          d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
-          d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
-          d.last = { win: winner.name, lose: loser ? loser.name : 'Komputer', w: d.streak[winner.id] };
-        }
-        if (!winner.bot && winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
-      } else d.last = null;
-      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!loser.bot && !d.queue.includes(loser.id)) d.queue.push(loser.id); }
-      if (!winner) { d.a = 0; d.b = 0; }
+    const aA = alive(mA), aB = alive(mB);
+    if (!aA || !aB) {
+      const wSide = aA ? 'teamA' : (aB ? 'teamB' : null), lSide = wSide === 'teamA' ? 'teamB' : (wSide === 'teamB' ? 'teamA' : null);
+      const winners = wSide ? duelMembers(room, wSide) : [], losers = wSide ? duelMembers(room, lSide) : [...mA, ...mB];
+      const wn = winners.filter(p => !p.bot).map(p => p.name), ln = losers.filter(p => !p.bot).map(p => p.name);
+      let wmax = 0;
+      for (const p of winners) {
+        if (p.bot) continue;
+        d.streak[p.id] = (d.streak[p.id] || 0) + 1; wmax = Math.max(wmax, d.streak[p.id]);
+        d.total[p.id] = (d.total[p.id] || 0) + 1; d.names[p.id] = p.name; d.best[p.id] = Math.max(d.best[p.id] || 0, d.streak[p.id]);
+        if (p.hp < MAXHP && !p.dead) { p.hp = MAXHP; broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); }
+      }
+      d.last = wSide ? { win: wn.length ? wn.join(' & ') : 'Komputer', names: wn, lose: ln.length ? ln.join(' & ') : 'Komputer', w: wn.length ? wmax : 0 } : null;
+      for (const p of losers) {
+        if (p.bot) continue;
+        d.streak[p.id] = 0;
+        const key = d.team[p.id] === 'a' ? 'teamA' : 'teamB';
+        d[key] = d[key].filter(i => i !== p.id);
+        delete d.team[p.id]; delete d.out[p.id];
+        if (!d.queue.includes(p.id)) d.queue.push(p.id);
+      }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
     }
   } else if (d.st === 'over') {
-    if (t >= d.until) { d.st = 'wait'; changed = true; duelBotRemove(room, d); }
+    if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
-    if (!A || !B || A.dead || B.dead) { d.st = 'wait'; changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; A.invuln = 0; B.invuln = 0; changed = true; }
+    if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; for (const p of [...mA, ...mB]) p.invuln = 0; changed = true; }
   }
   if (d.st === 'wait') {
-    if (!d.a) { const id = duelNextAlive(room); if (id) { d.a = id; changed = true; } }
-    if (!d.b) { const id = duelNextAlive(room); if (id) { d.b = id; changed = true; } }
-    /* tidak ada lawan: setelah 2,5 detik, komputer jadi lawan */
-    if (d.a && !d.b && !d.bot) {
-      if (!d.aloneAt) d.aloneAt = t;
-      else if (t - d.aloneAt > 2500) { d.bot = duelBotSpawn(room); d.b = d.bot.id; d.aloneAt = 0; changed = true; }
-    } else d.aloneAt = 0;
-    const A2 = d.a && room.players.get(d.a), B2 = d.b && (d.bot && d.b === d.bot.id ? d.bot : room.players.get(d.b));
-    if (A2 && B2) {
-      duelClearCombat(room);
-      const sa = duelSide('a'), sb = duelSide('b');
-      duelRefresh(room, A2); teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); A2.invuln = t + DUEL_COUNT_MS + 200;
-      duelRefresh(room, B2); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz); B2.invuln = t + DUEL_COUNT_MS + 200;
-      if (B2.bot) { B2.vy = 0; B2.kx = B2.kz = 0; B2.combo = 0; }
-      d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
+    /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
+    for (;;) {
+      const na = d.teamA.length, nb = d.teamB.length;
+      if (na >= d.size && nb >= d.size) break;
+      const side = (na <= nb && na < d.size) ? 'teamA' : (nb < d.size ? 'teamB' : 'teamA');
+      const id = duelNextAlive(room); if (!id) break;
+      d[side].push(id); changed = true;
     }
+    duelRebuild(room);
+    const humans = d.teamA.length + d.teamB.length;
+    if (humans > 0) {
+      let go = humans >= d.size * 2;
+      if (!go) { if (!d.aloneAt) d.aloneAt = t; else if (t - d.aloneAt > 2500) go = true; } else d.aloneAt = 0;
+      if (go) {
+        while (d.teamA.length < d.size) duelBotSpawn(room, 'teamA');
+        while (d.teamB.length < d.size) duelBotSpawn(room, 'teamB');
+        duelRebuild(room);
+        duelClearCombat(room);
+        ['teamA', 'teamB'].forEach(side => {
+          const ms = duelMembers(room, side), w = side === 'teamA' ? 'a' : 'b';
+          ms.forEach((p, i) => {
+            const sd = duelSide(w, i, ms.length);
+            duelRefresh(room, p); teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); p.invuln = t + DUEL_COUNT_MS + 200;
+            if (p.bot) { p.vy = 0; p.kx = p.kz = 0; p.combo = 0; }
+          });
+        });
+        d.out = {};
+        d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; d.aloneAt = 0; changed = true;
+      }
+    } else d.aloneAt = 0;
   }
-  if (d.st === 'fight' && d.bot && B === d.bot && A) duelBotStep(room, B, A, dt || 0.033, t);
-  /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
+  if (d.st === 'fight') {
+    for (const bot of [...mA, ...mB]) if (bot.bot && !d.out[bot.id]) duelBotStep(room, bot, d.team[bot.id] === 'a' ? mB : mA, dt || 0.033, t);
+  }
+  /* batas ring: penonton & yang sudah gugur tidak boleh masuk, petarung tidak boleh keluar */
   for (const p of room.players.values()) {
     if (p.dead || t < (p.tpUntil || 0) + 150) continue;
     const dx = p.x - ARENA.x, dz = p.z - ARENA.z, dist = Math.hypot(dx, dz) || 0.01;
-    const slot = d.a === p.id ? 'a' : (d.b === p.id ? 'b' : null);
+    const slot = d.team[p.id] && !d.out[p.id] ? d.team[p.id] : null;
     if (slot && p.y > ARENA.height + 2) { teleportTo(p, p.x, p.z, p.fx, p.fz); continue; }
     if (slot && (d.st === 'fight' || d.st === 'count')) {
-      if (d.st === 'count') { const sd = duelSide(slot); if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); }
-      else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
-    } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3) {
+      if (d.st === 'count') {
+        const ms = duelMembers(room, slot === 'a' ? 'teamA' : 'teamB'), sd = duelSide(slot, ms.indexOf(p), ms.length);
+        if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz);
+      } else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
+    } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3 && !p.bot) {
       const k = (ARENA.ringR + 3.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, dx / dist, dz / dist);
     }
   }
@@ -1272,7 +1325,7 @@ function onJoin(ws, m) {
   for (const p of room.players.values()) {
     if (p.name.toLowerCase() === lower) return send(ws, { t: 'err', msg: 'Nama "' + name + '" sudah dipakai di room ini. Pakai nama lain.' });
   }
-  if (room.players.size >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
+  if ([...room.players.values()].filter(q => !q.bot).length >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
 
   const s = room.duel ? standSpawn() : randomSpawn();
   const p = {
@@ -1307,7 +1360,7 @@ function onMessage(ws, text) {
   if (m.t === 'join') return onJoin(ws, m);
   const p = ws.player;
   if (!p) return;
-  const room = p.room;
+  const room = p.room; CUR = room;
   switch (m.t) {
     case 's': {
       if (p.dead || now() < (p.tpUntil || 0)) break;
@@ -1554,7 +1607,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1599,7 +1652,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : 'world' };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : 'world', team: clampN(Math.round(Number(b.team)) || 1, 1, 3) };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1653,7 +1706,7 @@ async function handleAdmin(req, res, pathname) {
       const max = Math.round(Number(r.max));
       if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
       seenR.add(r.code);
-      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : 'world' });
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : 'world', team: clampN(Math.round(Number(r.team)) || 1, 1, 3) });
     }
     for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
     DB.rooms = rs; DB.techniques = techs;
@@ -1871,7 +1924,7 @@ button:disabled{opacity:.5}
       <h2>Buat room baru</h2>
       <label>Nama room</label><input id="rname" maxlength="30" placeholder="Misal: Duel Sabtu Malam">
       <label>Mode room</label>
-      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel">Arena Duel 1 vs 1</option></select>
+      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel1">Arena Duel 1 vs 1</option><option value="duel2">Arena Tim 2 vs 2</option><option value="duel3">Arena Tim 3 vs 3</option></select>
       <label>Maksimal pemain</label>
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
@@ -1970,7 +2023,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':'duel',team:parseInt($('rmode').value.slice(4),10)||1}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -1983,7 +2036,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA DUEL 1v1':' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim)':' DUEL'):' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -2394,10 +2447,13 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
+<label class="srow"><span><b>Teks besar di tengah layar</b><small>Hitung mundur, FIGHT!, pengumuman pemenang, dan layar KO di arena.</small></span><input type="checkbox" data-set="bigText"><i class="sw"></i></label>
+<label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
+<label class="srow"><span><b>Jeda singkat saat tebasan kena</b><small>Layar berhenti sekejap (hitstop) dan tulisan PENUTUP! saat tebasan mengenai musuh.</small></span><input type="checkbox" data-set="hitStop"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
-<div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
+<div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
@@ -2546,8 +2602,8 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const ARENA={x:0,z:58,ringR:25,side:14,h:20};
-const flats=[{x:ARENA.x,z:ARENA.z,r:33,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
+const ARENA={x:-85,z:85,ringR:38,side:22,h:24};
+const flats=[{x:ARENA.x,z:ARENA.z,r:ARENA.ringR+8,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
 [[62,34],[-70,-22],[18,-82]].forEach(([x,z],i)=>{houseSpecs.push({x,z,rot:i*Math.PI/2+0.4,far:true});flats.push({x,z,r:8,b:10});});
@@ -2562,7 +2618,9 @@ function terrainH(x,z){
   for(const f of flats){const d=Math.hypot(x-f.x,z-f.z);if(d<f.r+f.b){const t=d<=f.r?0:(d-f.r)/f.b;const s=t*t*(3-2*t);if(s<m)m=s;}}
   const hills=(fbm(x*0.018,z*0.018)-0.5)*22+(fbm(x*0.06+50,z*0.06+50)-0.5)*3;
   const e=clamp((Math.hypot(x,z)-100)/42,0,1);
-  return hills*m+e*e*(3-2*e)*38-lakeDepth(x,z);
+  const da=Math.hypot(x-ARENA.x,z-ARENA.z),fa=ARENA.ringR+8;let ma=1;
+  if(da<fa+12){const t=da<=fa?0:(da-fa)/12;ma=t*t*(3-2*t);}
+  return hills*m+e*e*(3-2*e)*38*ma-lakeDepth(x,z);
 }
 function nearFlat(x,z,pad){for(const f of flats)if(Math.hypot(x-f.x,z-f.z)<f.r+pad)return true;return false}
 const pathSegs=[];
@@ -4138,7 +4196,7 @@ function onMsg(m){
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
       roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
       document.body.classList.toggle('dbg',!!(m.room&&m.room.debug));
-      if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);showDuelHelp();renderBoard();break;}
+      if(roomMode==='duel'){document.body.classList.add('duel');duelSize=(m.duel&&m.duel.size)||1;buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast(duelSize>1?'Arena Tim '+duelSize+' vs '+duelSize+': tim menang lanjut. Kalau kurang pemain, komputer jadi rekan & lawan!':'Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.6);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
@@ -4152,7 +4210,7 @@ function onMsg(m){
         if(o.fresh===undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;o.fresh=false;}
       });break;}
     case 'atk':{const o=others.get(m.id);if(o){o.atkT=0.32;o.fx=m.fx;o.fz=m.fz;sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,o.y,o.z,m.fx,m.fz,0xffd9a0,1,o.side);}break;}
-    case 'hf':{const big=m.cb===3;hitStop=big?0.11:0.05;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
+    case 'hf':{const big=m.cb===3;if(SET.hitStop)hitStop=big?0.11:0.05;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big&&SET.hitStop)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
       const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
@@ -4244,7 +4302,7 @@ function onHit(m){
 function onDie(m){
   feed('✖ '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
   if(m.by===me.id&&m.id!==me.id)sfx.kill();
-  if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display='flex';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
+  if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display=(SET.bigText||roomMode!=='duel')?'flex':'none';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
   else{const o=others.get(m.id);if(o){o.ride=false;o.dead=true;o.hp=0;drawLabel(o);burst(o.x,o.y+1,o.z,'#ffffff',16,5);}}
 }
 function showDc(t,p){$('dcT').textContent=t;$('dcP').textContent=p;$('dc').style.display='flex';}
@@ -4679,7 +4737,7 @@ let last=performance.now();
 
 
 /* ---------- ARENA DUEL 1 vs 1 ---------- */
-let roomMode='world',arenaBuilt=false,duel=null,duelAt=0,duelPrevSt='';
+let duelSize=1,roomMode='world',arenaBuilt=false,duel=null,duelAt=0,duelPrevSt='';
 function buildArena(){
   if(arenaBuilt)return;arenaBuilt=true;
   const g=new THREE.Group();g.position.set(ARENA.x,0,ARENA.z);scene.add(g);
@@ -4726,8 +4784,8 @@ function buildArena(){
   /* papan nama */
   const lc=document.createElement('canvas');lc.width=512;lc.height=128;const lx=lc.getContext('2d');
   lx.fillStyle='rgba(8,14,34,.85)';lx.fillRect(0,0,512,128);lx.strokeStyle='#6cd4ff';lx.lineWidth=6;lx.strokeRect(6,6,500,116);
-  lx.fillStyle='#ffffff';lx.font='800 54px Poppins,sans-serif';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('ARENA 1 vs 1',256,50);
-  lx.fillStyle='#ffd84d';lx.font='600 26px Poppins,sans-serif';lx.fillText('Menang lanjut, kalah antri',256,96);
+  lx.fillStyle='#ffffff';lx.font='800 54px Poppins,sans-serif';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('ARENA '+duelSize+' vs '+duelSize,256,50);
+  lx.fillStyle='#ffd84d';lx.font='600 26px Poppins,sans-serif';lx.fillText(duelSize>1?'Tim menang lanjut, kalah antri':'Menang lanjut, kalah antri',256,96);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(6,1.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc),side:THREE.DoubleSide}));sign.position.set(0,5.2,-(R+3.2));g.add(sign);
   const sp1=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,6),wood),sp2=sp1.clone();sp1.position.set(-2.8,2.5,-(R+3.2));sp2.position.set(2.8,2.5,-(R+3.2));g.add(sp1,sp2);
 }
@@ -4740,12 +4798,12 @@ function updArena(dt){
     if(duel&&duel.st==='count')tgt=0.4;
     else if(duel&&duel.st==='fight'&&sinceFight<1.6)tgt=0.4*Math.max(0,1-sinceFight/1.6);
     wallPulse=Math.max(0,wallPulse-dt*2.2);
-    const goal=Math.max(tgt,wallPulse*0.5);
+    const goal=SET.arenaWall?Math.max(tgt,wallPulse*0.5):0;
     wallA+=(goal-wallA)*Math.min(1,dt*(goal>wallA?8:3));
     arenaWallMat.opacity=wallA;arenaWallParts.forEach(m=>m.visible=wallA>0.012);
   }
   if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
-function duelMine(){if(!duel)return 0;if(duel.a&&duel.a.id===me.id)return 1;if(duel.b&&duel.b.id===me.id)return 2;return 0;}
+function duelMine(){if(!duel)return 0;const f=l=>(l||[]).some(x=>x.id===me.id&&!x.o);if(f(duel.ta))return 1;if(f(duel.tb))return 2;return 0;}
 function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
 let duelWarnT=0;
 function duelBlock(){
@@ -4756,7 +4814,8 @@ function duelBlock(){
 function renderDuelBox(){
   const el=$('duelBox');if(!duel||roomMode!=='duel'){el.innerHTML='';return;}
   const nm=p=>p?esc(p.name)+(p.w>0?' <span class="w">'+p.w+'x menang</span>':''):'?';
-  let h='<div class="vs"><span>'+nm(duel.a)+'</span><i>VS</i><span>'+nm(duel.b)+'</span></div>';
+  const side=l=>(l&&l.length?l.map(x=>nm(x)+(x.o?' ✖':'')).join(' &amp; '):'?');
+  let h='<div class="vs"><span>'+side(duel.ta)+'</span><i>VS</i><span>'+side(duel.tb)+'</span></div>';
   const mine=duelMine();let q='';
   if(mine)q='<span class="me">Kamu bertarung!</span>';
   else{const i=duel.q.findIndex(x=>x.id===me.id);q=i>=0?'Antrianmu: <b>#'+(i+1)+'</b>':'';}
@@ -4773,10 +4832,10 @@ function onDuel(m){
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
   if(m.st==='fight'&&prev!=='fight')fightAt=performance.now();
-  if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.win&&me.name===m.last.win)sfx.fanfare&&sfx.fanfare();}
+  if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
 let duelBigT=0;
-function duelBig(t,sub,ms){const el=$('duelBig');el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
+function duelBig(t,sub,ms){const el=$('duelBig');if(!SET.bigText)return;el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
 function updDuel(){
   if(roomMode!=='duel')return;
   const now=performance.now();
@@ -4784,14 +4843,14 @@ function updDuel(){
   if(duel&&duel.st==='count'){
     const rem=Math.max(0,duel.ms-(now-duelAt)),n=Math.ceil(rem/1000);
     if(n>0&&n!==duelCntN){duelCntN=n;sfx.click&&sfx.click();}
-    $('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;
+    if(SET.bigText){$('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;}else $('duelBig').classList.remove('show');
   }else duelCntN=0;
 }
 let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,hitStop:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
