@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Perbaikan bug arena: karakter tertarik balik ke posisi awal saat pertandingan mulai.** Setelah arena pindah ke stadion (x=5000), server membatasi posisi pemain hanya sampai x=3100, jadi server mengira petarung ada di luar ring lalu menariknya balik. Batas diperlebar ke 5200.
 - **Pengaturan baru "Tampilkan body fisika objek 3D"** (default mati): menampilkan garis kerangka collider pohon, batu, tiang, tembok, rumah, dan pagar arena dalam radius 60 unit. Oranye tabung, kuning batu/pijakan, magenta kotak.
 - **Arena pindah ke scene stadion terpisah** (koordinat interior x=5000, seperti goa), tidak lagi di tengah hutan dekat tepi peta. Ada lantai luar, tribun enam tingkat dengan penonton, dinding luar, enam tiang lampu sorot, spanduk biru dan merah, langit malam, dan minimap sendiri. Penonton tertahan di area antara ring dan tribun. Ini juga menghilangkan dinding tak terlihat yang dulu muncul karena batas dunia (radius 134) memotong ring.
 - **Kecepatan semua bola 2 kali lipat** (5 jadi 10, satu konstanta `ballSpeed` di `TUNING`): bola lempar, Bola Biru, dan bola pengejar. Jarak jangkau bola lempar dan Bola Biru tetap, jadi bola sampai dua kali lebih cepat; bola pengejar jangkauannya ikut dua kali lebih jauh.

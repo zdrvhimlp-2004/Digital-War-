@@ -1606,7 +1606,7 @@ function onMessage(ws, text) {
   switch (m.t) {
     case 's': {
       if (p.dead || now() < (p.tpUntil || 0)) break;
-      const x = num(m.x, -200, 3100, null), y = num(m.y, -12, 80, null), z = num(m.z, -200, 200, null);
+      const x = num(m.x, -200, 5200, null), y = num(m.y, -12, 80, null), z = num(m.z, -200, 200, null);
       if (x === null || y === null || z === null) break;
       p.x = x; p.y = y; p.z = z;
       p.fx = num(m.fx, -1, 1, p.fx); p.fz = num(m.fz, -1, 1, p.fz);
