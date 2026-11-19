@@ -31,7 +31,7 @@ const TUNING = {
   maxHp: 300,                 // darah pemain
   walk: 4.6, run: 7,          // kecepatan jalan / lari
   jump: 19.5,                 // daya lompat biasa
-  meleeDmg: 50, meleeRange: 3.3, meleeCd: 380,   // pedang (penutup kombo 1.6x)
+  meleeDmg: 50, meleeRange: 3.3, meleeCd: 250,   // pedang (penutup kombo 1.6x)
   waveDmg: 25,                // tebasan angin
   ballSpeed: 10,              // kecepatan semua bola (bolt & orb), 2x dari 5
   eagleSpeedMul: 0.275,       // pengali kecepatan elang (panggilan & tunggangan)
@@ -546,7 +546,7 @@ function doMelee(room, p, fx, fz, ay) {
   /* kombo 3 tahap: tebasan 1-2 cepat, tebasan 3 (penutup) lebih kuat, jauh, dan jeda lebih lama */
   p.combo = (t - (p.atkAt || 0) > 900 || !p.combo) ? 1 : (p.combo % 3) + 1;
   const cb = p.combo, fin = cb === 3, dm = fin ? 1.6 : 1, rb = fin ? 0.7 : 0;
-  p.atkCd = fin ? 720 : MELEE.cd;
+  p.atkCd = fin ? 480 : MELEE.cd;
   p.atkAt = t; p.atkFx = fx; p.atkFz = fz;
   broadcast(room, { t: 'atk', id: p.id, fx, fz, cb });
   let hfSent = false;
@@ -3816,11 +3816,11 @@ function doAttack(){
   if(guarding)setGuard(false);
   if(fps&&started){
     const v=aimVec(),hl=Math.hypot(v.x,v.z)||1,ax=v.x/hl,az=v.z/hl;faceX=ax;faceZ=az;
-    {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
+    {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.5:0.28;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
     netSend({t:'atk',fx:+ax.toFixed(3),fz:+az.toFixed(3),fy:+v.y.toFixed(3)});return;
   }
   const a=aim();faceX=a.x;faceZ=a.z;
-  {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
+  {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.5:0.28;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
   netSend({t:'atk',fx:a.x,fz:a.z});
 }
 function updSlotUI(i){

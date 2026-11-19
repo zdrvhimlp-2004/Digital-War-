@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Serangan biasa lebih cepat**: cooldown tebasan 0,38 jadi 0,25 detik, dan penutup kombo 0,72 jadi 0,48 detik (server dan layar pemain). Damage tidak berubah. Atur lewat `meleeCd` di `TUNING`.
 - **Perbaikan analog kiri**: sebelumnya karakter masih lambat bila analog hanya digeser sedikit, karena vektor gerak belum dinormalkan (hanya angka kecepatannya yang diubah). Sekarang arah dinormalkan sehingga selalu kecepatan penuh; bisa dimatikan di Pengaturan.
 - **Kunci Lawan juga mengunci arah vertikal**: bukan hanya kiri-kanan, bidikan ikut naik atau turun ke tinggi lawan (kamera di mode FPS maupun orang ketiga), jadi bola langsung mengarah tepat ke lawan di atas atau bawahmu.
 - **Tulisan "... bergabung" hanya muncul 1 detik** (sebelumnya 5 detik).
