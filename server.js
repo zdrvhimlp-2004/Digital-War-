@@ -33,6 +33,7 @@ const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
 const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
+const BALL_SPEED_MULT = 2;   /* kecepatan semua bola (bolt, bola biru), umur dibagi sama supaya jarak tempuh tetap. Gelombang tebasan tidak ikut */
 const KNOCK_MULT = 2;   /* pengali semua dorongan (tebasan, bola, ledakan, nova, sinar, dll.) */
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
@@ -122,7 +123,7 @@ function terrainH(x, z) {
   const ld = 5.5 * (1 - sstep(LAKE.R - 5, LAKE.R + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z)));
   return hills * m + e * e * (3 - 2 * e) * 38 - ld;
 }
-const BOLT_GRAVITY = 2.6;
+const BOLT_GRAVITY = 2.6 * BALL_SPEED_MULT * BALL_SPEED_MULT;   /* percepatan jatuh; dikali kuadrat pengali kecepatan supaya lengkung lintasan sama seperti sebelum dipercepat */
 
 /* ====================================================================
  *  PENYIMPANAN
@@ -472,7 +473,7 @@ function deflectProj(room, pr, by) {
   if (sh && !sh.dead) { dx = sh.x - pr.x; dy = (sh.y + 0.9) - pr.y; dz = sh.z - pr.z; } else { dx = -pr.dx; dy = -(pr.dy || 0); dz = -pr.dz; }
   const l = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1; dx /= l; dy /= l; dz /= l;
   const i = room.projs.indexOf(pr); if (i >= 0) room.projs.splice(i, 1);
-  const np = { id: projSeq++, o: by.id, x: pr.x, y: pr.y, z: pr.z, dx, dy, dz, sp: pr.sp * 1.25, life: Math.max(pr.life, 1.6), dmg: pr.dmg, stun: pr.stun, c: pr.c, hr: pr.hr, boom: pr.boom, size: pr.size, grav: pr.grav };
+  const np = { id: projSeq++, o: by.id, x: pr.x, y: pr.y, z: pr.z, dx, dy, dz, sp: pr.sp * 1.25, life: Math.max(pr.life, 1.6 / BALL_SPEED_MULT), dmg: pr.dmg, stun: pr.stun, c: pr.c, hr: pr.hr, boom: pr.boom, size: pr.size, grav: pr.grav };
   room.projs.push(np);
   broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, sb: 1 });
   broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(dx), dy: r2(dy), dz: r2(dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
@@ -609,7 +610,7 @@ function doCast(room, p, slot, ax, ay, az) {
         const ang = (i - (n - 1) / 2) * (tech.spread || 0), cs = Math.cos(ang), sn = Math.sin(ang);
         const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs;
         const size = tech.size || 1.6, boom = tech.boom == null ? 3 : tech.boom;
-        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: tech.speed, life: tech.life, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: tech.speed * BALL_SPEED_MULT, life: tech.life / BALL_SPEED_MULT, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
         room.projs.push(pr);
         broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(pr.dy), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
       }
@@ -617,7 +618,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'orb': {
       const r = tech.radius || 5.5;
-      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: tech.speed || 11, life: tech.life || 4, r, dmg: tech.damage, c: tech.color, hit: new Map() };
+      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: (tech.speed || 11) * BALL_SPEED_MULT, life: (tech.life || 4) / BALL_SPEED_MULT, r, dmg: tech.damage, c: tech.color, hit: new Map() };
       room.orbs.push(orb);
       broadcast(room, { t: 'orb', id: orb.id, o: p.id, x: r2(orb.x), y: r2(orb.y), z: r2(orb.z), dx: r2(bx), dy: r2(by), dz: r2(bz), sp: orb.sp, life: orb.life, r, c: orb.c });
       break;
@@ -918,7 +919,7 @@ function stepRoom(room, dt, t) {
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
     if (pr.grav) pr.dy -= pr.grav / Math.max(1, pr.sp) * dt;
-    const ox0 = pr.x, oz0 = pr.z;
+    const ox0 = pr.x, oz0 = pr.z, oy0 = pr.y;
     pr.x += pr.dx * pr.sp * dt; pr.y += (pr.dy || 0) * pr.sp * dt; pr.z += pr.dz * pr.sp * dt; pr.life -= dt;
     /* tembok teknik menghentikan peluru */
     let twh = null;
@@ -928,15 +929,23 @@ function stepRoom(room, dt, t) {
     }
     let hit = null;
     const hr = pr.hr || 1.35;
-    if (!twh) for (const v of victims(room)) {
-      if (friendly(pr.o, v) || (pr.skip && pr.skip.has(v.id))) continue;
-      if (Math.hypot(v.x - pr.x, v.z - pr.z) < hr && Math.abs((v.y + 0.9) - pr.y) < hr + 0.05) { hit = v; break; }
+    if (!twh) {
+      /* cek menyapu sepanjang jalur langkah ini, supaya bola cepat tidak melompati korban */
+      const sx = pr.x - ox0, sz = pr.z - oz0, sl2 = sx * sx + sz * sz;
+      let bestT = 2;
+      for (const v of victims(room)) {
+        if (friendly(pr.o, v) || (pr.skip && pr.skip.has(v.id))) continue;
+        const tt = sl2 > 1e-9 ? clampN(((v.x - ox0) * sx + (v.z - oz0) * sz) / sl2, 0, 1) : 1;
+        const qx = ox0 + sx * tt, qz = oz0 + sz * tt, qy = oy0 + (pr.y - oy0) * tt;
+        if (Math.hypot(v.x - qx, v.z - qz) < hr && Math.abs((v.y + 0.9) - qy) < hr + 0.05 && tt < bestT) { hit = v; bestT = tt; }
+      }
+      if (hit) { pr.x = ox0 + sx * bestT; pr.z = oz0 + sz * bestT; pr.y = oy0 + (pr.y - oy0) * bestT; }
     }
     if (hit && !pr.wv && hit.guarding && !hit.isMob && !hit.isSol && hit.fx !== undefined && (hit.fx * -pr.dx + hit.fz * -pr.dz) > 0.15) {
       /* kena perisai: bola dipantulkan balik ke arah penembak */
       const nx = -pr.dx, nz = -pr.dz, hl2 = Math.hypot(nx, nz) || 1;
       room.projs.splice(i, 1);
-      const np = { id: projSeq++, o: hit.id, x: hit.x + nx / hl2 * 1.5, y: pr.y, z: hit.z + nz / hl2 * 1.5, dx: nx, dy: -(pr.dy || 0) * 0.5 + 0.03, dz: nz, sp: pr.sp, life: Math.max(pr.life, 1.4), dmg: pr.dmg, stun: pr.stun, c: pr.c, hr: pr.hr, boom: pr.boom, size: pr.size, grav: pr.grav };
+      const np = { id: projSeq++, o: hit.id, x: hit.x + nx / hl2 * 1.5, y: pr.y, z: hit.z + nz / hl2 * 1.5, dx: nx, dy: -(pr.dy || 0) * 0.5 + 0.03, dz: nz, sp: pr.sp, life: Math.max(pr.life, 1.4 / BALL_SPEED_MULT), dmg: pr.dmg, stun: pr.stun, c: pr.c, hr: pr.hr, boom: pr.boom, size: pr.size, grav: pr.grav };
       room.projs.push(np);
       broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, rf: 1 });
       broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(np.dx), dy: r2(np.dy), dz: r2(np.dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
@@ -3150,7 +3159,15 @@ function sfxAt(name,x,z){if(!AC||!sfx[name])return;const R=SFX_R[name]||SFX_RANG
   /* batasi tumpukan suara jauh: maksimal 4 suara pelan per 150 ms */
   const tn=performance.now();sfxWin=sfxWin.filter(t=>tn-t<150);if(v<0.35){if(sfxWin.length>=4)return;sfxWin.push(tn);}
   SV=v;const a=Array.prototype.slice.call(arguments,3);try{sfx[name].apply(null,a);}catch(e){}SV=1;}
+let techClickT=0;
 const sfx={
+  /* klik pribadi saat teknik berhasil dipakai: retak tajam lalu serpihan kaca berdenting, cukup keras. Hanya didengar pemilik, bukan suara berjarak */
+  techClick(){
+    const n=performance.now();if(n-techClickT<110)return;techClickT=n;
+    noiseHit(0.035,0.95,7500,0,'highpass');tone(3400,1700,0.045,'square',0.17,0);tone(1500,800,0.1,'sine',0.14,0);
+    noiseHit(0.26,0.55,5200,0.012,'highpass');noiseHit(0.18,0.35,3000,0.02,'bandpass',2);
+    for(let k=0;k<8;k++){const f=rnd(2300,7600);tone(f,f*rnd(0.65,0.95),rnd(0.05,0.16),'triangle',0.1,0.014+k*rnd(0.012,0.03));}
+  },
   /* langkah */
   step(k){
     if(k==='wood'){noiseHit(0.06,0.11,520,0);tone(rnd(95,135),60,0.07,'triangle',0.1);}
@@ -3369,8 +3386,9 @@ function castSlot(i){
   if(sleeping)wakeUp();
   const s=slots[i];if(!s){cancelAim();openModal(i);return;}
   if(duelBlock())return;
-  if(aiming===i){fireAim();return;}
+  if(aiming===i){sfx.techClick();fireAim();return;}
   if(slotCd[i]>0)return;
+  sfx.techClick();   /* tombol teknik benar-benar tertekan dan jalan */
   if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
   if(aiming>=0)cancelAim();
   if(guarding)setGuard(false);
@@ -3808,7 +3826,7 @@ function castAimed(i){
   const v=aimVec(),hl=Math.hypot(v.x,v.z)||1;
   faceX=v.x/hl;faceZ=v.z/hl;
   if(guarding)setGuard(false);if(sleeping)wakeUp();
-  slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);
+  slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);sfx.techClick();
   netSend({t:'cast',slot:i,fx:+v.x.toFixed(3),fy:+v.y.toFixed(3),fz:+v.z.toFixed(3)});
   return true;
 }
@@ -3988,7 +4006,7 @@ function updOthers(dt,rgt,fwd){
   }
 }
 /* projectiles */
-let boomFlash=null;const BOLT_G=2.6;
+let boomFlash=null;const BOLT_G=2.6*4;   /* harus sama dengan BOLT_GRAVITY server (2.6 x pengali kecepatan bola 2 kuadrat) */
 const boltLight=new THREE.PointLight(0xffffff,0,18,2);scene.add(boltLight);
 const poolGeo=new THREE.CircleGeometry(1,28).rotateX(-Math.PI/2);
 function waveGeo(){
