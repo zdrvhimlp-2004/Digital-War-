@@ -3,6 +3,8 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Auto aim bola (mode non-FPS)**: teknik bola lempar dan Bola Biru langsung dilempar ke musuh terdekat dalam 40 unit (pemain dan penyamun/prajurit musuh), termasuk ketinggiannya. Bila tidak ada musuh, tetap bidik manual seperti biasa. Mode FPS tetap bidik sendiri. Bisa dimatikan di Pengaturan ("Auto aim bola", default hidup).
+- **Notifikasi hasil tebasan ("Meleset: ..." / "Kena ...") kini default mati** dan dinyalakan sendiri di Pengaturan ("Notifikasi hasil tebasan"). Tombolnya bekerja di semua room, tidak perlu mode uji hit dari admin.
 - **Suara klik pribadi saat teknik dipakai**: retak tajam lalu serpihan kaca berdenting, cukup keras, hanya terdengar oleh pemain yang menekan (bukan suara berjarak). Bunyi hanya bila teknik benar-benar jalan atau masuk mode bidik; saat cooldown, terkunci, atau slot kosong tidak ada bunyi, jadi kamu tahu tombolnya tertekan atau tidak.
 - **Semua bola 2 kali lebih cepat** (bola lempar Byte Bolt, Loop Barrage, Null Pointer, Fork Bomb, dan Bola Biru; pengali `BALL_SPEED_MULT` di `server.js`). Tebasan dan gelombang angin tidak ikut. Jarak tempuh tetap sama (umur terbang dibagi dua), lengkung jatuhnya juga sama, dan tabrakan bola kini dicek sepanjang jalur sehingga bola cepat tidak melompati lawan.
 - **Perbaikan bug tepi arena**: pemain yang berjalan sampai tepi ring tiba-tiba ditarik server ke tengah dan dihadapkan ke tengah (terasa seperti ada dinding tak terlihat). Penyebabnya batas klien (24,3) lebih jauh dari batas tarik server (24,2). Batas server sekarang diberi toleransi (24,2 jadi 25,5), jadi pemain bisa berjalan mulus sampai menempel di tepi.

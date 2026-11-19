@@ -513,19 +513,19 @@ function doMelee(room, p, fx, fz, ay) {
     if (v === p || friendly(p.id, v)) continue;
     if (room.twalls.length && twFirst(room, p.x, p.z, p.y + 1, v.x, v.z, 0)) continue;   /* terhalang tembok teknik */
     const ck = meleeCheck(p, v, fx, fz, ay);
-    if (!ck.ok) { if (room.debug && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
+    if (!ck.ok) { if ((room.debug || p.dbg) && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
     const dx = ck.dx, dz = ck.dz, d = ck.d;
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
     if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
       /* pedang beradu: keduanya terpental, tanpa damage */
       broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8 * KNOCK_MULT), az: r2(-nz * MELEE.knock * 0.8 * KNOCK_MULT), bx: r2(nx * MELEE.knock * 0.8 * KNOCK_MULT), bz: r2(nz * MELEE.knock * 0.8 * KNOCK_MULT) });
       v.atkAt = 0;
-      if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
+      if (room.debug || p.dbg) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
       landed++;
       continue;
     }
     landed++; hitIds.add(v.id);
-    if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
+    if (room.debug || p.dbg) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
     hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
   }
   /* tebasan mengenai tembok teknik */
@@ -546,7 +546,7 @@ function doMelee(room, p, fx, fz, ay) {
     room.projs.push(wv);
     broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1, o: p.id });
   }
-  if (room.debug && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
+  if ((room.debug || p.dbg) && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
   /* tebasan menghancurkan bola yang melintas di depan */
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
@@ -1293,6 +1293,7 @@ function onMessage(ws, text) {
       break;
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
+    case 'pref': { p.dbg = !!m.dbg; break; }   /* pemain menyalakan notifikasi hasil tebasan di Pengaturan */
     case 'atk': {
       if (room.duel && !duelFighting(room, p)) break;
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
@@ -2366,6 +2367,8 @@ body.cine #setBox{display:none!important}
 <div id="toast" class="pill"></div>
 <div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
+<label class="srow"><span><b>Auto aim bola</b><small>Di mode non-FPS, teknik bola (bola lempar dan bola biru) langsung dilempar ke musuh terdekat dalam 40 unit. Tidak ada musuh: bidik manual seperti biasa. Mode FPS tetap bidik sendiri.</small></span><input type="checkbox" data-set="autoAimBall"><i class="sw"></i></label>
+<label class="srow"><span><b>Notifikasi hasil tebasan</b><small>Pesan kecil di bawah layar: kena siapa atau kenapa meleset. Untuk menguji serangan. Default mati.</small></span><input type="checkbox" data-set="hitDbg"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
@@ -3350,6 +3353,15 @@ function interact(){
   else if(a.type==='cap')netSend({t:'cap',fort:a.fort});
   else netSend({t:'door',i:a.i});
 }
+/* auto aim bola (non-FPS): vektor 3D ke musuh terdekat dalam 40 unit, atau null */
+function ballAim(){
+  let best=null,bd=40;
+  const eh=pos.y+1.45;
+  const test=(x,y,z)=>{const dx=x-pos.x,dz=z-pos.z,d=Math.hypot(dx,dz);if(d<1||d>=bd)return;bd=d;const dy=(y+0.9)-eh,l=Math.hypot(d,dy);best={x:dx/l,y:dy/l,z:dz/l};};
+  for(const o of others.values()){if(o.dead)continue;test(o.x,o.y||0,o.z);}
+  for(const o of sols.values()){if(o.dead||o.owner===me.id)continue;test(o.x,terrainH(o.x,o.z),o.z);}
+  return best;
+}
 function aim(){
   if(!SET.autoAim)return {x:faceX,z:faceZ};
   let fx=faceX,fz=faceZ,best=null,bs=-9;
@@ -3389,7 +3401,7 @@ function castSlot(i){
   if(aiming===i){sfx.techClick();fireAim();return;}
   if(slotCd[i]>0)return;
   sfx.techClick();   /* tombol teknik benar-benar tertekan dan jalan */
-  if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
+  if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}if(SET.autoAimBall&&(s.kind==='bolt'||s.kind==='orb')){const bv=ballAim();if(bv){castAimed(i,bv);return;}}enterAim(i);return;}
   if(aiming>=0)cancelAim();
   if(guarding)setGuard(false);
   let a;
@@ -3820,10 +3832,10 @@ function enterAim(i){
   $('aimbar').classList.add('show');toast('Bidik dulu: geser kamera, lalu Tembak',1.8);sfx.plop();
 }
 function cancelAim(){aiming=-1;document.querySelectorAll('.slot').forEach(x=>x.classList.remove('aiming'));$('aimbar').classList.remove('show');aimRet.visible=false;aimLine.visible=false;}
-function castAimed(i){
+function castAimed(i,vOverride){
   const s=slots[i];
   if(!s||slotCd[i]>0||!started||dead||modalOpen||bookOpen||stunT>0||fade)return false;
-  const v=aimVec(),hl=Math.hypot(v.x,v.z)||1;
+  const v=vOverride||aimVec(),hl=Math.hypot(v.x,v.z)||1;
   faceX=v.x/hl;faceZ=v.z/hl;
   if(guarding)setGuard(false);if(sleeping)wakeUp();
   slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);sfx.techClick();
@@ -4122,7 +4134,7 @@ function onMsg(m){
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
       roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
-      document.body.classList.toggle('dbg',!!(m.room&&m.room.debug));
+      applySet();netSend({t:'pref',dbg:SET.hitDbg?1:0});
       if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
@@ -4873,13 +4885,13 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
-function applySet(){document.body.classList.toggle('nonet',!SET.net);}
+const SET=Object.assign({autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
 function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
 let setOpen=false;
-document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
+document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();if(i.dataset.set==='hitDbg')netSend({t:'pref',dbg:SET.hitDbg?1:0});}));
 $('setBtn').addEventListener('click',openSet);$('setBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('setX').addEventListener('click',closeSet);$('setBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('setBox'))closeSet();});
 applySet();
