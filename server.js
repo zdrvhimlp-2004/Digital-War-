@@ -2299,6 +2299,18 @@ body.playing.duel #duelBox{display:block}
 #duelBox .me{color:#7dffae;font-weight:700}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
+#netRep{display:none;position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:9;width:min(92vw,340px);background:rgba(8,14,34,.94);border:1px solid rgba(160,190,255,.25);border-left:6px solid var(--nc,#4de27a);border-radius:14px;padding:12px 40px 14px 14px;font-family:Poppins,system-ui,sans-serif;color:#eaf1ff;box-shadow:0 10px 36px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;animation:netIn .22s ease-out}
+#netRep.show{display:block}
+@keyframes netIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+#netRep .nh{font-size:12px;font-weight:600;color:#9fb4dd;letter-spacing:.4px;text-transform:uppercase}
+#netRep .nq{font-size:22px;font-weight:800;color:var(--nc,#4de27a);line-height:1.15;margin:2px 0 6px}
+#netRep .nl{font-size:13px;font-weight:500;line-height:1.5}
+#netRep .nl b{font-weight:700;color:#fff}
+#netRep .nx{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:17px;line-height:28px;text-align:center;cursor:pointer;padding:0}
+#netRep .nx:hover{background:rgba(255,255,255,.22)}
+#netRep .nb{position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--nc,#4de27a);transform-origin:left;opacity:.85}
+#netRep.show .nb{animation:netBar 5s linear forwards}
+@keyframes netBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #duelBig b{display:block;font-size:min(22vw,120px);line-height:1}
 #duelBig small{display:block;font-size:min(5vw,22px);font-weight:600;margin-top:6px;color:#cfe3ff}
 body.cine #duelBox,body.cine #duelBig{display:none!important}
@@ -2374,7 +2386,8 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
-<div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
+<div id="duelBox"></div><div id="duelBig"></div>
+<div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
@@ -4114,6 +4127,7 @@ let roomInfo={name:'',max:0};
 function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>35?'':'linear-gradient(#ff8080,#d63a3a)';}
 function applyDoor(i,open,silent){const d=doors[i];if(!d)return;if(d.open===open)return;d.open=open;d.target=open?1.65:0;if(!silent)sfxAt(open?'doorOpen':'doorClose',d.wx,d.wz);}
 function onMsg(m){
+  netTrackMsg();
   switch(m.t){
     case 'welcome':{
       me.id=m.id;roomInfo=m.room;(m.twalls||[]).forEach(w=>addTWall(w,true));hourBase=m.hour;hourAt=performance.now();
@@ -4158,7 +4172,7 @@ function onMsg(m){
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){if(m.y>ARENA.h-0.6)wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
-    case 'pong':{const r=performance.now()-m.ts;netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
+    case 'pong':{const r=performance.now()-m.ts;netTrackPing(r);netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
     case 'wall':setWallHp(m.i,m.hp,true);break;
@@ -4866,9 +4880,52 @@ function onDuel(m){
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
-  if(m.st==='fight'&&prev!=='fight')fightAt=performance.now();
+  if(m.st==='fight'&&prev!=='fight'){fightAt=performance.now();if(duelMine())netTrackStart();else netTrk=null;}
+  if(m.st!=='fight'&&prev==='fight')netTrackFinish();
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.win&&me.name===m.last.win)sfx.fanfare&&sfx.fanfare();}
 }
+/* ---------- catatan jaringan saat bertarung di ring ---------- */
+const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
+let netTrk=null,netMsgT=0,netRepTimer=0;
+function netTrackStart(){netTrk={t0:performance.now(),pings:[],stalls:[],hid:0};netMsgT=performance.now();}
+function netTrackMsg(){
+  const n=performance.now();
+  if(netTrk){
+    const gap=n-netMsgT;
+    if(netMsgT&&gap>NET_STALL_MS&&document.visibilityState==='visible')netTrk.stalls.push(gap);
+  }
+  netMsgT=n;
+}
+function netTrackPing(r){if(netTrk)netTrk.pings.push(r);}
+function netTrackFinish(){
+  const k=netTrk;netTrk=null;if(!k)return;
+  const dur=(performance.now()-k.t0)/1000,pg=k.pings;
+  const avg=pg.length?pg.reduce((a,b)=>a+b,0)/pg.length:-1,mn=pg.length?Math.min.apply(null,pg):-1,mx=pg.length?Math.max.apply(null,pg):-1;
+  const sc=k.stalls.length,longest=sc?Math.max.apply(null,k.stalls)/1000:0,total=k.stalls.reduce((a,b)=>a+b,0)/1000;
+  let q=0;   /* 0 baik, 1 cukup, 2 buruk */
+  if(avg>=120||sc>=1||mx>=300)q=1;
+  if(avg>=220||sc>=2||longest>=1.5||mx>=600)q=2;
+  showNetRep(q,{dur,avg,mn,mx,sc,longest,total});
+}
+function showNetRep(q,d){
+  const el=$('netRep');if(!el)return;
+  const names=['BAIK','CUKUP','BURUK'],cols=['#4de27a','#ffd84d','#ff6a6a'];
+  const tips=['Koneksimu lancar selama bertarung.','Ada sedikit gangguan. Serangan bisa terasa terlambat sesekali.','Jaringanmu buruk. Serangan dan gerakan bisa tertunda atau meleset. Coba pindah ke sinyal lebih baik.'];
+  el.style.setProperty('--nc',cols[q]);
+  $('netQ').textContent=names[q];
+  const f=v=>v<0?'-':Math.round(v)+' ms';
+  $('netL').innerHTML=
+    'Lama bertarung: <b>'+Math.round(d.dur)+' dtk</b><br>'+
+    'Ping rata-rata: <b>'+f(d.avg)+'</b> (terendah '+f(d.mn)+', tertinggi '+f(d.mx)+')<br>'+
+    'Nyandet: <b>'+(d.sc?d.sc+' kali, terlama '+d.longest.toFixed(1)+' dtk':'tidak ada')+'</b><br>'+
+    '<span style="color:#9fb4dd">'+tips[q]+'</span>';
+  /* ulang animasi bar 5 detik */
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+  clearTimeout(netRepTimer);netRepTimer=setTimeout(hideNetRep,5000);
+}
+function hideNetRep(){clearTimeout(netRepTimer);netRepTimer=0;const el=$('netRep');if(el)el.classList.remove('show');}
+$('netRep').addEventListener('click',hideNetRep);
+$('netRep').addEventListener('pointerdown',e=>e.stopPropagation());
 let duelBigT=0;
 function duelBig(t,sub,ms){const el=$('duelBig');el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
 function updDuel(){
@@ -5030,6 +5087,7 @@ function drawNet(){
   el.title=q>=3?'Jaringan bagus':q===2?'Jaringan lumayan':q===1?'Jaringan jelek':'Jaringan sangat jelek / terputus';
 }
 setInterval(()=>{if(!joined)return;netPingT=performance.now();netSend({t:'ping',ts:netPingT});drawNet();},2000);
+setInterval(()=>{if(joined&&netTrk)netSend({t:'ping',ts:performance.now()});},700);
 drawNet();
 
 /* ---------- efek kena (0.5 dtk): gaya 'flash' (siluet+cincin) atau 'glass' (silinder kaca) atau 'lines' ---------- */

@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Catatan jaringan saat bertarung di ring**: selama kamu bertarung (bukan penonton), game mencatat ping (diukur tiap 0,7 detik) dan setiap kali server tidak mengirim apa pun lebih dari 0,6 detik (nyandet). Di akhir pertarungan muncul popup 5 detik berisi penilaian BAIK / CUKUP / BURUK, lama bertarung, ping rata-rata (terendah, tertinggi), dan jumlah serta lama nyandet terlama. Bisa langsung ditutup dengan tombol × atau ketuk popup-nya; ada bar waktu yang menyusut. Buruk bila ping rata-rata 220 ms atau lebih, nyandet 2 kali atau lebih, satu nyandet 1,5 detik atau lebih, atau ping tertinggi 600 ms atau lebih.
 - **Auto aim bola (mode non-FPS)**: teknik bola lempar dan Bola Biru langsung dilempar ke musuh terdekat dalam 40 unit (pemain dan penyamun/prajurit musuh), termasuk ketinggiannya. Bila tidak ada musuh, tetap bidik manual seperti biasa. Mode FPS tetap bidik sendiri. Bisa dimatikan di Pengaturan ("Auto aim bola", default hidup).
 - **Notifikasi hasil tebasan ("Meleset: ..." / "Kena ...") kini default mati** dan dinyalakan sendiri di Pengaturan ("Notifikasi hasil tebasan"). Tombolnya bekerja di semua room, tidak perlu mode uji hit dari admin.
 - **Suara klik pribadi saat teknik dipakai**: retak tajam lalu serpihan kaca berdenting, cukup keras, hanya terdengar oleh pemain yang menekan (bukan suara berjarak). Bunyi hanya bila teknik benar-benar jalan atau masuk mode bidik; saat cooldown, terkunci, atau slot kosong tidak ada bunyi, jadi kamu tahu tombolnya tertekan atau tidak.
