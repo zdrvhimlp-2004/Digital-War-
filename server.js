@@ -4012,22 +4012,39 @@ function eagleSet(o,fx,fz,rgt,fwd,frame){
 const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH*5;
 (function(){
   const x=lionCv.getContext('2d');
-  const body='#d9a24a',dk='#a8742c',mane='#7a4a1c',face='#f0c878',nose='#3a2a1a';
+  const fur='#e0a84c',fd='#b57a2a',fl='#f4cf86',mane='#8a4f1c',md='#5e3512',nose='#2a1a12',eye='#1a1a1a',wh='#ffffff';
   function draw(row,f){
     const ox=f*EW,oy=row*EH;const E=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(ox+a,oy+b,w,h);};
     const lg=f?1:0;
-    if(row===0||row===3||row===4){
-      E(5,7,13,6,body);E(5,11,13,2,dk);
-      E(17-lg*2,13,2,4,dk);E(14+lg*2,13,2,3,body);E(6+lg*2,13,2,4,dk);E(9-lg*2,13,2,3,body);   /* kaki */
-      E(1,6,5,1,dk);E(0,4,2,4,mane);                                                          /* ekor + jumbai */
-      if(row===4){E(13,3,8,9,mane);E(15,5,4,5,dk);}
-      else{E(14,3,8,10,mane);E(19,5,6,6,face);E(24,8,2,2,nose);E(21,6,1,1,nose);if(row===3){E(23,6,1,1,nose);E(20,10,3,1,dk);}}
-    }else if(row===1){
-      E(7,3,14,12,mane);E(10,5,8,8,face);E(11,7,2,1,nose);E(15,7,2,1,nose);E(13,9,2,2,nose);E(12,11,4,1,dk);
-      E(9,14-lg,3,4,body);E(16,14-(1-lg),3,4,body);
-    }else{
-      E(8,6,12,9,body);E(9,2,10,7,mane);E(13,12,2,5,dk);E(12,16,4,2,mane);
-      E(9,15-lg,3,3,dk);E(16,15-(1-lg),3,3,dk);
+    const legsSide=()=>{E(16-lg*2,13,2,4,fd);E(13+lg*2,13,2,3,fur);E(6+lg*2,13,2,4,fd);E(9-lg*2,13,2,3,fur);E(16-lg*2,16,2,1,md);E(6+lg*2,16,2,1,md);};
+    const tail=()=>{E(2,8,4,1,fd);E(1,6,2,4,md);E(2,7,1,2,mane);};
+    if(row===0){   /* samping, menghadap kanan */
+      E(5,8,13,6,fur);E(6,12,11,2,fl);legsSide();tail();
+      E(14,3,7,11,mane);E(14,3,2,11,md);E(17,4,3,1,md);
+      E(19,6,6,6,fur);E(23,8,3,3,fl);E(25,8,1,1,nose);E(21,7,1,1,eye);E(18,3,2,3,fur);E(23,11,3,1,nose);E(22,6,2,1,md);
+    }else if(row===1){   /* depan */
+      E(6,2,16,14,mane);E(6,2,16,2,md);E(6,13,16,3,md);E(7,1,3,3,fur);E(18,1,3,3,fur);E(8,2,1,1,md);E(19,2,1,1,md);
+      E(9,5,10,9,fur);E(10,6,8,1,fl);
+      E(10,7,3,3,wh);E(11,8,2,2,eye);E(15,7,3,3,wh);E(15,8,2,2,eye);
+      E(11,10,6,4,fl);E(13,10,2,2,nose);E(12,12,4,1,nose);E(13,13,2,1,fd);
+      E(9,14-lg,3,4,fur);E(16,14-(1-lg),3,4,fur);E(9,17-lg,3,1,md);E(16,17-(1-lg),3,1,md);
+    }else if(row===2){   /* belakang: surai bulat, telinga, pantat dan ekor berjumbai */
+      E(9,0,3,3,fur);E(16,0,3,3,fur);E(10,1,1,1,fd);E(17,1,1,1,fd);
+      E(8,2,12,1,mane);E(6,3,16,6,mane);E(7,9,14,2,mane);E(9,11,10,1,mane);
+      E(6,3,16,1,md);E(7,4,2,5,md);E(19,4,2,5,md);E(10,4,8,2,'#a36228');
+      E(8,10,12,5,fur);E(8,10,5,5,fd);E(15,10,5,5,fd);E(13,9,2,6,fur);
+      E(13,10,2,5,fd);E(12,14,4,3,md);E(13,13,2,1,mane);
+      E(8,15-lg,4,3,md);E(16,15-(1-lg),4,3,md);E(9,15-lg,2,1,fd);E(17,15-(1-lg),2,1,fd);
+    }else if(row===3){   /* 3/4 depan, menghadap kanan */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(20,2,2,3,fur);
+      E(13,5,9,8,fur);
+      E(14,6,3,3,wh);E(15,7,2,2,eye);E(19,6,3,3,wh);E(19,7,2,2,eye);
+      E(15,10,6,3,fl);E(17,9,3,2,nose);E(16,12,5,1,nose);
+    }else{   /* 3/4 belakang, menghadap kanan (kepala berpaling: telinga, pipi, ekor) */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(19,2,2,3,fur);E(14,5,6,6,md);
+      E(21,6,3,5,fur);E(23,8,2,2,fl);E(24,8,1,1,nose);E(22,7,1,1,eye);
     }
   }
   for(let r=0;r<5;r++)for(let f=0;f<2;f++)draw(r,f);
@@ -5440,7 +5457,7 @@ function frame(now){
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
-window.__dw={mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
+window.__dw={lionCv,mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
 })();
 </script>
