@@ -75,7 +75,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 8;
+const TECH_VERSION = 9;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -99,7 +99,7 @@ const DEFAULT_TECHS = [
   { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 },
   { code: '6464', name: 'Tembok Kode',   kind: 'wall',   emoji: '🧱', color: '#9fd0ff', hp: 150, dur: 15, width: 6, cd: 8 },
-  { code: '3939', name: 'Singa Rimba',   kind: 'summon', emoji: '🦁', color: '#ffb347', damage: 14, cd: 12, count: 1, dur: 14, speed: 11, form: 'lion' }
+  { code: '3939', name: 'Singa Rimba',   kind: 'summon', emoji: '🐾', color: '#ffb347', damage: 14, cd: 12, count: 1, dur: 14, speed: 11, form: 'lion' }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall'];
 
@@ -169,6 +169,7 @@ function loadDB() {
       if (!j.techniques.some(x => x.code === '6464')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '6464')));
       /* Singa Rimba: tambahkan bila belum ada (cek kode dan nama supaya tidak ganda dengan yang dibuat admin) */
       if (!j.techniques.some(x => x.code === '3939' || /singa\s*rimba/i.test(String(x.name || '')))) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '3939')));
+      for (const t of j.techniques) if (t.code === '3939' && t.emoji === '🦁') t.emoji = '🐾';   /* emoji singa punya wajah */
       /* Singa Rimba (bawaan atau buatan admin) berwujud singa */
       for (const t of j.techniques) if (t.kind === 'summon' && !t.form && (t.code === '3939' || /singa/i.test(String(t.name || '')))) t.form = 'lion';
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
@@ -257,7 +258,7 @@ function sanitizeTech(t) {
   return out;
 }
 const techByCode = code => DB.techniques.find(t => t.code === code);
-const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, emoji: t.emoji, color: t.color, cd: t.cd });
+const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, emoji: t.emoji, color: t.color, cd: t.cd, form: t.form || '' });
 function techDesc(t) {
   if (t.desc) return t.desc;
   const st = t.stun ? ', beku ' + t.stun + ' dtk' : '';
@@ -2477,6 +2478,7 @@ const ICO={
  scope:'<circle cx="12" cy="12" r="6.500"/><path d="M12 2.500v5M12 16.500v5M2.500 12h5M16.500 12h5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
  back:'<path d="M20 5H9l-6 7 6 7h11z"/><path d="M13 9.500l4 5M17 9.500l-4 5"/>',
  sword:'<path d="M20 4L9 15M6.5 12.5l5 5M9 15l-4.5 4.5M4 4l11 11M12.5 17.5l5-5M15 15l4.500 4.500"/><circle cx="4" cy="20" r="1" fill="currentColor"/><circle cx="20" cy="20" r="1" fill="currentColor"/>',
+ lion:'<rect x="3.500" y="9" width="11.500" height="6" rx="3" fill="currentColor" fill-opacity=".25"/><path d="M6 15v5M9.500 15v5M12.500 15v5M15 15v5M4.500 10.500C2.500 9.500 2 7 3 5.500"/><circle cx="3" cy="5" r="1.200" fill="currentColor"/><circle cx="17.500" cy="9" r="4.400" fill="currentColor" fill-opacity=".35"/><circle cx="18.600" cy="10" r="2"/>',
  wall:'<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 9.700h18M3 14.300h18M9 5v4.700M15 9.700v4.600M9 14.300V19"/>',
  shield:'<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2.200 2.200L15.500 10"/>',
  jump:'<path d="M12 19V6M6 12l6-6 6 6M6 21.500h12"/>',
@@ -2503,6 +2505,7 @@ const ICO={
  dash:'<path d="M13.500 2L4.500 14h7l-1 8 9-12h-7z" fill="currentColor" fill-opacity=".2"/>',
  spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
 };
+function tIcon(t){return t&&t.kind==='summon'&&t.form==='lion'?'lion':(t?t.kind:'spark');}
 function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO.spark)+'</svg>';}
 function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('dead',null,'kdi')+' '+d;}
 
@@ -3400,7 +3403,7 @@ function doAttack(){
 function updSlotUI(i){
   const el=document.querySelector('.slot[data-i="'+i+'"]'),s=slots[i];
   el.classList.toggle('empty',!s);el.classList.toggle('filled',!!s);
-  el.querySelector('.ic').innerHTML=s?svg(s.kind,s.color):svg('plus');
+  el.querySelector('.ic').innerHTML=s?svg(tIcon(s),s.color):svg('plus');
   el.querySelector('.nm').textContent=s?s.name:'';
   if(s)el.style.setProperty('--c',s.color);else el.style.removeProperty('--c');
 }
@@ -3428,7 +3431,7 @@ function renderCode(){$('codeBox').textContent=typed||'· · · · · ·';$('mOk
 function renderPick(list){
   const box=$('pickBox');box.innerHTML='';
   list.forEach(t=>{const b=document.createElement('button');b.className='pk'+(slots.some((s,j)=>s&&s.code===t.code&&j!==modalSlot)?' has':'');
-    b.innerHTML=svg(t.kind,t.color);const w=document.createElement('div');const n=document.createElement('b');n.textContent=t.name;const d=document.createElement('small');d.textContent=t.desc+'. CD '+t.cd+' dtk';w.appendChild(n);w.appendChild(d);b.appendChild(w);
+    b.innerHTML=svg(tIcon(t),t.color);const w=document.createElement('div');const n=document.createElement('b');n.textContent=t.name;const d=document.createElement('small');d.textContent=t.desc+'. CD '+t.cd+' dtk';w.appendChild(n);w.appendChild(d);b.appendChild(w);
     b.addEventListener('click',()=>{if(pendingLearn)return;pendingLearn=true;sfx.click();netSend({t:'learn',slot:modalSlot,code:t.code});});box.appendChild(b);});
 }
 function openModal(i){
@@ -3569,7 +3572,7 @@ function renderBook(){
   const fill=(el,items,no,title)=>{
     el.innerHTML='';const h=document.createElement('h3');h.innerHTML=title;el.appendChild(h);
     items.forEach(t=>{const d=document.createElement('div');d.className='te';
-      const ic=document.createElement('div');ic.className='ic';ic.innerHTML=svg(t.kind,'#7a3a14');
+      const ic=document.createElement('div');ic.className='ic';ic.innerHTML=svg(tIcon(t),'#7a3a14');
       const bx=document.createElement('div');const b=document.createElement('b');b.textContent=t.name;
       const cd=document.createElement('div');cd.className='cd';cd.textContent=t.code;
       const sm=document.createElement('small');sm.textContent=t.desc+'. Cooldown '+t.cd+' dtk';
@@ -3655,15 +3658,15 @@ const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH
     const legs=()=>{if(f===0){E(7,13,2,5,body);E(10,13,2,4,dk);E(15,13,2,4,dk);E(18,13,2,5,body);}else{E(7,13,2,4,dk);E(10,13,2,5,body);E(15,13,2,5,body);E(18,13,2,4,dk);}};
     if(row===0){ /* samping, menghadap kanan */
       legs();E(6,6,14,7,body);E(6,12,14,1,dk);E(3,8,4,2,dk);E(1,5,3,5,mane);
-      E(18,3,9,10,mane);E(17,6,2,5,mane2);E(21,6,6,5,face);E(26,8,1,2,nose);E(23,7,1,1,eye);E(20,2,3,2,mane2);E(22,11,4,1,dk);
+      E(18,3,9,10,mane);E(17,6,2,5,mane2);E(21,6,6,5,face);E(20,2,3,2,mane2);
     }else if(row===1){ /* depan */
       E(9,13,10,3,body);E(10,15,3,3,body);E(15,15,3,3,body);if(f===1){E(10,17,3,1,dk);}else{E(15,17,3,1,dk);}
-      E(7,2,14,12,mane);E(9,4,10,9,face);E(8,1,3,3,mane2);E(17,1,3,3,mane2);E(11,6,2,2,eye);E(15,6,2,2,eye);E(13,9,2,2,nose);E(12,11,4,1,dk);
+      E(7,2,14,12,mane);E(9,4,10,9,face);E(8,1,3,3,mane2);E(17,1,3,3,mane2);
     }else if(row===2){ /* belakang */
       E(9,14,3,4,body);E(16,14,3,4,body);E(8,5,12,9,body);E(9,2,10,5,mane);E(13,9,2,6,dk);E(12,14,4,3,mane);
     }else if(row===3){ /* 3/4 depan, menghadap kanan */
       legs();E(5,6,13,7,body);E(5,12,13,1,dk);E(1,6,5,3,dk);E(0,4,3,5,mane);
-      E(16,2,10,11,mane);E(19,5,7,6,face);E(23,6,1,1,eye);E(25,6,1,1,eye);E(24,8,2,2,nose);E(18,1,3,3,mane2);E(20,11,5,1,dk);
+      E(16,2,10,11,mane);E(19,5,7,6,face);E(18,1,3,3,mane2);
     }else{ /* 3/4 belakang, menghadap kanan */
       legs();E(5,6,13,7,body);E(5,12,13,1,dk);E(1,7,5,3,dk);E(0,5,3,5,mane);E(15,3,10,10,mane);E(17,2,3,3,mane2);
     }
