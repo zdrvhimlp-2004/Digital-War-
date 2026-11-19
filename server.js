@@ -325,7 +325,7 @@ function techDesc(t) {
     case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
     case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m)';
     case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/gigitan, ' + t.hp + ' HP';
-    case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, memblokir bola & tebasan angin (bisa dilompati)';
+    case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, padat tidak tembus pandang, memblokir semua bola & tebasan angin (bisa dilompati)';
     case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
     case 'blink': return 'Teleport ' + t.range + ' m ke depan';
     case 'haste': return 'Lari ' + t.power + 'x lebih cepat ' + t.dur + ' dtk';
@@ -625,6 +625,13 @@ function wallAt(room, ownerId, x, y, z) {
     const rx = x - w.x, rz = z - w.z, along = rx * w.tx + rz * w.tz, dist = rx * w.nx + rz * w.nz;
     if (Math.abs(along) <= w.len / 2 + 0.3 && Math.abs(dist) <= WALL_THICK) return w;
   }
+  return null;
+}
+/* periksa sepanjang lintasan (bukan hanya titik akhir) supaya bola cepat tidak menembus tembok */
+function wallCross(room, ownerId, x0, y0, z0, x1, y1, z1) {
+  if (!room.walls.length) return null;
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 0.45));
+  for (let k = 1; k <= n; k++) { const f = k / n, w = wallAt(room, ownerId, x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, z0 + (z1 - z0) * f); if (w) return w; }
   return null;
 }
 function wallDamage(room, w, dmg) { w.hp -= dmg; if (w.hp <= 0) wallRemove(room, w, true); else broadcast(room, { t: 'wallh', id: w.id, hp: Math.round(w.hp), max: w.max }); }
@@ -1025,9 +1032,10 @@ function stepRoom(room, dt, t) {
       if (pr.hn % 3 === 0) broadcast(room, { t: 'prd', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(pr.dx), dy: r2(pr.dy), dz: r2(pr.dz) });
     }
     if (pr.grav) pr.dy -= pr.grav / Math.max(1, pr.sp) * dt;
+    const ox0 = pr.x, oy0 = pr.y, oz0 = pr.z;
     pr.x += pr.dx * pr.sp * dt; pr.y += (pr.dy || 0) * pr.sp * dt; pr.z += pr.dz * pr.sp * dt; pr.life -= dt;
     {
-      const w = wallAt(room, pr.o, pr.x, pr.y, pr.z);
+      const w = wallCross(room, pr.o, ox0, oy0, oz0, pr.x, pr.y, pr.z);
       if (w) {
         wallDamage(room, w, pr.dmg || 10);
         broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1 });
@@ -1091,7 +1099,9 @@ function stepRoom(room, dt, t) {
   /* bola biru raksasa */
   for (let i = room.orbs.length - 1; i >= 0; i--) {
     const o = room.orbs[i], owner = room.players.get(o.o);
+    const ox0 = o.x, oy0 = o.y, oz0 = o.z;
     o.x += o.dx * o.sp * dt; o.y += o.dy * o.sp * dt; o.z += o.dz * o.sp * dt; o.life -= dt;
+    { const w = wallCross(room, o.o, ox0, oy0, oz0, o.x, o.y, o.z); if (w) { wallDamage(room, w, o.dmg || 10); room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; } }   /* bola biru juga tertahan tembok */
     if (!owner || o.life <= 0 || (room.duel && (Math.hypot(o.x - ARENA.x, o.z - ARENA.z) > ARENA.ringR || o.y > ARENA.height))) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
     for (const v of victims(room)) {
       if (friendly(o.o, v)) continue;
@@ -4160,7 +4170,7 @@ function addTrap(m){
 function addWall(m){
   if(walls.has(m.id))return;
   const gy=terrainH(m.x,m.z),H=4;
-  const mat=new THREE.MeshPhongMaterial({color:m.c||'#b8a27a',flatShading:true,transparent:true,opacity:0.85,emissive:new THREE.Color(m.c||'#b8a27a'),emissiveIntensity:0.18});
+  const mat=new THREE.MeshPhongMaterial({color:m.c||'#b8a27a',flatShading:true,emissive:new THREE.Color(m.c||'#b8a27a'),emissiveIntensity:0.18});
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(m.len,H,0.9),mat);
   mesh.position.set(m.x,gy+H/2,m.z);mesh.rotation.y=Math.atan2(-m.nx,-m.nz);mesh.scale.y=0.05;scene.add(mesh);
   const edge=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.9,fog:false}));mesh.add(edge);

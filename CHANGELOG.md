@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Tembok Kode solid**: tidak lagi transparan, dan semua bola (termasuk Bola Biru dan bola cepat) tertahan. Pengecekan kini sepanjang lintasan bola, jadi tidak ada yang menembus.
 - **Kunci Lawan (menghadap lawan) tanpa cooldown**: bisa dipakai berulang tanpa jeda, juga untuk data teknik lama yang tersimpan.
 - **Analog kiri default-nya kecepatan penuh**: digeser sedikit pun karakter (dan elang tunggangan) tetap lari penuh, hanya arahnya yang berubah. Bisa dimatikan di Pengaturan ("Analog kiri selalu kecepatan penuh") untuk kecepatan sesuai jarak geser.
 - **Elang dan Singa Rimba membalas penyerang**: saat kamu atau hewanmu diserang (pemain, prajurit, penyamun), penyerangnya langsung jadi sasaran. Antara musuh yang kamu serang dan yang menyerangmu, yang paling baru menang (7 detik).
