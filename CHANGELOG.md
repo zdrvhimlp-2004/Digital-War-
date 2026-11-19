@@ -3,7 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
-- **Menu pilih teknik (ketuk slot) juga punya tombol kategori**: Semua, Serangan, Ledakan, Pemanggil, Pertahanan, Gerak, dengan jumlah teknik di tiap tab. Berlaku di room dengan mode pilih teknik dari admin; tab bisa digeser ke samping di layar sempit.
+- **Menu pilih teknik (ketuk slot) berbentuk folder**: yang pertama muncul kartu kategori (Semua teknik, Serangan, Ledakan, Pemanggil, Pertahanan, Gerak) beserta jumlah tekniknya. Ketuk satu folder untuk melihat isinya, tombol "‹ Folder" untuk kembali. Berlaku di room dengan mode pilih teknik dari admin.
 - **Buku teknik punya tombol kategori**: Semua, Serangan, Ledakan, Pemanggil, Pertahanan, dan Gerak, masing-masing menampilkan jumlah tekniknya. Ketuk satu untuk menyaring daftar; halaman kembali ke awal.
 - **Tebasan angin ketemu tebasan angin lawan: keduanya hancur** (muncul BENTROK!). Tebasan yang mengenai bola tetap memukulnya balik dan tebasannya tidak hancur.
 - **Tembok Kode tidak bisa ditembus** oleh badan: pemain, prajurit, penyamun, dan singa kini ditahan tembok di sisi server (bukan hanya di layar pemain). Pemain yang memaksa menembus ditarik balik; tembok tetap bisa dilompati. Unit server meluncur di sepanjang tembok.

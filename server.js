@@ -2659,7 +2659,9 @@ body.pickmode #pickBox{display:grid}
 #pickTabs{display:none;gap:6px;overflow-x:auto;margin:0 0 8px;padding:2px;scrollbar-width:none;touch-action:pan-x}#pickTabs::-webkit-scrollbar{display:none}
 #pickTabs button{flex:none;border:2px solid #1c3a66;background:#0a1424;color:#cfe3ff;border-radius:999px;padding:5px 12px;font:600 12px Poppins,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
 #pickTabs button.on{background:#2a7bff;border-color:#2a7bff;color:#fff}
-body.pickmode #pickTabs{display:flex}
+body.pickmode #pickTabs{display:flex;align-items:center;gap:10px}body.pickmode #pickTabs:empty{display:none}
+#pickTabs .pt{font-weight:700;font-size:14px;color:#fff}
+.pk.pf{flex-direction:column;justify-content:center;text-align:center;gap:4px;padding:14px 8px;min-height:88px}.pk.pf svg{width:34px;height:34px;flex:0 0 34px}.pk.pf b{font-size:14px}.pk.pf small{font-size:11px}
 body.pickmode #mrow{grid-template-columns:1fr}
 #modal{position:fixed;inset:0;background:rgba(0,0,10,.6);display:none;align-items:center;justify-content:center;z-index:20;touch-action:manipulation}
 #modal.show{display:flex}
@@ -3930,15 +3932,21 @@ function castSlot(i){
 
 /* ---------- code modal ---------- */
 function renderCode(){$('codeBox').textContent=typed||'· · · · · ·';$('mOk').disabled=typed.length<2||pendingLearn;}
-let pickList=[],pickCat='all';
+let pickList=[],pickCat=null;
+const PICK_ICON={all:'book',atk:'bolt',boom:'nova',sum:'summon',def:'shield',move:'dash'};
 function renderPick(list){
   if(list)pickList=list;
-  const tb=$('pickTabs');tb.innerHTML='';
-  BOOK_CATS.forEach(c=>{const n=c[2]?pickList.filter(t=>c[2].includes(t.kind)).length:pickList.length;if(c[2]&&!n)return;
-    const b=document.createElement('button');b.type='button';b.textContent=c[1]+' ('+n+')';if(c[0]===pickCat)b.className='on';
-    b.addEventListener('click',()=>{pickCat=c[0];sfx.click();renderPick();});tb.appendChild(b);});
+  const tb=$('pickTabs'),box=$('pickBox');tb.innerHTML='';box.innerHTML='';
+  if(pickCat===null){   /* tampilan folder: pilih kategori dulu */
+    BOOK_CATS.forEach(c=>{const n=c[2]?pickList.filter(t=>c[2].includes(t.kind)).length:pickList.length;if(!n)return;
+      const b=document.createElement('button');b.className='pk pf';b.innerHTML=svg(PICK_ICON[c[0]]||'book','#ffd84d');
+      const w=document.createElement('div');const nm=document.createElement('b');nm.textContent=(c[0]==='all'?'Semua teknik':c[1]);const d=document.createElement('small');d.textContent=n+' teknik';w.appendChild(nm);w.appendChild(d);b.appendChild(w);
+      b.addEventListener('click',()=>{pickCat=c[0];sfx.click();renderPick();});box.appendChild(b);});
+    return;
+  }
   const cat=BOOK_CATS.find(x=>x[0]===pickCat),shown=!cat||!cat[2]?pickList:pickList.filter(t=>cat[2].includes(t.kind));
-  const box=$('pickBox');box.innerHTML='';
+  const back=document.createElement('button');back.type='button';back.textContent='‹ Folder';back.addEventListener('click',()=>{pickCat=null;sfx.click();renderPick();});
+  const ttl=document.createElement('span');ttl.className='pt';ttl.textContent=(cat&&cat[0]!=='all'?cat[1]:'Semua teknik')+' ('+shown.length+')';tb.appendChild(back);tb.appendChild(ttl);
   shown.forEach(t=>{const b=document.createElement('button');b.className='pk'+(slots.some((s,j)=>s&&s.code===t.code&&j!==modalSlot)?' has':'');
     b.innerHTML=svg(t.kind,t.color);const w=document.createElement('div');const n=document.createElement('b');n.textContent=t.name;const d=document.createElement('small');d.textContent=t.desc+'. CD '+t.cd+' dtk';w.appendChild(n);w.appendChild(d);b.appendChild(w);
     b.addEventListener('click',()=>{if(pendingLearn)return;pendingLearn=true;sfx.click();netSend({t:'learn',slot:modalSlot,code:t.code});});box.appendChild(b);});
@@ -3949,7 +3957,7 @@ function openModal(i){
   $('mSub').textContent=slots[i]?'Slot ini berisi: '+slots[i].name+'. Ketik kode baru untuk mengganti.':'Masukkan kode angka 1-9 dari buku';
   $('mrow2').style.display=slots[i]?'block':'none';
   const pm=!!(roomInfo&&roomInfo.pick);document.body.classList.toggle('pickmode',pm);
-  if(pm){pickCat='all';$('mSub').textContent='Pilih teknik untuk slot ini';$('pickBox').innerHTML='<small>Memuat...</small>';netSend({t:'techs'});}
+  if(pm){pickCat=null;$('mSub').textContent='Pilih teknik untuk slot ini';$('pickBox').innerHTML='<small>Memuat...</small>';netSend({t:'techs'});}
   $('modal').classList.add('show');renderCode();
   keys.clear();jumpBtnHeld=false;diveBtnHeld=false;
 }
