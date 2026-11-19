@@ -75,7 +75,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 6;
+const TECH_VERSION = 7;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -98,7 +98,8 @@ const DEFAULT_TECHS = [
   { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 5 },
   { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 },
-  { code: '6464', name: 'Tembok Kode',   kind: 'wall',   emoji: '🧱', color: '#9fd0ff', hp: 150, dur: 15, width: 6, cd: 8 }
+  { code: '6464', name: 'Tembok Kode',   kind: 'wall',   emoji: '🧱', color: '#9fd0ff', hp: 150, dur: 15, width: 6, cd: 8 },
+  { code: '3939', name: 'Singa Rimba',   kind: 'summon', emoji: '🦁', color: '#ffb347', damage: 14, cd: 12, count: 1, dur: 14, speed: 11 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall'];
 
@@ -166,6 +167,8 @@ function loadDB() {
         if (!j.techniques.some(x => x.code === '858')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '858')));
       }
       if (!j.techniques.some(x => x.code === '6464')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '6464')));
+      /* Singa Rimba: tambahkan bila belum ada (cek kode dan nama supaya tidak ganda dengan yang dibuat admin) */
+      if (!j.techniques.some(x => x.code === '3939' || /singa\s*rimba/i.test(String(x.name || '')))) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '3939')));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();

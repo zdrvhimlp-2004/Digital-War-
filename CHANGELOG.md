@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Teknik Singa Rimba (3939) ditambahkan sebagai teknik bawaan**: pemanggil dengan perilaku sama seperti elang (14 dmg, cooldown 12 dtk, 14 dtk). Ditambahkan otomatis ke buku teknik yang sudah ada bila belum ada teknik bernama Singa Rimba (tidak dobel dengan buatan admin).
 - **Efek layar saat mode FPS** (karakter tidak terlihat, jadi statusnya ditampilkan di layar; mode orang ketiga tidak berubah): **beku** (layar biru), **Firewall** (cahaya biru muda dan bingkai), **Overclock** (cahaya kuning), **Auto Backup** (denyut hijau), **tahan/tameng** (cahaya biru lembut), **tameng pecah** (cahaya jingga), dan **terbang dengan elang** (cahaya hangat). Hanya warna polos, tanpa tekstur. Muncul cepat saat efek mulai dan memudar saat habis.
 - **Elang mengutamakan musuh yang KAMU serang**, bukan yang paling dekat dan bukan yang paling baru menyerangmu. Pemain yang menyerangmu hanya jadi sasaran cadangan bila kamu tidak punya sasaran (berlaku 7 detik).
 - **Tips & trik baru**: peringatan agar tidak memakai Elang atau Singa Rimba di laga yang ada kawan (bisa ikut menyerang kawan). Muncul di panduan arena duel, di bagian "Tips & trik" README, dan di keterangan teknik pemanggil pada buku teknik.
