@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Efek layar saat mode FPS** (karakter tidak terlihat, jadi statusnya ditampilkan di layar; mode orang ketiga tidak berubah): **beku** (layar biru es dengan kristal di tepi), **Firewall** (cahaya biru muda dan bingkai), **Overclock** (garis kecepatan kuning berputar), **Auto Backup** (denyut hijau), **tahan/tameng** (cahaya biru lembut), **tameng pecah** (cahaya jingga), dan **terbang dengan elang** (cahaya hangat). Muncul cepat saat efek mulai dan memudar saat habis.
 - **Elang mengutamakan musuh yang KAMU serang**, bukan yang paling dekat dan bukan yang paling baru menyerangmu. Pemain yang menyerangmu hanya jadi sasaran cadangan bila kamu tidak punya sasaran (berlaku 7 detik).
 - **Tips & trik baru**: peringatan agar tidak memakai Elang atau Singa Rimba di laga yang ada kawan (bisa ikut menyerang kawan). Muncul di panduan arena duel, di bagian "Tips & trik" README, dan di keterangan teknik pemanggil pada buku teknik.
 - **Elang (Elang Digital dan Elang Kembar) tidak lagi menempel di dekatmu**: saat tidak ada sasaran, elang mengitarimu pada jarak sekitar 10 unit dan tinggi 7 unit (dulu 3,5 dan 3,2), jadi tidak menutupi kamera. Sasarannya kini **musuh yang kamu serang dan juga musuh yang menyerangmu** (yang terbaru menang, berlaku 7 detik). Jarak dan tinggi tunggu bisa diatur lewat `EAGLE_ORBIT` dan `EAGLE_HEIGHT` di `server.js`.
