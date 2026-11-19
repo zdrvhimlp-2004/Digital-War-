@@ -313,6 +313,7 @@ function randomSpawn() {
 let twSeq = 1, projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000;
 const GUARD_WINDOW = 3000, GUARD_MAX = 9, GUARD_BREAK_MS = 2500;
 const MAX_TRAPS = 6;
+const EAGLE_ORBIT = 10, EAGLE_HEIGHT = 7;   /* elang menunggu mengitari pemilik pada jarak ini (unit), tinggi di atas tanah */
 const MAX_TWALLS = 2;   /* tembok teknik aktif per pemain */
 
 /* ---- tembok teknik: kotak berputar. (fx,fz) = arah tebal (depan), panjang tegak lurus ---- */
@@ -375,6 +376,7 @@ function damageMob(room, m, dmg, attacker) {
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
   kx *= KNOCK_MULT; kz *= KNOCK_MULT;
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
+  if (v.ws && attacker && attacker.ws && attacker !== v && !friendly(v.id, attacker)) v.focus = { v: attacker, until: now() + 7000 };   /* ...dan musuh yang menyerangmu */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
@@ -997,7 +999,7 @@ function stepRoom(room, dt, t) {
   for (let i = room.mobs.length - 1; i >= 0; i--) {
     const m = room.mobs[i], owner = room.players.get(m.o);
     if (!owner || t > m.until) { room.mobs.splice(i, 1); broadcast(room, { t: 'mobx', id: m.id }); continue; }
-    /* sasaran = musuh yang terakhir kamu serang (7 dtk); tanpa sasaran elang hanya mengitarimu */
+    /* sasaran = musuh yang terakhir kamu serang atau yang terakhir menyerangmu (7 dtk); tanpa sasaran elang mengitari jauh dari kamu supaya tidak mengganggu */
     let tg = null, tp = null;
     const fo = owner.focus;
     if (fo && t < fo.until) {
@@ -1010,7 +1012,7 @@ function stepRoom(room, dt, t) {
     }
     let tx, ty, tz;
     if (tg) { tx = tp.x; tz = tp.z; ty = tp.y + 2.6; }
-    else { const a = t / 900 + m.id; tx = owner.x + Math.cos(a) * 3.5; tz = owner.z + Math.sin(a) * 3.5; ty = owner.y + 3.2; }
+    else { const a = t / 1600 + m.id * 2.1, r = EAGLE_ORBIT + 1.5 * Math.sin(t / 2300 + m.id); tx = owner.x + Math.cos(a) * r; tz = owner.z + Math.sin(a) * r; ty = owner.y + EAGLE_HEIGHT; }
     const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
     const sp = m.sp * (dist > 12 ? 1.5 : 1), step = Math.min(dist, sp * dt);
     if (dist > 0.05) { m.x += dx / dist * step; m.z += dz / dist * step; }
