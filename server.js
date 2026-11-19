@@ -2372,6 +2372,7 @@ body.playing.uihide.uiask #uiShow{display:flex}
 body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar,.hud,.pill:not(#toast),#mini,#hpBox,#oxyBox,#roomTag,#net,#clock,#board,#feed,#chatFeed,#duelBox,#capBox){display:none!important}
 #duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
 body.playing.duel #duelBox{display:block}
+body.noduelbar #duelBox{display:none!important}
 #duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 #duelBox .vs i{font-style:normal;color:#ffd84d;font-size:12px}
 #duelBox .vs span.w{color:#6cd4ff;font-weight:600;font-size:11px}
@@ -2452,6 +2453,8 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
 <label class="srow"><span><b>Teks besar di tengah layar</b><small>Hitung mundur, FIGHT!, pengumuman pemenang, dan layar KO di arena.</small></span><input type="checkbox" data-set="bigText"><i class="sw"></i></label>
 <label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
+<label class="srow"><span><b>Pesan notifikasi di tengah layar</b><small>Tulisan info yang muncul di tengah layar (misal "Naik elang!", "Tunggu hitungan mundur"). Mati secara bawaan.</small></span><input type="checkbox" data-set="toast"><i class="sw"></i></label>
+<label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
@@ -3355,7 +3358,7 @@ let guarding=false,guardPips=9,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,my
 
 /* ---------- UI helpers ---------- */
 let toastT=0;
-function toast(msg,secs){const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=secs||2.2;}
+function toast(msg,secs){let on=false;try{on=SET.toast;}catch(e){}if(!on)return;const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=secs||2.2;}
 function feed(txt){const f=$('feed'),d=document.createElement('div');d.textContent=txt;f.appendChild(d);while(f.children.length>4)f.removeChild(f.firstChild);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},5000);}
 function nearestDoor(){let best=null,bd=3.1,bi=-1;doors.forEach((d,i)=>{const dist=Math.hypot(d.wx-pos.x,d.wz-pos.z);if(dist<bd&&Math.abs(pos.y)<3){bd=dist;best=d;bi=i;}});return best?{d:best,i:bi}:null;}
 function netSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
@@ -4852,8 +4855,8 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
-function applySet(){document.body.classList.toggle('nonet',!SET.net);}
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
 function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
