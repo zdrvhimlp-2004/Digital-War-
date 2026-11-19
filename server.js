@@ -73,7 +73,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 5;
+const TECH_VERSION = 6;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -90,7 +90,7 @@ const DEFAULT_TECHS = [
   { code: '1618', name: 'Landmine',      kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 3,   radius: 2.2, stun: 0.6 },
   { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 7,   count: 1, dur: 12, speed: 12 },
   { code: '1928', name: 'Elang Kembar',  kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 10,  count: 2, dur: 10, speed: 13 },
-  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 70, speed: 24, cd: 15 },
+  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 10, speed: 24, cd: 60 },
   { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 4 },
   { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 6,   dur: 6 },
   { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 5 },
@@ -163,6 +163,9 @@ function loadDB() {
           if (t.kind === 'trap') delete t.dur;
         }
         if (!j.techniques.some(x => x.code === '858')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '858')));
+      }
+      if (ver < 6) {   /* elang tunggangan: 10 detik, cooldown 4x lebih lama */
+        for (const t of j.techniques) if (t.kind === 'ride') { if (Number(t.dur) === 70) t.dur = 10; if (Number(t.cd) === 15) t.cd = 60; }
       }
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
@@ -238,7 +241,7 @@ function sanitizeTech(t) {
   } else if (kind === 'regen') {
     out.damage = num(t.damage, 1, MAXHP, 40); out.dur = num(t.dur, 2, 20, 6);
   } else if (kind === 'ride') {
-    out.dur = num(t.dur, 3, 300, 70); out.speed = num(t.speed, 6, 60, 24);
+    out.dur = num(t.dur, 3, 300, 10); out.speed = num(t.speed, 6, 60, 24);
   } else if (kind === 'orb') {
     out.damage = num(t.damage, 0, 50, 3); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
   } else if (kind === 'haste') {
