@@ -26,13 +26,25 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 /* ====================================================================
  *  KONFIGURASI GAME
  * ==================================================================== */
-const MAXHP = 300;
+/* ---- PENYETELAN: semua angka utama ada di sini (server + dikirim ke browser) ---- */
+const TUNING = {
+  maxHp: 300,                 // darah pemain
+  walk: 4.6, run: 7,          // kecepatan jalan / lari
+  jump: 19.5,                 // daya lompat biasa
+  meleeDmg: 50, meleeRange: 3.3, meleeCd: 380,   // pedang (penutup kombo 1.6x)
+  waveDmg: 25,                // tebasan angin
+  ballSpeed: 5,               // kecepatan semua bola (bolt & orb)
+  eagleSpeedMul: 0.275,       // pengali kecepatan elang (panggilan & tunggangan)
+  dashMinCd: 3,               // cooldown minimum dash (dtk)
+  sleepRegen: 18              // HP per detik saat tidur
+};
+const MAXHP = TUNING.maxHp;
 const TICK_MS = 33;             // simulasi server ~30 Hz
 const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
-const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
+const MELEE = { dmg: TUNING.meleeDmg, range: TUNING.meleeRange, cd: TUNING.meleeCd, knock: 28 };
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -40,7 +52,7 @@ const CHAR_COUNT = 8;
 const CHEST = { x: 3000, z: 0 };           // peti di dalam goa (koordinat interior goa)
 const CHEST_RESET_MS = 60000;
 const SNIPER = { ammo: 5, dmg: 45, range: 90, cd: 2200, width: 1.0 };
-const SLEEP_REGEN = 6;                     // HP per detik saat tidur
+const SLEEP_REGEN = TUNING.sleepRegen;                     // HP per detik saat tidur
 const FORTS = [
   { id: 0, name: 'Benteng Fajar', x: 62, z: -52 },
   { id: 1, name: 'Benteng Senja', x: -72, z: -52 },
@@ -73,16 +85,16 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 8;
+const TECH_VERSION = 9;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
 const DEFAULT_TECHS = [
-  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 2.4, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
-  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 8,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
-  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 10, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
-  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
-  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 3,  cd: 8,   speed: 11, life: 4, radius: 5.5 },
+  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 30, cd: 2.4, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
+  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 18, cd: 8,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
+  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 57, cd: 10, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
+  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 14, cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
+  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 5,  cd: 8,   speed: 11, life: 4, radius: 5.5 },
   { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 12,   radius: 6 },
   { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 20,   radius: 5.5, stun: 2 },
   { code: '3735', name: 'Laser Beam',    kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 12,   range: 28 },
@@ -91,8 +103,8 @@ const DEFAULT_TECHS = [
   { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 28,   count: 1, dur: 12, speed: 12 },
   { code: '1928', name: 'Elang Kembar',  kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 40,  count: 2, dur: 10, speed: 13 },
   { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 10, speed: 24, cd: 60 },
-  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 16 },
-  { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 24,   dur: 6 },
+  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 105, cd: 16 },
+  { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 120, cd: 24,   dur: 6 },
   { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 20 },
   { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 20 },
   { code: '777', name: 'Tembok Kode', kind: 'wall', emoji: '🧱', color: '#b8a27a', hp: 120, dur: 6, len: 8, cd: 20 },
@@ -124,7 +136,7 @@ function terrainH(x, z) {
   if (da < fa + 12) { const t = da <= fa ? 0 : (da - fa) / 12; ma = t * t * (3 - 2 * t); }
   return hills * m + e * e * (3 - 2 * e) * 38 * ma - ld;
 }
-const BALL_SPEED = 5;   /* semua bola (bolt & orb) melaju 5; jarak jangkau tetap (life disesuaikan) */
+const BALL_SPEED = TUNING.ballSpeed;   /* semua bola (bolt & orb) melaju 5; jarak jangkau tetap (life disesuaikan) */
 const BOLT_GRAVITY = 0.08;
 
 /* ====================================================================
@@ -180,6 +192,13 @@ function loadDB() {
         }
       }
       if (ver < 8) for (const d of DEFAULT_TECHS) if (['777', '8181', '2929'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 9) {   /* penyeimbangan: damage bola naik, heal 3x (darah 300) */
+        const OLD_DMG = { '637': 20, '314': 12, '8472': 38, '4242': 9, '858': 3, '918': 35, '9876': 40 };
+        for (const t of j.techniques) {
+          const d = DEFAULT_TECHS.find(x => x.code === t.code);
+          if (d && OLD_DMG[t.code] !== undefined && Number(t.damage) === OLD_DMG[t.code]) t.damage = d.damage;
+        }
+      }
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -315,7 +334,7 @@ function makeRuntime(r) {
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3)); else initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
@@ -325,6 +344,7 @@ function broadcast(room, obj, exceptId) {
 }
 function scoreList(room) { return [...room.players.values()].map(p => [p.id, p.k, p.d]); }
 
+function spawnFor(room) { return room.duel ? standSpawn() : (room.train ? { x: r2((Math.random() - 0.5) * 4), z: -4 } : randomSpawn()); }
 function randomSpawn() {
   const sp = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
   return { x: r2(sp.x + (Math.random() - 0.5) * 10), z: r2(sp.z + (Math.random() - 0.5) * 10) };
@@ -342,13 +362,13 @@ function victims(room) {
   for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
 }
-const FRIENDLY_FIRE = true;   /* arena tim: teman satu tim bisa saling serang */
-let CUR = null;   /* room yang sedang diproses (untuk cek satu tim di arena) */
+let CUR = null;
+const ffOn = room => !!(room && room.duel && room.duel.ff);   /* friendly fire per room (arena tim) */   /* room yang sedang diproses (untuk cek satu tim di arena) */
 function sameTeam(room, aId, bId) { const tm = room && room.duel && room.duel.team; return !!tm && !!tm[aId] && tm[aId] === tm[bId]; }
 function friendly(ownerId, v) {
   if (v.isMob) { if (v.o === ownerId) return true; }
   else if (v.id === ownerId || (v.isSol && v.owner === ownerId)) return true;
-  return !FRIENDLY_FIRE && sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
+  return !ffOn(CUR) && sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
 }
 function damageMob(room, m, dmg, attacker) {
   if (m.hp <= 0) return;
@@ -363,7 +383,7 @@ function damageMob(room, m, dmg, attacker) {
   }
 }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
-  if (!FRIENDLY_FIRE && room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
+  if (!ffOn(room) && room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
@@ -468,7 +488,7 @@ function deflectProj(room, pr, by) {
   broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, sb: 1 });
   broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(dx), dy: r2(dy), dz: r2(dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
 }
-const WAVE = { speed: 17, life: 0.3, dmg: 20, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
+const WAVE = { speed: 17, life: 0.3, dmg: TUNING.waveDmg, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
 const MELEE_CONE = 0.64;   /* kerucut FPS: cos 50 derajat */
 function vName(v) { return v.name || (v.isSol ? (v.bandit ? 'Penyamun' : 'Prajurit') : (v.isMob ? 'Elang' : '?')); }
 /* apakah tebasan p (arah fx,fz, ay = arah vertikal bila FPS) mengenai v? */
@@ -590,7 +610,7 @@ function doCast(room, p, slot, ax, ay, az) {
   const t = now();
   if (t < p.stunUntil) return;
   {
-    const cdv = tech.kind === 'dash' ? Math.max(tech.cd, 3) : tech.cd;   /* dash: cooldown min 3 dtk */
+    const cdv = (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : tech.cd) * (room.tune ? room.tune.cd : 1);   /* dash: cooldown min 3 dtk */
     if ((p.cdUntil[code] || 0) > t + 120) return;
     p.cdUntil[code] = t + cdv * 1000;
   }
@@ -673,7 +693,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * 0.275, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * TUNING.eagleSpeedMul, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
@@ -701,13 +721,13 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'ride': {
       p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
-      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * 0.275, c: tech.color });
+      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * TUNING.eagleSpeedMul, c: tech.color });
       break;
     }
     case 'wall': {
       const mine = room.walls.filter(w => w.o === p.id);
       if (mine.length >= 3) wallRemove(room, mine[0], false);
-      const dist = 4.5, w = { id: wallSeq++, o: p.id, x: p.x + fx * dist, z: p.z + fz * dist, y: p.y, nx: fx, nz: fz, tx: -fz, tz: fx, len: tech.len || 8, hp: tech.hp || 120, max: tech.hp || 120, until: t + (tech.dur || 6) * 1000 };
+      const dist = 4.5, w = { id: wallSeq++, o: p.id, x: p.x + fx * dist, z: p.z + fz * dist, y: p.y, nx: fx, nz: fz, tx: -fz, tz: fx, len: tech.len || 8, hp: tech.hp || 120, max: tech.hp || 120, c: tech.color, until: t + (tech.dur || 6) * 1000 };
       room.walls.push(w);
       broadcast(room, { t: 'wall', id: w.id, o: p.id, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(fx), nz: r2(fz), len: w.len, hp: w.hp, dur: tech.dur || 6, c: tech.color });
       break;
@@ -1059,7 +1079,7 @@ function stepRoom(room, dt, t) {
   if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
-  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t, dt);
+  if (room.duel) duelTick(room, t, dt); else if (room.train) trainTick(room, dt, t); else stepBandits(room, dt, t);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -1076,7 +1096,7 @@ function stepRoom(room, dt, t) {
     }
     if (p.rideUntil && (t >= p.rideUntil || p.dead)) { p.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: p.id }); }
     if (p.dead && !p.bot && t >= p.respawnAt) {
-      const s = room.duel ? standSpawn() : randomSpawn();
+      const s = spawnFor(room);
       p.dead = false; p.hp = MAXHP; p.x = s.x; p.z = s.z; p.y = 0; p.invuln = t + SPAWN_PROTECT_MS; p.shield = 0; p.regenUntil = 0; p.stunUntil = 0; p.gbUntil = 0; p.sleeping = false;
       broadcast(room, { t: 'resp', id: p.id, x: s.x, z: s.z });
     }
@@ -1113,7 +1133,7 @@ function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew(size) { return { size: size || 1, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelNew(size, ff) { return { size: size || 1, ff: ff !== false, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
 function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
 function duelRebuild(room) {
@@ -1232,6 +1252,8 @@ function duelBotStep(room, bot, enemies, dt, t) {
       if (t >= ai.seen && eta < 0.42) {
         const side = ai.strafe, px = -thr.dz * side, pz = thr.dx * side;
         if (eta < 0.3 && botDash(room, bot, px, pz, t)) { /* dash menyamping: kebal sesaat */ }
+        else if (!thr.r && !thr.wv && botReady(bot, '777', t) && Math.random() < 0.5) botCast(room, bot, '777', nx, 0, nz);   /* tembok kode */
+        else if (thr.r && grounded && botReady(bot, '8181', t)) botCast(room, bot, '8181', nx, 0, nz);   /* loncat tinggi melewati orb */
         else if (!thr.r && !thr.wv && grounded) ai.guardUntil = Math.max(ai.guardUntil, t + eta * 1000 + 220);
         else if (grounded) { bot.vy = 18.5; }
       }
@@ -1253,6 +1275,9 @@ function duelBotStep(room, bot, enemies, dt, t) {
       else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
       else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
       else if (dist > 4 && botReady(bot, '637', t) && Math.random() < (ai.style === 'ranged' ? 0.5 : 0.2)) cast('637');
+      else if (bot.hp < MAXHP * 0.35 && dist < 5 && botReady(bot, '2929', t)) botCast(room, bot, '2929', -nx, 0, -nz);   /* kabur dengan teleport */
+      else if (bot.hp < MAXHP * 0.35 && dist < 6 && grounded && botReady(bot, '8181', t) && Math.random() < 0.2) botCast(room, bot, '8181', -nx, 0, -nz);
+      else if (dist > 12 && ai.style === 'melee' && Math.random() < 0.04 && botReady(bot, '2929', t)) botCast(room, bot, '2929', nx, 0, nz);   /* teleport mendekat */
       else if (dist > 11 && ai.style === 'melee' && Math.random() < 0.03 && botDash(room, bot, nx, nz, t)) { }
       if (dist < 3.1 && Math.random() < 0.92) doMelee(room, bot, r2(nx), r2(nz));
       if (grounded && (Math.random() < 0.004 || (dist < 5 && A.y > bot.y + 0.8 && Math.random() < 0.05))) bot.vy = 18.5;
@@ -1283,6 +1308,29 @@ function duelBotStep(room, bot, enemies, dt, t) {
   bot.m = (mx || mz) ? (sp > 5 ? 2 : 1) : 0; bot.a = bot.y > g + 0.05 ? (bot.vy > 0 ? 1 : 2) : 0;
 }
 
+/* ---- mode latihan: target diam yang hidup lagi setelah dikalahkan ---- */
+const DUMMY_SPOTS = [[-6, 6], [0, 9], [6, 6]];
+function trainResetDummies(room) {
+  for (const sl of room.sols.filter(q => q.dummy)) broadcast(room, { t: 'solx', id: sl.id });
+  room.sols = room.sols.filter(q => !q.dummy);
+}
+function trainTick(room, dt, t) {
+  const hpMul = room.tune ? room.tune.hp : 1;
+  DUMMY_SPOTS.forEach(([hx, hz], i) => {
+    const cur = room.sols.find(q => q.dummy && q.slot === i);
+    if (cur) {   /* kembali ke tempat setelah terpental */
+      const dx = hx - cur.x, dz = hz - cur.z; if (Math.hypot(dx, dz) > 0.05) { cur.x += dx * Math.min(1, 2 * dt); cur.z += dz * Math.min(1, 2 * dt); }
+      return;
+    }
+    const k = room.dummyDeadAt || (room.dummyDeadAt = DUMMY_SPOTS.map(() => t - 2000));
+    if (k[i] == null) { k[i] = t; return; }   /* baru dikalahkan */
+    if (t - k[i] < 2000) return;
+    k[i] = null;
+    const hp = Math.round(MAXHP * hpMul);
+    const sl = { id: solSeq++, isSol: true, bandit: true, dummy: true, slot: i, nm: 'Target', camp: -1, fort: -1, owner: BANDIT_OWNER, ch: 0, kind: 'brute', x: hx, y: 0, z: hz, fx: 0, fz: -1, hp, max: hp, atkAt: 0, dead: false, atkFlag: 0, hx, hz };
+    room.sols.push(sl); broadcast(room, { t: 'sol', s: solPublic(sl) });
+  });
+}
 function duelToWait(room, d) { duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
 function duelTick(room, t, dt) {
   const d = room.duel;
@@ -1409,7 +1457,7 @@ function onJoin(ws, m) {
   }
   if ([...room.players.values()].filter(q => !q.bot).length >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
 
-  const s = room.duel ? standSpawn() : randomSpawn();
+  const s = spawnFor(room);
   const p = {
     id: room.nextPid++, uid, name, ch, ws, room,
     x: s.x, y: 0, z: s.z, fx: 0, fz: 1, m: 0, a: 0, sw: 0,
@@ -1421,8 +1469,8 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
-    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
+    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : (room.train ? 'train' : 'world') }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
+    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), walls: room.walls.map(w => ({ id: w.id, o: w.o, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(w.nx), nz: r2(w.nz), len: w.len, hp: Math.round(w.hp), dur: Math.max(0.1, (w.until - now()) / 1000), c: w.c || '#b8a27a' })), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
     players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
   });
@@ -1454,6 +1502,14 @@ function onMessage(ws, text) {
       break;
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
+    case 'tune': {   /* mode latihan: pengatur cooldown teknik & darah target */
+      if (!room.train) break;
+      const tu = room.tune || (room.tune = { cd: 1, hp: 1 });
+      const hpOld = tu.hp;
+      tu.cd = num(m.cd, 0, 3, tu.cd); tu.hp = num(m.hp, 1, 10, tu.hp);
+      if (tu.hp !== hpOld) trainResetDummies(room);
+      break;
+    }
     case 'atk': {
       if (room.duel && !duelFighting(room, p)) break;
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
@@ -1689,7 +1745,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1734,7 +1790,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : 'world', team: clampN(Math.round(Number(b.team)) || 1, 1, 3) };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1788,7 +1844,7 @@ async function handleAdmin(req, res, pathname) {
       const max = Math.round(Number(r.max));
       if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
       seenR.add(r.code);
-      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : 'world', team: clampN(Math.round(Number(r.team)) || 1, 1, 3) });
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false });
     }
     for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
     DB.rooms = rs; DB.techniques = techs;
@@ -1838,7 +1894,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
-    if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML);
+    if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';</script>'));
     if (pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
     if (pathname === '/healthz') return json(res, 200, { ok: true });
     html(res, '<!doctype html><meta charset="utf-8"><title>404</title><body style="font-family:sans-serif;background:#0b1020;color:#fff;text-align:center;padding:60px"><h1>404</h1><p>Halaman tidak ada.</p><a style="color:#4de1ff" href="/">Kembali</a>', 404);
@@ -2006,12 +2062,13 @@ button:disabled{opacity:.5}
       <h2>Buat room baru</h2>
       <label>Nama room</label><input id="rname" maxlength="30" placeholder="Misal: Duel Sabtu Malam">
       <label>Mode room</label>
-      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel1">Arena Duel 1 vs 1</option><option value="duel2">Arena Tim 2 vs 2</option><option value="duel3">Arena Tim 3 vs 3</option></select>
+      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel1">Arena Duel 1 vs 1</option><option value="duel2">Arena Tim 2 vs 2</option><option value="duel3">Arena Tim 3 vs 3</option><option value="train">Mode Latihan (target diam + pengatur kecepatan/cooldown)</option></select>
       <label>Maksimal pemain</label>
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
       <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
+      <label class="chk"><input type="checkbox" id="rff" checked> Friendly fire (khusus Arena Tim): teman satu tim bisa saling melukai</label>
       <label class="chk"><input type="checkbox" id="rdebug"> Mode uji hit: tampilkan alasan serangan meleset di layar penyerang (untuk mencari bug)</label>
       <div id="rmsg"></div>
       <button class="pri" id="rcreate" style="margin-top:12px">Buat room</button>
@@ -2108,7 +2165,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':'duel',team:parseInt($('rmode').value.slice(4),10)||1}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -2121,7 +2178,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim)':' DUEL'):' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -2209,7 +2266,7 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
-<title>Digital War</title>
+<!--TUNING--><title>Digital War</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--s:clamp(46px,8vh,60px)}
@@ -2455,6 +2512,11 @@ body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBt
 #duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
 body.playing.duel #duelBox{display:block}
 body.noduelbar #duelBox{display:none!important}
+#trainBox{display:none;position:fixed;left:calc(max(10px,env(safe-area-inset-left)) + 120px);top:calc(max(10px,env(safe-area-inset-top)) + 52px);z-index:6;width:min(200px,40vw);background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:14px;padding:8px 10px;color:#fff;font:600 12px Poppins,system-ui,sans-serif}
+body.playing.train #trainBox{display:block}
+#trainBox b{display:block;color:#ffd84d;margin-bottom:4px}
+#trainBox label{display:block;margin:5px 0 0}#trainBox label span{float:right;color:#6cd4ff}
+#trainBox input{width:100%;accent-color:#4de1ff;margin:2px 0 0}
 #duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 #duelBox .vs i{font-style:normal;color:#ffd84d;font-size:12px}
 #duelBox .vs span.w{color:#6cd4ff;font-weight:600;font-size:11px}
@@ -2543,6 +2605,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
+<div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -2618,7 +2681,7 @@ const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
 const damp=(k,dt)=>1-Math.exp(-k*dt);
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const ROOM=(location.pathname.split('/')[2]||'').toUpperCase();
-const MAXHP=300;
+const MAXHP=TUNING.maxHp;
 /* ---------- ikon SVG buatan sendiri ---------- */
 const ICO={
  book:'<path d="M2.5 5.5c3.2-1.6 6.3-1.4 9.5 1v13c-3.200-2.400-6.300-2.600-9.500-1z"/><path d="M21.500 5.500c-3.200-1.600-6.300-1.400-9.500 1v13c3.200-2.400 6.300-2.600 9.500-1z"/>',
@@ -3440,7 +3503,7 @@ const others=new Map();
 const projs=[];
 const slots=[null,null,null,null,null],slotCd=[0,0,0,0,0],slotCdMax=[1,1,1,1,1];
 /* teknik yang terpasang disimpan per room di localStorage (tiap room datanya beda) */
-let restoreN=0;
+let restoreN=0,trainSpd=1,trainJump=1,trainCd=1;
 function slotsKey(){return 'dw_slots_'+ROOM;}
 function saveSlots(){LS.set(slotsKey(),JSON.stringify(slots.map(t=>t?t.code:null)));}
 function restoreSlots(){
@@ -3573,7 +3636,7 @@ function castSlot(i){
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
-  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?Math.max(s.cd,3):s.cd);
+  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?Math.max(s.cd,TUNING.dashMinCd):s.cd)*trainCd;
   attackT=s.kind==='dash'?0:Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
 }
@@ -4304,6 +4367,7 @@ function onMsg(m){
       {const f=findFree(m.spawn.x,m.spawn.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;cam.ty=0;
       chestOpen=!!m.chest;if(chest){chest.open=chestOpen;chest.target=chest.ang=chestOpen?1.25:0;}ammo=0;sleeping=false;$('night').style.opacity=0;fade=null;$('fade').style.opacity=0;
       cam.yaw=cam.yawT=0;
+      walls.forEach((_,id)=>removeWall(id,false));(m.walls||[]).forEach(addWall);if(roomMode==='train')setTimeout(()=>netSend({t:'tune',cd:trainCd,hp:parseInt($('trHp').value,10)}),300);
       others.forEach((o,id)=>removeOther(id));mobs.forEach((_,id)=>removeMob(id,true));traps.forEach((_,id)=>removeTrap(id));
       bookEnabled=!!m.book;$('bookBtn').classList.toggle('off',!bookEnabled);
       m.players.forEach(p=>{if(p.id!==me.id)addOther(p);});
@@ -4316,7 +4380,7 @@ function onMsg(m){
       document.body.classList.add('playing');$('start').classList.add('hide');canvas.focus();
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
-      roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
+      roomMode=(m.room&&m.room.mode)==='duel'?'duel':((m.room&&m.room.mode)==='train'?'train':'world');document.body.classList.toggle('train',roomMode==='train');
       document.body.classList.toggle('dbg',!!(m.room&&m.room.debug));
       if(roomMode==='duel'){document.body.classList.add('duel');duelSize=(m.duel&&m.duel.size)||1;buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast(duelSize>1?'Arena Tim '+duelSize+' vs '+duelSize+': tim menang lanjut. Kalau kurang pemain, komputer jadi rekan & lawan!':'Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.6);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
@@ -4564,7 +4628,7 @@ function drawMini(){
 }
 
 /* ---------- physics ---------- */
-const SPEED_WALK=4.6,SPEED_RUN=7,GRAV=30,JUMPV=19.5; /* lompat 2x lebih tinggi (v^2 x2) */
+const SPEED_WALK=TUNING.walk,SPEED_RUN=TUNING.run,GRAV=30,JUMPV=TUNING.jump; /* lompat 2x lebih tinggi (v^2 x2) */
 function canMove(nx,nz,step,swim){
   const g=groundAt(nx,nz,pos.y);const rise=g-pos.y;
   const maxRise=swim?1.6:(grounded?0.9*step+0.03:0.45);
@@ -4621,7 +4685,7 @@ function update(dt){
   const wd=waterDepthAt(pos.x,pos.z);
   let swim=wd>0.5&&pos.y<WATER_Y-0.1&&!dead&&!riding;
   const jumpHeld=live&&(keys.has('Space')||jumpBtnHeld);
-  if(swim&&jumpBuf>0&&pos.y>SURF_Y-0.45){vy=JUMPV*0.82;jumpBuf=0;jumping=true;swim=false;grounded=false;sfx.jump();}
+  if(swim&&jumpBuf>0&&pos.y>SURF_Y-0.45){vy=JUMPV*trainJump*0.82;jumpBuf=0;jumping=true;swim=false;grounded=false;sfx.jump();}
   swimNow=swim;
   if(swim&&!wasSwim){sfx.splash();for(let i=0;i<14;i++)emit(pos.x,WATER_Y+0.1,pos.z,(Math.random()-0.5)*4,2+Math.random()*3,(Math.random()-0.5)*4,0.7,0.45,'#cfeeff',8,0.9,0.3);}
   if(!swim&&wasSwim&&vy>0){}
@@ -4632,6 +4696,7 @@ function update(dt){
   if(swim)speed*=0.55;
   if(guarding)speed*=0.5;
   if(hasteT>0)speed*=hastePw;
+  speed*=trainSpd;
   if(riding)speed=(joy.id!==null&&mag>0.02?ridePw*Math.min(1,mag/0.9):ridePw);
   if(attackT>0)speed*=0.55;
   if(!live||sleeping)speed=0;
@@ -4655,7 +4720,7 @@ function update(dt){
   }else{
     if(grounded)coyote=0.1;else coyote-=dt;
     jumpBuf-=dt;
-    if(jumpBuf>0&&coyote>0&&live){vy=JUMPV;grounded=false;coyote=0;jumpBuf=0;jumping=true;sq.y=1.28;sq.v=0;sfx.jump();dust(6,2.2,0.6);}
+    if(jumpBuf>0&&coyote>0&&live){vy=JUMPV*trainJump;grounded=false;coyote=0;jumpBuf=0;jumping=true;sq.y=1.28;sq.v=0;sfx.jump();dust(6,2.2,0.6);}
     if(jumping&&!jumpHeld&&vy>0){vy*=0.5;jumping=false;}
     if(!grounded)vy-=GRAV*dt;
   }
@@ -4990,6 +5055,13 @@ function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').
 let setOpen=false;
 document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
 $('sensIn').addEventListener('input',()=>{SET.sens=parseFloat($('sensIn').value)||1;$('sensVal').textContent=SET.sens.toFixed(1)+'x';saveSet();});
+{
+  const sync=()=>{const sp=parseFloat($('trSpd').value),jm=parseFloat($('trJmp').value),cd=parseFloat($('trCd').value),hp=parseInt($('trHp').value,10);
+    trainSpd=sp;trainJump=jm;trainCd=cd;$('tvSpd').textContent=sp.toFixed(1)+'x';$('tvJmp').textContent=jm.toFixed(1)+'x';$('tvCd').textContent=cd.toFixed(1)+'x';$('tvHp').textContent=hp+'x';
+    return {cd,hp};};
+  ['trSpd','trJmp','trCd','trHp'].forEach(id=>{$(id).addEventListener('input',()=>{const v=sync();if(roomMode==='train')netSend({t:'tune',cd:v.cd,hp:v.hp});});$(id).addEventListener('pointerdown',e=>e.stopPropagation());});
+  $('trainBox').addEventListener('pointerdown',e=>e.stopPropagation());
+}
 $('setBtn').addEventListener('click',openSet);$('setBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('setX').addEventListener('click',closeSet);$('setBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('setBox'))closeSet();});
 applySet();
