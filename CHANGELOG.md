@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Arena 3 kali lebih tinggi**: langit-langit arena naik dari 24 jadi 72 unit (lompat, terbang, dan bola punya ruang tiga kali lebih tinggi), dan dinding luar stadion serta tiang lampu ikut ditinggikan 3 kali.
 - **Perbaikan bug arena: karakter tertarik balik ke posisi awal saat pertandingan mulai.** Setelah arena pindah ke stadion (x=5000), server membatasi posisi pemain hanya sampai x=3100, jadi server mengira petarung ada di luar ring lalu menariknya balik. Batas diperlebar ke 5200.
 - **Pengaturan baru "Tampilkan body fisika objek 3D"** (default mati): menampilkan garis kerangka collider pohon, batu, tiang, tembok, rumah, dan pagar arena dalam radius 60 unit. Oranye tabung, kuning batu/pijakan, magenta kotak.
 - **Arena pindah ke scene stadion terpisah** (koordinat interior x=5000, seperti goa), tidak lagi di tengah hutan dekat tepi peta. Ada lantai luar, tribun enam tingkat dengan penonton, dinding luar, enam tiang lampu sorot, spanduk biru dan merah, langit malam, dan minimap sendiri. Penonton tertahan di area antara ring dan tribun. Ini juga menghilangkan dinding tak terlihat yang dulu muncul karena batas dunia (radius 134) memotong ring.
