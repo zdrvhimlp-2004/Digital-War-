@@ -675,7 +675,7 @@ function doSnipe(room, p, ax, ay, az) {
 /* ---- benteng & pasukan ---- */
 function makeForts() { return FORTS.map(f => ({ id: f.id, name: f.name, x: f.x, z: f.z, owner: 0, ownerName: '', ownerCh: 0, cap: null, nextSpawn: 0 })); }
 function fortPublic(f) { return { id: f.id, owner: f.owner, name: f.ownerName, ch: f.ownerCh }; }
-function solPublic(s) { return { id: s.id, fort: s.fort, kind: s.kind, x: r2(s.x), z: r2(s.z), hp: s.hp, max: s.max, owner: s.owner, ch: s.ch, bandit: s.bandit ? 1 : 0 }; }
+function solPublic(s) { return { id: s.id, fort: s.fort, kind: s.kind, x: r2(s.x), z: r2(s.z), hp: s.hp, max: s.max, owner: s.owner, ch: s.ch, bandit: s.bandit ? 1 : 0, nm: s.nm || undefined }; }
 function spawnBandit(room, c, kind) {
   const a = Math.random() * Math.PI * 2, r = 2.5 + Math.random() * 4, sp = SOLDIER[kind];
   const s = { id: solSeq++, isSol: true, bandit: true, camp: c.id, fort: -1, owner: BANDIT_OWNER, ch: 0, kind, x: c.x + Math.cos(a) * r, y: 0, z: c.z + Math.sin(a) * r, fx: 0, fz: 1, hp: sp.hp, max: sp.hp, atkAt: 0, dead: false, atkFlag: 0, hx: c.x + Math.cos(a) * r, hz: c.z + Math.sin(a) * r, alert: 0 };
@@ -968,7 +968,7 @@ function stepRoom(room, dt, t) {
   if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
-  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
+  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t, dt);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -1027,7 +1027,7 @@ function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fi
 function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
 function duelState(room) {
   const d = room.duel;
-  const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
+  const P = id => { const q = id && room.players.get(id); if (d.bot && id === d.bot.id) return { id, name: 'Komputer', w: 0 }; return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
   return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
 }
@@ -1056,10 +1056,49 @@ function duelNextAlive(room) {
   for (let i = 0; i < d.queue.length; i++) { const q = room.players.get(d.queue[i]); if (q && !q.dead) { d.queue.splice(i, 1); return q.id; } }
   return 0;
 }
-function duelTick(room, t) {
+const DUELBOT = { id: -2, name: 'Komputer' };
+function duelBotSpawn(room) {
+  const sb = duelSide('b');
+  const s = { id: solSeq++, isSol: true, bandit: true, duelBot: true, nm: 'Komputer', camp: -1, fort: -1, owner: DUELBOT.id, ch: 0, kind: 'sword', x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, hp: 100, max: 100, atkAt: 0, dead: false, atkFlag: 0, hx: sb.x, hz: sb.z, windupAt: 0, retreatUntil: 0 };
+  room.sols.push(s);
+  broadcast(room, { t: 'sol', s: solPublic(s) });
+  return s;
+}
+function duelBotRemove(room, d) {
+  if (!d.bot) return;
+  const i = room.sols.indexOf(d.bot);
+  if (i >= 0) { room.sols.splice(i, 1); broadcast(room, { t: 'solx', id: d.bot.id }); }
+  if (d.b === d.bot.id) d.b = 0;
+  d.bot = null;
+}
+/* lawan komputer: mendekat, ancang-ancang 0,35 dtk (bisa dihindari/ditangkis), menebas, lalu mundur sebentar */
+function duelBotStep(room, bot, A, dt, t) {
+  if (bot.dead || !A || A.dead) return;
+  const dx = A.x - bot.x, dz = A.z - bot.z, dist = Math.hypot(dx, dz) || 0.01, nx = dx / dist, nz = dz / dist;
+  bot.fx = nx; bot.fz = nz;
+  let mx = 0, mz = 0, sp = 5.2;
+  if (bot.windupAt) {
+    if (t >= bot.windupAt) {
+      bot.windupAt = 0;
+      if (dist < 3.2 && Math.abs(A.y - bot.y) < 2.6) hurt(room, A, 13, DUELBOT, nx * 8, nz * 8, { sx: -nx, sz: -nz });
+      bot.atkAt = t + 900 + Math.random() * 700; bot.retreatUntil = t + 450;
+    }
+  } else if (t < bot.retreatUntil) { mx = -nx; mz = -nz; sp = 4.2; }
+  else if (dist > 2.5) { const w = Math.sin(t / 450 + bot.id) * 0.4; mx = nx - nz * w; mz = nz + nx * w; }
+  else if (t >= bot.atkAt) { bot.windupAt = t + 350; bot.atkFlag = 1; }
+  else { mx = -nz * 0.6; mz = nx * 0.6; sp = 3.2; }   /* mengitari sambil menunggu */
+  const ml = Math.hypot(mx, mz);
+  if (ml > 0.01) {
+    let x = bot.x + mx / ml * sp * dt, z = bot.z + mz / ml * sp * dt;
+    const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.5;
+    if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; }
+    if (Math.hypot(x - A.x, z - A.z) > 1.4) { bot.x = x; bot.z = z; }
+  }
+}
+function duelTick(room, t, dt) {
   const d = room.duel;
   d.queue = d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
-  const A = d.a && room.players.get(d.a), B = d.b && room.players.get(d.b);
+  const A = d.a && room.players.get(d.a), B = d.b && (d.bot && d.b === d.bot.id ? d.bot : room.players.get(d.b));
   if (d.a && !A) d.a = 0;
   if (d.b && !B) d.b = 0;
   let changed = false;
@@ -1068,17 +1107,20 @@ function duelTick(room, t) {
     if (aDead || bDead) {
       const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
       if (winner) {
-        d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
-        d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
-        d.last = { win: winner.name, lose: loser ? loser.name : '', w: d.streak[winner.id] };
-        if (winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
+        if (winner.isSol) d.last = loser ? { win: 'Komputer', lose: loser.name, w: 0 } : null;
+        else {
+          d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
+          d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
+          d.last = { win: winner.name, lose: loser ? loser.name : 'Komputer', w: d.streak[winner.id] };
+        }
+        if (!winner.isSol && winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
       } else d.last = null;
-      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!d.queue.includes(loser.id)) d.queue.push(loser.id); }
+      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!loser.isSol && !d.queue.includes(loser.id)) d.queue.push(loser.id); }
       if (!winner) { d.a = 0; d.b = 0; }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
     }
   } else if (d.st === 'over') {
-    if (t >= d.until) { d.st = 'wait'; changed = true; }
+    if (t >= d.until) { d.st = 'wait'; changed = true; duelBotRemove(room, d); }
   } else if (d.st === 'count') {
     if (!A || !B || A.dead || B.dead) { d.st = 'wait'; changed = true; }
     else if (t >= d.until) { d.st = 'fight'; A.invuln = 0; B.invuln = 0; changed = true; }
@@ -1086,16 +1128,22 @@ function duelTick(room, t) {
   if (d.st === 'wait') {
     if (!d.a) { const id = duelNextAlive(room); if (id) { d.a = id; changed = true; } }
     if (!d.b) { const id = duelNextAlive(room); if (id) { d.b = id; changed = true; } }
-    const A2 = d.a && room.players.get(d.a), B2 = d.b && room.players.get(d.b);
+    /* tidak ada lawan: setelah 2,5 detik, komputer jadi lawan */
+    if (d.a && !d.b && !d.bot) {
+      if (!d.aloneAt) d.aloneAt = t;
+      else if (t - d.aloneAt > 2500) { d.bot = duelBotSpawn(room); d.b = d.bot.id; d.aloneAt = 0; changed = true; }
+    } else d.aloneAt = 0;
+    const A2 = d.a && room.players.get(d.a), B2 = d.b && (d.bot && d.b === d.bot.id ? d.bot : room.players.get(d.b));
     if (A2 && B2) {
       duelClearCombat(room);
-      duelRefresh(room, A2); duelRefresh(room, B2);
       const sa = duelSide('a'), sb = duelSide('b');
-      teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz);
-      A2.invuln = t + DUEL_COUNT_MS + 200; B2.invuln = t + DUEL_COUNT_MS + 200;
+      duelRefresh(room, A2); teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); A2.invuln = t + DUEL_COUNT_MS + 200;
+      if (B2.isSol) { B2.hp = B2.max; B2.x = sb.x; B2.z = sb.z; B2.fx = sb.fx; B2.fz = sb.fz; B2.atkAt = t + DUEL_COUNT_MS + 600; B2.windupAt = 0; broadcast(room, { t: 'sh', id: B2.id, hp: B2.hp, dmg: 0 }); }
+      else { duelRefresh(room, B2); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz); B2.invuln = t + DUEL_COUNT_MS + 200; }
       d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
     }
   }
+  if (d.st === 'fight' && d.bot && B === d.bot) duelBotStep(room, B, A, dt || 0.033, t);
   /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
   for (const p of room.players.values()) {
     if (p.dead || t < (p.tpUntil || 0) + 150) continue;
@@ -3654,7 +3702,7 @@ function addSol(info){
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
   const owner=info.owner===me.id?me.name:((others.get(info.owner)||{}).name||'Pasukan');
   const bnm={sword:'Penyamun Pedang',archer:'Penyamun Panah',brute:'Penyamun Brute'}[info.kind];
-  const o={id:info.id,isSol:true,kind:info.kind,fort:info.fort,owner:info.owner,x:info.x,z:info.z,tx:info.x,tz:info.z,fx:0,fz:1,hp:info.hp,max:info.max,name:info.bandit?bnm:((info.kind==='sword'?'Pedang ':'Panah ')+owner),bandit:!!info.bandit,sc:info.kind==='brute'?1.3:1,shieldT:0,
+  const o={id:info.id,isSol:true,kind:info.kind,fort:info.fort,owner:info.owner,x:info.x,z:info.z,tx:info.x,tz:info.z,fx:0,fz:1,hp:info.hp,max:info.max,name:info.nm?info.nm:info.bandit?bnm:((info.kind==='sword'?'Pedang ':'Panah ')+owner),bandit:!!info.bandit,sc:info.kind==='brute'?1.3:1,shieldT:0,
     mesh,tex,mat:m,sh,lab:makeLabel(),viewK:0,wt:Math.random()*4,atkT:0,flash:0,moving:false};
   o.hpv=o.hp/o.max*MAXHP;
   drawSolLabel(o);sols.set(o.id,o);
