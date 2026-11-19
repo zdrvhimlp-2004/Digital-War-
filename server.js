@@ -4962,6 +4962,7 @@ function update(dt){
     if(joy.id!==null){ix+=joy.x;iy+=joy.y;}
   }
   let mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag;mag=1;}
+  if(SET.joyFull&&joy.id!==null&&mag>0.02){ix/=mag;iy/=mag;mag=1;}   /* analog: digeser sedikit pun arahnya dinormalkan, jadi kecepatan penuh */
   if(!live)jumpBuf=0;
   if(sleeping&&(mag>0.3||jumpBuf>0)){wakeUp();jumpBuf=0;}
   const riding=rideT>0&&!dead;

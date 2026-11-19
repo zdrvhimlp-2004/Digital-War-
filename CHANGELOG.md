@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Perbaikan analog kiri**: sebelumnya karakter masih lambat bila analog hanya digeser sedikit, karena vektor gerak belum dinormalkan (hanya angka kecepatannya yang diubah). Sekarang arah dinormalkan sehingga selalu kecepatan penuh; bisa dimatikan di Pengaturan.
 - **Kunci Lawan juga mengunci arah vertikal**: bukan hanya kiri-kanan, bidikan ikut naik atau turun ke tinggi lawan (kamera di mode FPS maupun orang ketiga), jadi bola langsung mengarah tepat ke lawan di atas atau bawahmu.
 - **Tulisan "... bergabung" hanya muncul 1 detik** (sebelumnya 5 detik).
 - **Arena 3 kali lebih tinggi**: langit-langit arena naik dari 24 jadi 72 unit (lompat, terbang, dan bola punya ruang tiga kali lebih tinggi), dan dinding luar stadion serta tiang lampu ikut ditinggikan 3 kali.
