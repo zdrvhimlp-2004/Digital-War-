@@ -3,6 +3,8 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Kunci Lawan juga mengunci arah vertikal**: bukan hanya kiri-kanan, bidikan ikut naik atau turun ke tinggi lawan (kamera di mode FPS maupun orang ketiga), jadi bola langsung mengarah tepat ke lawan di atas atau bawahmu.
+- **Tulisan "... bergabung" hanya muncul 1 detik** (sebelumnya 5 detik).
 - **Arena 3 kali lebih tinggi**: langit-langit arena naik dari 24 jadi 72 unit (lompat, terbang, dan bola punya ruang tiga kali lebih tinggi), dan dinding luar stadion serta tiang lampu ikut ditinggikan 3 kali.
 - **Perbaikan bug arena: karakter tertarik balik ke posisi awal saat pertandingan mulai.** Setelah arena pindah ke stadion (x=5000), server membatasi posisi pemain hanya sampai x=3100, jadi server mengira petarung ada di luar ring lalu menariknya balik. Batas diperlebar ke 5200.
 - **Pengaturan baru "Tampilkan body fisika objek 3D"** (default mati): menampilkan garis kerangka collider pohon, batu, tiang, tembok, rumah, dan pagar arena dalam radius 60 unit. Oranye tabung, kuning batu/pijakan, magenta kotak.

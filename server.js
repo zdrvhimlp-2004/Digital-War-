@@ -323,7 +323,7 @@ function techDesc(t) {
     case 'ride': return 'Tunggangi elang terbang ' + t.dur + ' dtk (Lompat naik, Selam turun)';
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
     case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
-    case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m)';
+    case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m), termasuk arah atas/bawah';
     case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/gigitan, ' + t.hp + ' HP';
     case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, padat tidak tembus pandang, memblokir semua bola & tebasan angin (bisa dilompati)';
     case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
@@ -677,7 +677,8 @@ function doCast(room, p, slot, ax, ay, az) {
       if (tg) {
         const nx = (tg.x - p.x) / (bd || 1), nz = (tg.z - p.z) / (bd || 1);
         p.fx = nx; p.fz = nz;
-        send(p.ws, { t: 'face', fx: r2(nx), fz: r2(nz) });
+        const fdy = (tg.y || 0) + 0.9 - (p.y + 1.5), fy = clampN(fdy / (Math.hypot(bd, fdy) || 1), -0.9, 0.9);   /* arah vertikal juga dikunci */
+        send(p.ws, { t: 'face', fx: r2(nx), fz: r2(nz), fy: r2(fy) });
         broadcast(room, { t: 'fx', k: 'face', id: p.id, tx: r2(tg.x), tz: r2(tg.z), c: tech.color });
       }
       break;
@@ -3717,7 +3718,7 @@ let guarding=false,guardPips=9,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,my
 /* ---------- UI helpers ---------- */
 let toastT=0;   /* waktu habis (jam nyata, ms), bukan jam game, supaya tetap pas walau frame rate rendah */
 function toast(msg,secs){let on=false;try{on=SET.toast;}catch(e){}if(!on)return;const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=performance.now()+(secs||2.2)*1000;}
-function feed(txt){const f=$('feed'),d=document.createElement('div');d.textContent=txt;f.appendChild(d);while(f.children.length>4)f.removeChild(f.firstChild);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},5000);}
+function feed(txt,ms){const f=$('feed'),d=document.createElement('div');d.textContent=txt;f.appendChild(d);while(f.children.length>4)f.removeChild(f.firstChild);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},ms||5000);}
 function nearestDoor(){let best=null,bd=3.1,bi=-1;doors.forEach((d,i)=>{const dist=Math.hypot(d.wx-pos.x,d.wz-pos.z);if(dist<bd&&Math.abs(pos.y)<3){bd=dist;best=d;bi=i;}});return best?{d:best,i:bi}:null;}
 function netSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
 function nearestBed(){if(!insideHouse||sleeping)return null;const b=l2w(insideHouse,-2.6,-2.5);return Math.hypot(pos.x-b.x,pos.z-b.z)<2.8?{h:insideHouse,x:b.x,z:b.z}:null;}
@@ -4643,7 +4644,7 @@ function onMsg(m){
       if(roomMode==='duel'){document.body.classList.add('duel');duelSize=(m.duel&&m.duel.size)||1;buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast(duelSize>1?'Arena Tim '+duelSize+' vs '+duelSize+': tim menang lanjut. Kalau kurang pemain, komputer jadi rekan & lawan!':'Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.6);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
-    case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
+    case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung',1000);renderBoard();}break;}
     case 'pl':{closePeer(m.id);const o=others.get(m.id);if(o){feed('➖ '+o.name+' keluar');removeOther(m.id);renderBoard();}break;}
     case 'sc':{m.s.forEach(r=>{if(r[0]===me.id){me.k=r[1];me.d=r[2];}else{const o=others.get(r[0]);if(o){o.k=r[1];o.d=r[2];}}});renderBoard();break;}
     case 'ps':{
@@ -4663,7 +4664,7 @@ function onMsg(m){
     case 'learnerr':if(restoreN>0){restoreN--;break;}if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',3);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
     case 'techs':renderPick(m.list);break;
     case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);saveSlots();toast('Teknik itu sudah tidak tersedia',3);break;}
-    case 'face':{faceX=m.fx;faceZ=m.fz;cam.yawT=Math.atan2(-m.fx,-m.fz);break;}
+    case 'face':{faceX=m.fx;faceZ=m.fz;cam.yawT=Math.atan2(-m.fx,-m.fz);if(typeof m.fy==='number'){if(fps)fpsPitch=clamp(Math.asin(m.fy),-1.3,1.3);else cam.pitchT=clamp(0.55-m.fy/1.6,0.22,1.1);}break;}
     case 'prd':{const q=projs.find(p=>p.id===m.id);if(q){q.x=m.x;q.y=m.y;q.z=m.z;q.dx=m.dx;q.dy=m.dy;q.dz=m.dz;}break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
