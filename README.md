@@ -98,7 +98,7 @@ Teknik bawaan (semua bisa diubah di admin):
 
 ### Tips & trik
 
-- **Jangan gunakan Elang atau Singa (teknik pemanggil) di laga yang ada kawanmu di sekitar**, karena mereka bisa ikut menyerang kawan.
+- **Jangan gunakan Elang atau Singa Rimba (teknik pemanggil) di laga yang ada kawanmu di sekitar**, karena mereka bisa ikut menyerang kawan.
 - Elang mengejar musuh yang **kamu** serang. Serang dulu lawan yang kamu mau dikejar, lalu panggil elang.
 - Tekan teknik: bunyi klik kaca berarti tekniknya jalan. Diam berarti masih cooldown atau terkunci.
 - Dinding Tembok Kode (6464) menahan bola, tebasan, sinar, dan sniper. Pasang di depan lawan yang menembak dari jauh.
