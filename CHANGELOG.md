@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Ikon singa diberi kuping** (dua kuping bulat kecil di atas surai) di buku, daftar pilih teknik, dan tombol slot di kanan.
 - **Singa Rimba tanpa wajah**: gambar singa di game tidak lagi punya mata, hidung, dan mulut (hanya surai dan badan). Ikon teknik di buku, daftar pilih teknik, dan tombol slot di kanan kini siluet singa bersurai tanpa wajah (sebelumnya sayap elang). Emoji teknik diganti 🐾 karena emoji singa punya wajah. Teknik pemanggil berwujud singa otomatis memakai ikon ini.
 - **Singa Rimba kini benar-benar berwujud singa**: sprite pixel-art singa (surai, 8 arah, dua bingkai langkah), berjalan di tanah (bukan terbang), darah 60, dan mengaum saat muncul. Perilaku sasaran dan jarak tunggu sama seperti elang. Teknik pemanggil punya isian "Wujud" (Elang atau Singa) di buku teknik admin. Singa Rimba yang sudah ada di buku teknik (bawaan atau buatan admin, nama mengandung "singa") otomatis diubah jadi wujud singa.
 - **Teknik Singa Rimba (3939) ditambahkan sebagai teknik bawaan**: pemanggil dengan perilaku sama seperti elang (14 dmg, cooldown 12 dtk, 14 dtk). Ditambahkan otomatis ke buku teknik yang sudah ada bila belum ada teknik bernama Singa Rimba (tidak dobel dengan buatan admin).

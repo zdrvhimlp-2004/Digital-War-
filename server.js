@@ -2478,7 +2478,7 @@ const ICO={
  scope:'<circle cx="12" cy="12" r="6.500"/><path d="M12 2.500v5M12 16.500v5M2.500 12h5M16.500 12h5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
  back:'<path d="M20 5H9l-6 7 6 7h11z"/><path d="M13 9.500l4 5M17 9.500l-4 5"/>',
  sword:'<path d="M20 4L9 15M6.5 12.5l5 5M9 15l-4.5 4.5M4 4l11 11M12.5 17.5l5-5M15 15l4.500 4.500"/><circle cx="4" cy="20" r="1" fill="currentColor"/><circle cx="20" cy="20" r="1" fill="currentColor"/>',
- lion:'<rect x="3.500" y="9" width="11.500" height="6" rx="3" fill="currentColor" fill-opacity=".25"/><path d="M6 15v5M9.500 15v5M12.500 15v5M15 15v5M4.500 10.500C2.500 9.500 2 7 3 5.500"/><circle cx="3" cy="5" r="1.200" fill="currentColor"/><circle cx="17.500" cy="9" r="4.400" fill="currentColor" fill-opacity=".35"/><circle cx="18.600" cy="10" r="2"/>',
+ lion:'<rect x="3.500" y="9" width="11.500" height="6" rx="3" fill="currentColor" fill-opacity=".25"/><path d="M6 15v5M9.500 15v5M12.500 15v5M15 15v5M4.500 10.500C2.500 9.500 2 7 3 5.500"/><circle cx="3" cy="5" r="1.200" fill="currentColor"/><circle cx="14.900" cy="4.800" r="1.500" fill="currentColor"/><circle cx="20.100" cy="4.800" r="1.500" fill="currentColor"/><circle cx="17.500" cy="9" r="4.400" fill="currentColor" fill-opacity=".35"/><circle cx="18.600" cy="10" r="2"/>',
  wall:'<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 9.700h18M3 14.300h18M9 5v4.700M15 9.700v4.600M9 14.300V19"/>',
  shield:'<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2.200 2.200L15.500 10"/>',
  jump:'<path d="M12 19V6M6 12l6-6 6 6M6 21.500h12"/>',
