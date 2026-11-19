@@ -2855,7 +2855,7 @@ const ICO={
  wall:'<path d="M3 5h18v4H3zM3 9h18v5H3zM3 14h18v5H3zM9 5v4M15 9v5M9 14v5"/>',
  blink:'<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="12" r="2.500" fill="currentColor" fill-opacity=".3"/><path d="M9.500 12h5M12.500 9l3 3-3 3"/>',
  homing:'<circle cx="6" cy="7" r="3" fill="currentColor" fill-opacity=".25"/><circle cx="6" cy="17" r="3" fill="currentColor" fill-opacity=".25"/><path d="M9 7c5 0 7 3 9 5M9 17c5 0 7-3 9-5"/><circle cx="20" cy="12" r="1.500"/>',
- lion:'<circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity=".15"/><circle cx="12" cy="12.500" r="5"/><path d="M9.500 11.500h.01M14.500 11.500h.01M11 14.500h2M12 13v1.500"/>',
+ lion:'<circle cx="12" cy="12.500" r="9" fill="currentColor" fill-opacity=".22"/><circle cx="12" cy="12.500" r="5" fill="currentColor" fill-opacity=".35"/><circle cx="6.500" cy="5.500" r="2"/><circle cx="17.500" cy="5.500" r="2"/>',
  face:'<circle cx="12" cy="12" r="7.500"/><circle cx="12" cy="12" r="2.500" fill="currentColor"/><path d="M12 1.500v4M12 18.500v4M1.500 12h4M18.500 12h4"/>',
  spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
 };
