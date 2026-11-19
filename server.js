@@ -65,7 +65,7 @@ const FORT_ROSTER = [
   { kind: 'archer', role: 'guard' }, { kind: 'archer', role: 'escort' }
 ];
 const ESCORT_AGGRO = 30;
-const MOB_HP = 40, MOUNT_HP = 70;
+const MOB_HP = 40, MOUNT_HP = 70, LION_HP = 60;
 const CAVE_MOUTH = { x: -15, z: 87 };
 const SOLDIER_RESPAWN_MS = 12000;
 const CHAT_MAX = 140;
@@ -75,7 +75,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 7;
+const TECH_VERSION = 8;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -99,7 +99,7 @@ const DEFAULT_TECHS = [
   { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 },
   { code: '6464', name: 'Tembok Kode',   kind: 'wall',   emoji: '🧱', color: '#9fd0ff', hp: 150, dur: 15, width: 6, cd: 8 },
-  { code: '3939', name: 'Singa Rimba',   kind: 'summon', emoji: '🦁', color: '#ffb347', damage: 14, cd: 12, count: 1, dur: 14, speed: 11 }
+  { code: '3939', name: 'Singa Rimba',   kind: 'summon', emoji: '🦁', color: '#ffb347', damage: 14, cd: 12, count: 1, dur: 14, speed: 11, form: 'lion' }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall'];
 
@@ -169,6 +169,8 @@ function loadDB() {
       if (!j.techniques.some(x => x.code === '6464')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '6464')));
       /* Singa Rimba: tambahkan bila belum ada (cek kode dan nama supaya tidak ganda dengan yang dibuat admin) */
       if (!j.techniques.some(x => x.code === '3939' || /singa\s*rimba/i.test(String(x.name || '')))) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '3939')));
+      /* Singa Rimba (bawaan atau buatan admin) berwujud singa */
+      for (const t of j.techniques) if (t.kind === 'summon' && !t.form && (t.code === '3939' || /singa/i.test(String(t.name || '')))) t.form = 'lion';
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -234,6 +236,7 @@ function sanitizeTech(t) {
     out.speed = num(t.speed, 20, 120, 60);
   } else if (kind === 'summon') {
     out.damage = num(t.damage, 1, 60, 9); out.count = Math.round(num(t.count, 1, 4, 1)); out.dur = num(t.dur, 3, 30, 12); out.speed = num(t.speed, 5, 25, 12);
+    out.form = t.form === 'lion' ? 'lion' : 'eagle';
   } else if (kind === 'slam') {
     out.damage = num(t.damage, 0, 100, 40); out.radius = num(t.radius, 2, 12, 5);
   } else if (kind === 'trap') {
@@ -265,7 +268,7 @@ function techDesc(t) {
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'wall': return 'Tembok solid di depanmu, darah ' + t.hp + ', lebar ' + t.width + ', bertahan ' + t.dur + ' dtk, bisa retak dan hancur';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
-    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
+    case 'summon': return 'Panggil ' + t.count + (t.form === 'lion' ? ' singa (berjalan di tanah)' : ' elang') + ' selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
     case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
@@ -597,7 +600,7 @@ function doCast(room, p, slot, ax, ay, az) {
   const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
   const fx = ax / l, fz = az / l;                 // arah horizontal (satuan)
   const bx = fx * hl, bz = fz * hl, by = ay;      // arah 3D (satuan)
-  broadcast(room, { t: 'fx', k: 'cast', id: p.id, c: tech.color, fx: r2(fx), fz: r2(fz), kind: tech.kind });
+  broadcast(room, { t: 'fx', k: 'cast', id: p.id, c: tech.color, fx: r2(fx), fz: r2(fz), kind: tech.kind, form: tech.form || '' });
   switch (tech.kind) {
     case 'bolt': {
       const n = tech.count || 1;
@@ -662,9 +665,10 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const lion = tech.form === 'lion', mhp = lion ? LION_HP : MOB_HP, sx = p.x + (i - (n - 1) / 2) * 1.6;
+        const m = { id: mobSeq++, o: p.id, k: lion ? 'lion' : 'eagle', ground: lion, hp: mhp, x: sx, y: lion ? terrainH(sx, p.z) + 0.9 : p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
-        broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
+        broadcast(room, { t: 'mob', id: m.id, o: p.id, k: m.k, hp: mhp, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
       break;
     }
@@ -1017,11 +1021,12 @@ function stepRoom(room, dt, t) {
     let tx, ty, tz;
     if (tg) { tx = tp.x; tz = tp.z; ty = tp.y + 2.6; }
     else { const a = t / 1600 + m.id * 2.1, r = EAGLE_ORBIT + 1.5 * Math.sin(t / 2300 + m.id); tx = owner.x + Math.cos(a) * r; tz = owner.z + Math.sin(a) * r; ty = owner.y + EAGLE_HEIGHT; }
+    if (m.ground) ty = terrainH(m.x, m.z) + 0.9;   /* singa berjalan di tanah */
     const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
     const sp = m.sp * (dist > 12 ? 1.5 : 1), step = Math.min(dist, sp * dt);
     if (dist > 0.05) { m.x += dx / dist * step; m.z += dz / dist * step; }
     if (dist > 0.3) { m.fx = dx / dist; m.fz = dz / dist; }
-    if (tg && dist < 4) ty = tp.y + 1.0;
+    if (tg && dist < 4 && !m.ground) ty = tp.y + 1.0;
     m.y += (ty - m.y) * Math.min(1, 6 * dt);
     if (tg && dist < 2.2 && Math.abs(m.y - (tp.y + 0.9)) < 2.4 && t >= m.atkAt) {
       m.atkAt = t + 1300; m.atkFlag = 1;
@@ -1978,6 +1983,7 @@ function renderTech(){
     kind.addEventListener('change',()=>{t.kind=kind.value;renderTech();});field('Jenis',kind);
     const col=document.createElement('input');col.type='color';col.value=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4db8ff';col.addEventListener('input',()=>t.color=col.value);field('Warna',col);
     const ds=document.createElement('input');ds.value=t.desc||'';ds.maxLength=80;ds.placeholder='(otomatis)';ds.addEventListener('input',()=>t.desc=ds.value);field('Deskripsi di buku',ds);
+    if(t.kind==='summon'){const fm=document.createElement('select');[['eagle','Elang (terbang)'],['lion','Singa (berjalan di tanah)']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if((t.form||'eagle')===v)o.selected=true;fm.appendChild(o);});fm.addEventListener('change',()=>t.form=fm.value);field('Wujud',fm);}
     (FIELDS[t.kind]||[]).forEach(f=>{const n=document.createElement('input');n.type='number';n.step='any';n.value=t[f[0]]==null?'':t[f[0]];n.addEventListener('input',()=>t[f[0]]=parseFloat(n.value));field(f[1],n);});
     d.appendChild(g);box.appendChild(d);
   });
@@ -3155,7 +3161,7 @@ function tone(f0,f1,dur,type,vol,delay){if(!AC||SV<0.03)return;const j=1+(Math.r
 function noiseHit(dur,vol,freq,delay,type,q){if(!AC||SV<0.03)return;const t=AC.currentTime+(delay||0),s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'lowpass';f.frequency.value=freq*(1+(Math.random()-0.5)*0.15);if(q)f.Q.value=q;const g=AC.createGain();g.gain.setValueAtTime(Math.max(0.0002,vol*SV),t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t,Math.random(),dur+0.05);}
 const SFX_RANGE=45,VOICE_RANGE=40;
 /* jarak dengar per jenis suara (unit); di atas jarak ini tidak terdengar sama sekali */
-const SFX_R={swing:24,hit:26,clang:26,clash:30,block:24,twang:26,arrowHit:24,soldierDie:24,gbreak:26,
+const SFX_R={swing:24,hit:26,clang:26,clash:30,roar:42,block:24,twang:26,arrowHit:24,soldierDie:24,gbreak:26,
   throw:30,dash:26,orb:38,beam:36,shield:26,heal:26,regen:22,haste:22,eagle:30,step:16,land:18,jump:18,stroke:18,splash:26,sleep:14,
   boom:55,snipe:70,horn:70,fanfare:60,chestOpen:30};
 let sfxWin=[];
@@ -3167,6 +3173,9 @@ function sfxAt(name,x,z){if(!AC||!sfx[name])return;const R=SFX_R[name]||SFX_RANG
 let techClickT=0;
 const sfx={
   /* klik pribadi saat teknik berhasil dipakai: retak tajam lalu serpihan kaca berdenting, cukup keras. Hanya didengar pemilik, bukan suara berjarak */
+  roar(){/* auman singa: dengung rendah kasar dengan embusan napas */
+    tone(150,70,0.55,'sawtooth',0.12);tone(110,55,0.6,'square',0.07,0.03);tone(310,150,0.35,'sawtooth',0.05,0.02);noiseHit(0.5,0.2,700,0,'lowpass');
+  },
   techClick(){
     const n=performance.now();if(n-techClickT<110)return;techClickT=n;
     noiseHit(0.035,0.95,7500,0,'highpass');tone(3400,1700,0.045,'square',0.17,0);tone(1500,800,0.1,'sine',0.14,0);
@@ -3635,6 +3644,35 @@ const eagleCv=document.createElement('canvas');eagleCv.width=EW*2;eagleCv.height
 })();
 const eagleBase=new THREE.CanvasTexture(eagleCv);eagleBase.magFilter=eagleBase.minFilter=THREE.NearestFilter;eagleBase.generateMipmaps=false;
 const eagleGeo=new THREE.PlaneGeometry(2.8,1.8);
+/* singa: atlas piksel dengan tata letak sama seperti elang (5 baris arah x 2 bingkai langkah) */
+const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH*5;
+(function(){
+  const x=lionCv.getContext('2d');
+  const body='#d6a04c',dk='#a8742a',mane='#6b3e14',mane2='#8a5420',face='#ecc47a',nose='#3a2a22',eye='#161010';
+  function draw(row,f){
+    const ox=f*EW,oy=row*EH;
+    const E=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(ox+a,oy+b,w,h);};
+    const legs=()=>{if(f===0){E(7,13,2,5,body);E(10,13,2,4,dk);E(15,13,2,4,dk);E(18,13,2,5,body);}else{E(7,13,2,4,dk);E(10,13,2,5,body);E(15,13,2,5,body);E(18,13,2,4,dk);}};
+    if(row===0){ /* samping, menghadap kanan */
+      legs();E(6,6,14,7,body);E(6,12,14,1,dk);E(3,8,4,2,dk);E(1,5,3,5,mane);
+      E(18,3,9,10,mane);E(17,6,2,5,mane2);E(21,6,6,5,face);E(26,8,1,2,nose);E(23,7,1,1,eye);E(20,2,3,2,mane2);E(22,11,4,1,dk);
+    }else if(row===1){ /* depan */
+      E(9,13,10,3,body);E(10,15,3,3,body);E(15,15,3,3,body);if(f===1){E(10,17,3,1,dk);}else{E(15,17,3,1,dk);}
+      E(7,2,14,12,mane);E(9,4,10,9,face);E(8,1,3,3,mane2);E(17,1,3,3,mane2);E(11,6,2,2,eye);E(15,6,2,2,eye);E(13,9,2,2,nose);E(12,11,4,1,dk);
+    }else if(row===2){ /* belakang */
+      E(9,14,3,4,body);E(16,14,3,4,body);E(8,5,12,9,body);E(9,2,10,5,mane);E(13,9,2,6,dk);E(12,14,4,3,mane);
+    }else if(row===3){ /* 3/4 depan, menghadap kanan */
+      legs();E(5,6,13,7,body);E(5,12,13,1,dk);E(1,6,5,3,dk);E(0,4,3,5,mane);
+      E(16,2,10,11,mane);E(19,5,7,6,face);E(23,6,1,1,eye);E(25,6,1,1,eye);E(24,8,2,2,nose);E(18,1,3,3,mane2);E(20,11,5,1,dk);
+    }else{ /* 3/4 belakang, menghadap kanan */
+      legs();E(5,6,13,7,body);E(5,12,13,1,dk);E(1,7,5,3,dk);E(0,5,3,5,mane);E(15,3,10,10,mane);E(17,2,3,3,mane2);
+    }
+  }
+  for(let r=0;r<5;r++)for(let f=0;f<2;f++)draw(r,f);
+  outlineCv(lionCv,EW,EH);
+})();
+const lionBase=new THREE.CanvasTexture(lionCv);lionBase.magFilter=lionBase.minFilter=THREE.NearestFilter;lionBase.generateMipmaps=false;
+function lionTex(){const t=lionBase.clone();t.needsUpdate=true;t.repeat.set(0.5,0.2);return t;}
 /* 8 arah: pakai pemetaan baris yang sama dengan karakter (ROWMAP) */
 function eagleTex(){const t=eagleBase.clone();t.needsUpdate=true;t.repeat.set(0.5,0.2);return t;}
 function eagleSet(o,fx,fz,rgt,fwd,frame){
@@ -3645,12 +3683,12 @@ function eagleSet(o,fx,fz,rgt,fwd,frame){
 const mobs=new Map();
 function addMob(m){
   if(mobs.has(m.id))return;
-  const tex=eagleTex();
+  const lion=m.k==='lion';const tex=lion?lionTex():eagleTex();
   const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
-  const mine=m.o===me.id;const lab=makeLabel();const mo={friend:mine,name:mine?'Elangmu':'Elang',hp:m.hp||40,max:m.hp||40,lab};
+  const mine=m.o===me.id;const lab=makeLabel();const mo={friend:mine,name:lion?(mine?'Singamu':'Singa'):(mine?'Elangmu':'Elang'),hp:m.hp||40,max:m.hp||40,lab};
   mobs.set(m.id,{lab,friend:mine,name:mo.name,max:mo.max,hp:m.hp||40,flash:0,id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
-  drawMobLabel(mobs.get(m.id));burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfxAt('eagle',m.x,m.z);
+  drawMobLabel(mobs.get(m.id));burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfxAt(lion?'roar':'eagle',m.x,m.z);
 }
 function drawMobLabel(o){drawLabel({name:o.name,hp:o.hp/o.max*MAXHP,shieldT:0,lab:o.lab,friend:o.friend});}
 function removeMob(id,quiet){
@@ -4207,7 +4245,7 @@ function entPos(id){if(id===me.id)return {x:pos.x,y:pos.y,z:pos.z};const o=other
 function onFx(m){
   const p=entPos(m.id);if(!p)return;const near=Math.hypot(p.x-pos.x,p.z-pos.z)<45;
   const col=m.c||'#ffffff';
-  if(m.k==='cast'){if(m.id!==me.id){const o=others.get(m.id);if(o){o.atkT=0.32;if(m.fx!=null){o.fx=m.fx;o.fz=m.fz;}}}burst(p.x,p.y+1.1,p.z,col,8,3);{const kk=m.kind;const mp={bolt:'zap',beam:'beam',summon:'eagle',ride:'eagle',orb:'orb',slam:'slam',dash:null,nova:null,heal:null,regen:null,shield:null,haste:null,trap:null};const nm=mp[kk];if(nm)sfxAt(nm,p.x,p.z);if(kk==='trap'&&m.id===me.id)sfx.trapset();}}
+  if(m.k==='cast'){if(m.id!==me.id){const o=others.get(m.id);if(o){o.atkT=0.32;if(m.fx!=null){o.fx=m.fx;o.fz=m.fz;}}}burst(p.x,p.y+1.1,p.z,col,8,3);{const kk=m.kind;const mp={bolt:'zap',beam:'beam',summon:'eagle',ride:'eagle',orb:'orb',slam:'slam',dash:null,nova:null,heal:null,regen:null,shield:null,haste:null,trap:null};const nm=(kk==='summon'&&m.form==='lion')?null:mp[kk];if(nm)sfxAt(nm,p.x,p.z);if(kk==='trap'&&m.id===me.id)sfx.trapset();}}
   else if(m.k==='nova'){ringFx(p.x,p.y+0.2,p.z,m.r,col);burst(p.x,p.y+0.8,p.z,col,22,7);sfxAt('boom',p.x,p.z);if(m.id===me.id)shake=Math.max(shake,0.3);}
   else if(m.k==='heal'){for(let i=0;i<14;i++)emit(p.x+(Math.random()-0.5)*1.2,p.y+0.2,p.z+(Math.random()-0.5)*1.2,0,1.5+Math.random()*2,0,1,0.45,i%2?'#7dffae':'#ffffff',0,0.9,0.2);floatText(p.x,p.y+2.2,p.z,'+'+(m.v||''),'#6dff96');sfxAt('heal',p.x,p.z);}
   else if(m.k==='shield'){if(m.id===me.id)myShieldT=m.dur;else{const o=others.get(m.id);if(o){o.shieldT=m.dur;drawLabel(o);}}burst(p.x,p.y+1,p.z,col,10,3);sfxAt('shield',p.x,p.z);}

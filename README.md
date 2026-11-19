@@ -95,7 +95,7 @@ Teknik bawaan (semua bisa diubah di admin):
 | 1357 | Overclock | lari lebih cepat |
 | 753 | Lag Dash | lesat ke arah gerakmu tanpa bidik (tekan kiri lalu dash, maka melesat ke kiri; tanpa input, ke arah hadap karakter) |
 | 6464 | Tembok Kode | tembok bata solid 3,4 unit di depanmu (darah 150, lebar 6, bertahan 15 detik). Menghalangi pemain, bola, tebasan, sinar, dan sniper. Tiap serangan yang kena mengurangi darahnya, retak bertahap, lalu hancur. Maksimal 2 tembok per pemain |
-| 3939 | Singa Rimba | panggil singa selama 14 detik, 14 dmg per serangan, cooldown 12 detik. Perilakunya sama seperti elang: menunggu agak jauh darimu dan mengejar musuh yang kamu serang. Jangan dipakai di laga yang ada kawan |
+| 3939 | Singa Rimba | panggil singa yang **berjalan di tanah** selama 14 detik (darah 60), 14 dmg per serangan, cooldown 12 detik. Perilakunya seperti elang: menunggu sekitar 10 unit darimu dan mengejar musuh yang kamu serang. Jangan dipakai di laga yang ada kawan |
 
 ### Tips & trik
 

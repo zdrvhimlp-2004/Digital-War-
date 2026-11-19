@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Singa Rimba kini benar-benar berwujud singa**: sprite pixel-art singa (surai, 8 arah, dua bingkai langkah), berjalan di tanah (bukan terbang), darah 60, dan mengaum saat muncul. Perilaku sasaran dan jarak tunggu sama seperti elang. Teknik pemanggil punya isian "Wujud" (Elang atau Singa) di buku teknik admin. Singa Rimba yang sudah ada di buku teknik (bawaan atau buatan admin, nama mengandung "singa") otomatis diubah jadi wujud singa.
 - **Teknik Singa Rimba (3939) ditambahkan sebagai teknik bawaan**: pemanggil dengan perilaku sama seperti elang (14 dmg, cooldown 12 dtk, 14 dtk). Ditambahkan otomatis ke buku teknik yang sudah ada bila belum ada teknik bernama Singa Rimba (tidak dobel dengan buatan admin).
 - **Efek layar saat mode FPS** (karakter tidak terlihat, jadi statusnya ditampilkan di layar; mode orang ketiga tidak berubah): **beku** (layar biru), **Firewall** (cahaya biru muda dan bingkai), **Overclock** (cahaya kuning), **Auto Backup** (denyut hijau), **tahan/tameng** (cahaya biru lembut), **tameng pecah** (cahaya jingga), dan **terbang dengan elang** (cahaya hangat). Hanya warna polos, tanpa tekstur. Muncul cepat saat efek mulai dan memudar saat habis.
 - **Elang mengutamakan musuh yang KAMU serang**, bukan yang paling dekat dan bukan yang paling baru menyerangmu. Pemain yang menyerangmu hanya jadi sasaran cadangan bila kamu tidak punya sasaran (berlaku 7 detik).
