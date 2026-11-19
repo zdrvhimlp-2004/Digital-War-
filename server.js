@@ -2452,7 +2452,6 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
 <label class="srow"><span><b>Teks besar di tengah layar</b><small>Hitung mundur, FIGHT!, pengumuman pemenang, dan layar KO di arena.</small></span><input type="checkbox" data-set="bigText"><i class="sw"></i></label>
 <label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
-<label class="srow"><span><b>Jeda singkat saat tebasan kena</b><small>Layar berhenti sekejap (hitstop) dan tulisan PENUTUP! saat tebasan mengenai musuh.</small></span><input type="checkbox" data-set="hitStop"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
@@ -3332,7 +3331,7 @@ $('btnJump').addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- state ---------- */
 const pos=new THREE.Vector3(0,0,6),vel=new THREE.Vector3();
-let comboN=0,comboT=0,hitStop=0;
+let comboN=0,comboT=0;
 let vy=0,grounded=true,coyote=0,jumpBuf=0,jumping=false,started=false,tAll=0;
 const cam={yaw:0,yawT:0,pitch:0.55,pitchT:0.55,dist:14,distT:14,tx:pos.x,ty:0,tz:pos.z,fov:50};
 let faceX=0,faceZ=1,viewK=0,walkT=0,idleT=0,lastStepIdx=-1;
@@ -4213,7 +4212,7 @@ function onMsg(m){
         if(o.fresh===undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;o.fresh=false;}
       });break;}
     case 'atk':{const o=others.get(m.id);if(o){o.atkT=0.32;o.fx=m.fx;o.fz=m.fz;sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,o.y,o.z,m.fx,m.fz,0xffd9a0,1,o.side);}break;}
-    case 'hf':{const big=m.cb===3;if(SET.hitStop)hitStop=big?0.11:0.05;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big&&SET.hitStop)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
+    case 'hf':{const big=m.cb===3;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
       const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
@@ -4853,7 +4852,7 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,hitStop:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
@@ -5031,7 +5030,6 @@ function updHitboxes(dt){
 }
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
-  if(hitStop>0){hitStop-=dt;dt*=0.04;}   /* jeda singkat saat tebasan kena */
   update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
