@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Arena pindah ke scene stadion terpisah** (koordinat interior x=5000, seperti goa), tidak lagi di tengah hutan dekat tepi peta. Ada lantai luar, tribun enam tingkat dengan penonton, dinding luar, enam tiang lampu sorot, spanduk biru dan merah, langit malam, dan minimap sendiri. Penonton tertahan di area antara ring dan tribun. Ini juga menghilangkan dinding tak terlihat yang dulu muncul karena batas dunia (radius 134) memotong ring.
 - **Kecepatan semua bola 2 kali lipat** (5 jadi 10, satu konstanta `ballSpeed` di `TUNING`): bola lempar, Bola Biru, dan bola pengejar. Jarak jangkau bola lempar dan Bola Biru tetap, jadi bola sampai dua kali lebih cepat; bola pengejar jangkauannya ikut dua kali lebih jauh.
 - **Tembok Kode solid**: tidak lagi transparan, dan semua bola (termasuk Bola Biru dan bola cepat) tertahan. Pengecekan kini sepanjang lintasan bola, jadi tidak ada yang menembus.
 - **Kunci Lawan (menghadap lawan) tanpa cooldown**: bisa dipakai berulang tanpa jeda, juga untuk data teknik lama yang tersimpan.
