@@ -3439,6 +3439,15 @@ let ws=null,joined=false,hourBase=9,hourAt=0,netT=0,netIdle=0;
 const others=new Map();
 const projs=[];
 const slots=[null,null,null,null,null],slotCd=[0,0,0,0,0],slotCdMax=[1,1,1,1,1];
+/* teknik yang terpasang disimpan per room di localStorage (tiap room datanya beda) */
+let restoreN=0;
+function slotsKey(){return 'dw_slots_'+ROOM;}
+function saveSlots(){LS.set(slotsKey(),JSON.stringify(slots.map(t=>t?t.code:null)));}
+function restoreSlots(){
+  let sv=[];try{sv=JSON.parse(LS.get(slotsKey())||'[]');}catch(e){}
+  restoreN=0;
+  sv.forEach((c,i)=>{if(c&&i<slots.length&&!slots[i]){restoreN++;netSend({t:'learn',slot:i,code:String(c)});}});
+}
 let modalSlot=-1,typed='',modalOpen=false,pendingLearn=false;
 let boardRows=[];
 let atkSide=false,strokeT=0,ambT=3,hbT=0,humT=0,inCave=false,fade=null,sleeping=false,sleepHouse=null,sleepPos=null,ammo=0,snipeCd=0,chestOpen=false,zT=0,fountT=0;
@@ -3599,7 +3608,7 @@ document.querySelectorAll('#pad button').forEach(b=>b.addEventListener('click',(
 $('mBack').addEventListener('click',()=>{typed=typed.slice(0,-1);renderCode();});
 $('mCancel').addEventListener('click',closeModal);
 $('mOk').addEventListener('click',submitCode);
-$('mClear').addEventListener('click',()=>{const i=modalSlot;slots[i]=null;slotCd[i]=0;updSlotUI(i);netSend({t:'clear',slot:i});closeModal();});
+$('mClear').addEventListener('click',()=>{const i=modalSlot;slots[i]=null;slotCd[i]=0;updSlotUI(i);saveSlots();netSend({t:'clear',slot:i});closeModal();});
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal();});
 document.querySelectorAll('.slot').forEach(el=>{
   const i=+el.dataset.i;let timer=null,longDone=false;
@@ -4290,7 +4299,7 @@ function applyDoor(i,open,silent){const d=doors[i];if(!d)return;if(d.open===open
 function onMsg(m){
   switch(m.t){
     case 'welcome':{
-      me.id=m.id;roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();
+      me.id=m.id;roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();slots.fill(null);
       setHp(m.hp==null?MAXHP:m.hp);me.k=0;me.d=0;
       {const f=findFree(m.spawn.x,m.spawn.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;cam.ty=0;
       chestOpen=!!m.chest;if(chest){chest.open=chestOpen;chest.target=chest.ang=chestOpen?1.25:0;}ammo=0;sleeping=false;$('night').style.opacity=0;fade=null;$('fade').style.opacity=0;
@@ -4303,7 +4312,7 @@ function onMsg(m){
       sols.forEach((_,id)=>removeSol(id));orbs.forEach((_,id)=>removeOrb(id,true));(m.sols||[]).forEach(addSol);
       $('chatList').innerHTML='';(m.chat||[]).forEach(c=>addChatLine(c,false));
       closeAllPeers();{const vo=voiceEnabled();document.querySelectorAll('.vo').forEach(b=>b.classList.toggle('off',!vo));micOn=false;spkOn=true;setMicUI();setSpkUI();if(vo)m.players.forEach(pl=>{if(pl.id!==me.id)ensurePeer(pl.id);});}
-      joined=true;started=true;
+      joined=true;started=true;slots.forEach((_,i)=>{slotCd[i]=0;updSlotUI(i);});restoreSlots();
       document.body.classList.add('playing');$('start').classList.add('hide');canvas.focus();
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
@@ -4326,10 +4335,12 @@ function onMsg(m){
     case 'hf':{const big=m.cb===3;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
-      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
-    case 'learnerr':if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
+      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);saveSlots();
+      if(restoreN>0){restoreN--;break;}   /* pemulihan otomatis: tanpa suara/pesan */
+      pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
+    case 'learnerr':if(restoreN>0){restoreN--;break;}if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
     case 'techs':renderPick(m.list);break;
-    case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
+    case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);saveSlots();toast('Teknik itu sudah tidak tersedia',2);break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
