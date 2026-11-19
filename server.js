@@ -26,13 +26,26 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 /* ====================================================================
  *  KONFIGURASI GAME
  * ==================================================================== */
-const MAXHP = 100;
+/* ---- PENYETELAN: semua angka utama ada di sini (server + dikirim ke browser) ---- */
+const TUNING = {
+  maxHp: 300,                 // darah pemain
+  walk: 4.6, run: 7,          // kecepatan jalan / lari
+  jump: 19.5,                 // daya lompat biasa
+  meleeDmg: 50, meleeRange: 3.3, meleeCd: 380,   // pedang (penutup kombo 1.6x)
+  waveDmg: 25,                // tebasan angin
+  ballSpeed: 5,               // kecepatan semua bola (bolt & orb)
+  eagleSpeedMul: 0.275,       // pengali kecepatan elang (panggilan & tunggangan)
+  dashMinCd: 3,               // cooldown minimum dash (dtk)
+  sleepRegen: 18              // HP per detik saat tidur
+};
+const MAXHP = TUNING.maxHp;
 const TICK_MS = 33;             // simulasi server ~30 Hz
 const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
-const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
+const MELEE = { dmg: TUNING.meleeDmg, range: TUNING.meleeRange, cd: TUNING.meleeCd, knock: 28 };
+const KNOCK_MULT = 2;   /* pengali semua dorongan (tebasan, bola, ledakan, nova, sinar, dll.) */
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -40,7 +53,7 @@ const CHAR_COUNT = 8;
 const CHEST = { x: 3000, z: 0 };           // peti di dalam goa (koordinat interior goa)
 const CHEST_RESET_MS = 60000;
 const SNIPER = { ammo: 5, dmg: 45, range: 90, cd: 2200, width: 1.0 };
-const SLEEP_REGEN = 6;                     // HP per detik saat tidur
+const SLEEP_REGEN = TUNING.sleepRegen;                     // HP per detik saat tidur
 const FORTS = [
   { id: 0, name: 'Benteng Fajar', x: 62, z: -52 },
   { id: 1, name: 'Benteng Senja', x: -72, z: -52 },
@@ -73,31 +86,38 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 5;
+const TECH_VERSION = 12;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
 const DEFAULT_TECHS = [
-  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 20, cd: 0.6, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
-  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 12, cd: 2,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
-  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 38, cd: 2.5, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
-  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 9,  cd: 3,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
-  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 3,  cd: 2,   speed: 11, life: 4, radius: 5.5 },
-  { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 3,   radius: 6 },
-  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 5,   radius: 5.5, stun: 2 },
-  { code: '3735', name: 'Laser Beam',    kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 3,   range: 28 },
-  { code: '2718', name: 'Stack Overflow', kind: 'slam',  emoji: '🔨', color: '#ffb84d', damage: 40, cd: 4,   radius: 5 },
-  { code: '1618', name: 'Landmine',      kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 3,   radius: 2.2, stun: 0.6 },
-  { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 7,   count: 1, dur: 12, speed: 12 },
-  { code: '1928', name: 'Elang Kembar',  kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 10,  count: 2, dur: 10, speed: 13 },
-  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 70, speed: 24, cd: 15 },
-  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 35, cd: 4 },
-  { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 40, cd: 6,   dur: 6 },
-  { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 5 },
-  { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
-  { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 }
+  { code: '637', name: 'Byte Bolt',      kind: 'bolt',   emoji: '🔹', color: '#4de1ff', damage: 30, cd: 2.4, speed: 24, life: 1.6, count: 1, spread: 0, size: 1.7, boom: 3.2 },
+  { code: '314', name: 'Loop Barrage',   kind: 'bolt',   emoji: '🌀', color: '#b57bff', damage: 18, cd: 8,   speed: 22, life: 1.5, count: 3, spread: 0.22, size: 1.2, boom: 2.6 },
+  { code: '8472', name: 'Null Pointer',  kind: 'bolt',   emoji: '🎯', color: '#ff5d5d', damage: 57, cd: 10, speed: 38, life: 1.4, count: 1, spread: 0, size: 2.1, boom: 3.8 },
+  { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   emoji: '🎆', color: '#ff9a3c', damage: 14, cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
+  { code: '858', name: 'Bola Biru',      kind: 'orb',    emoji: '🔵', color: '#2f8fff', damage: 150, cd: 20,   speed: 11, life: 4, radius: 5.5 },
+  { code: '519', name: 'Overflow Nova',  kind: 'nova',   emoji: '💥', color: '#ffd84d', damage: 30, cd: 12,   radius: 6 },
+  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   emoji: '❄️', color: '#aee6ff', damage: 8,  cd: 20,   radius: 5.5, stun: 2 },
+  { code: '3735', name: 'Laser Beam',    kind: 'beam',   emoji: '📡', color: '#ff4de1', damage: 30, cd: 12,   range: 28 },
+  { code: '2718', name: 'Stack Overflow', kind: 'slam',  emoji: '🔨', color: '#ffb84d', damage: 40, cd: 16,   radius: 5 },
+  { code: '1618', name: 'Landmine',      kind: 'trap',   emoji: '💣', color: '#ff6a4d', damage: 35, cd: 12,   radius: 2.2, stun: 0.6 },
+  { code: '481', name: 'Elang Digital',  kind: 'summon', emoji: '🦅', color: '#ffd9a0', damage: 9,  cd: 28,   count: 1, dur: 12, speed: 12 },
+  { code: '1928', name: 'Elang Kembar',  kind: 'summon', emoji: '🦅', color: '#ffe9c0', damage: 7,  cd: 40,  count: 2, dur: 10, speed: 13 },
+  { code: '7294', name: 'Elang Tunggangan', kind: 'ride', emoji: '🦅', color: '#ffe0b0', dur: 10, speed: 24, cd: 60 },
+  { code: '918', name: 'Patch Heal',     kind: 'heal',   emoji: '💚', color: '#5dff9e', damage: 105, cd: 16 },
+  { code: '9876', name: 'Auto Backup',   kind: 'regen',  emoji: '🔋', color: '#8affc0', damage: 120, cd: 24,   dur: 6 },
+  { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 20 },
+  { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 20 },
+  { code: '777', name: 'Tembok Kode', kind: 'wall', emoji: '🧱', color: '#b8a27a', hp: 120, dur: 6, len: 8, cd: 20 },
+  { code: '8181', name: 'Loncat Tinggi', kind: 'jump', emoji: '🦘', color: '#9dffb0', power: 30, cd: 12 },
+  { code: '2929', name: 'Kedip Teleport', kind: 'blink', emoji: '🌀', color: '#c79bff', range: 14, cd: 16 },
+  { code: '6464', name: 'Bola Pengejar', kind: 'homing', emoji: '🧿', color: '#ff7ad9', damage: 30, cd: 10, count: 2, life: 7, size: 1.3, boom: 2.6, turn: 2.5 },
+  { code: '8182', name: 'Loncat Super', kind: 'jump', emoji: '🚀', color: '#7dffb2', power: 60, cd: 10 },
+  { code: '4141', name: 'Kunci Lawan', kind: 'face', emoji: '🎯', color: '#ffe066', range: 60, cd: 1 },
+  { code: '4343', name: 'Singa Rimba', kind: 'lion', emoji: '🦁', color: '#f0b45a', damage: 25, cd: 24, count: 1, dur: 15, speed: 7, hp: 90 },
+  { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 6 }
 ];
-const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb'];
+const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face'];
 
 /* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
 function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
@@ -105,8 +125,8 @@ function vnoise(x, y) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - x
 function fbm(x, y) { return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 7.3, y * 2.1 + 1.7) * 0.28 + vnoise(x * 4.3 + 3.1, y * 4.3 + 9.4) * 0.12; }
 function sstep(a, b, v) { const t = clampN((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 const LAKE = { x: 0, z: -48, R: 11 };
-const ARENA = { x: 0, z: 58, ringR: 25, side: 14, height: 20 };
-const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: 33, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
+const ARENA = { x: -85, z: 85, ringR: 38, side: 22, height: 24 };
+const TERRAIN_FLATS = [{ x: ARENA.x, z: ARENA.z, r: ARENA.ringR + 8, b: 12 }, { x: 0, z: 0, r: 22, b: 14 }, { x: LAKE.x, z: LAKE.z, r: 16, b: 10 }, { x: -15, z: 87, r: 9, b: 9 },
   { x: 62, z: 34, r: 8, b: 10 }, { x: -70, z: -22, r: 8, b: 10 }, { x: 18, z: -82, r: 8, b: 10 }, { x: 36, z: -28, r: 9, b: 10 }, { x: -48, z: 46, r: 9, b: 10 },
   { x: 62, z: -52, r: 15, b: 9 }, { x: -72, z: -52, r: 15, b: 9 }, { x: 40, z: 78, r: 15, b: 9 },
   { x: 88, z: 0, r: 16, b: 8 }, { x: -90, z: 0, r: 16, b: 8 }, { x: 0, z: -92, r: 16, b: 8 }];
@@ -117,9 +137,12 @@ function terrainH(x, z) {
   const hills = (fbm(x * 0.018, z * 0.018) - 0.5) * 22 + (fbm(x * 0.06 + 50, z * 0.06 + 50) - 0.5) * 3;
   const e = clampN((Math.hypot(x, z) - 100) / 42, 0, 1);
   const ld = 5.5 * (1 - sstep(LAKE.R - 5, LAKE.R + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z)));
-  return hills * m + e * e * (3 - 2 * e) * 38 - ld;
+  const da = Math.hypot(x - ARENA.x, z - ARENA.z), fa = ARENA.ringR + 8; let ma = 1;   /* lantai arena tidak ikut terangkat oleh pegunungan tepi peta */
+  if (da < fa + 12) { const t = da <= fa ? 0 : (da - fa) / 12; ma = t * t * (3 - 2 * t); }
+  return hills * m + e * e * (3 - 2 * e) * 38 * ma - ld;
 }
-const BOLT_GRAVITY = 2.6;
+const BALL_SPEED = TUNING.ballSpeed;   /* semua bola (bolt & orb) melaju 5; jarak jangkau tetap (life disesuaikan) */
+const BOLT_GRAVITY = 0.08;
 
 /* ====================================================================
  *  PENYIMPANAN
@@ -162,6 +185,30 @@ function loadDB() {
         }
         if (!j.techniques.some(x => x.code === '858')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '858')));
       }
+      if (ver < 6) {   /* elang tunggangan: 10 detik, cooldown 4x lebih lama */
+        for (const t of j.techniques) if (t.kind === 'ride') { if (Number(t.dur) === 70) t.dur = 10; if (Number(t.cd) === 15) t.cd = 60; }
+      }
+      if (ver < 7) {   /* semua cooldown teknik 4x lebih lama (kecuali elang tunggangan yang sudah dinaikkan) */
+        for (const t of j.techniques) {
+          if (t.kind === 'ride') continue;
+          const d = DEFAULT_TECHS.find(x => x.code === t.code);
+          if (d && Number(t.cd) === d.cd) continue;   /* sudah bernilai baru */
+          t.cd = Math.min(120, Math.round(Number(t.cd) * 4 * 10) / 10);
+        }
+      }
+      if (ver < 8) for (const d of DEFAULT_TECHS) if (['777', '8181', '2929'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 9) {   /* penyeimbangan: damage bola naik, heal 3x (darah 300) */
+        const OLD_DMG = { '637': 20, '314': 12, '8472': 38, '4242': 9, '858': 3, '918': 35, '9876': 40 };
+        for (const t of j.techniques) {
+          const d = DEFAULT_TECHS.find(x => x.code === t.code);
+          if (d && OLD_DMG[t.code] !== undefined && Number(t.damage) === OLD_DMG[t.code]) t.damage = d.damage;
+        }
+      }
+      if (ver < 10) {   /* Bola Biru: cooldown 20 dtk, satu hantaman 150 (5x Byte Bolt) */
+        for (const t of j.techniques) if (t.code === '858' && t.kind === 'orb') { if ([3, 5].includes(Number(t.damage))) t.damage = 150; if ([8, 2].includes(Number(t.cd))) t.cd = 20; }
+      }
+      if (ver < 11) for (const d of DEFAULT_TECHS) if (d.code === '6464' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 12) for (const d of DEFAULT_TECHS) if (['8182', '4141', '4343'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -236,9 +283,22 @@ function sanitizeTech(t) {
   } else if (kind === 'regen') {
     out.damage = num(t.damage, 1, MAXHP, 40); out.dur = num(t.dur, 2, 20, 6);
   } else if (kind === 'ride') {
-    out.dur = num(t.dur, 3, 300, 70); out.speed = num(t.speed, 6, 60, 24);
+    out.dur = num(t.dur, 3, 300, 10); out.speed = num(t.speed, 6, 60, 24);
   } else if (kind === 'orb') {
-    out.damage = num(t.damage, 0, 50, 3); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
+    out.damage = num(t.damage, 0, 300, 150); out.speed = num(t.speed, 3, 40, 11); out.life = num(t.life, 1, 10, 4); out.radius = num(t.radius, 2, 12, 5.5);
+  } else if (kind === 'homing') {
+    out.damage = num(t.damage, 0, 100, 30); out.count = Math.round(num(t.count, 1, 4, 2)); out.life = num(t.life, 1, 10, 7);
+    out.size = num(t.size, 0.5, 3, 1.3); out.boom = num(t.boom, 0, 8, 2.6); out.turn = num(t.turn, 0.5, 6, 2.5);
+  } else if (kind === 'face') {
+    out.range = num(t.range, 10, 120, 60);
+  } else if (kind === 'lion') {
+    out.damage = num(t.damage, 1, 80, 25); out.count = Math.round(num(t.count, 1, 2, 1)); out.dur = num(t.dur, 3, 40, 15); out.speed = num(t.speed, 3, 12, 7); out.hp = Math.round(num(t.hp, 20, 300, 90));
+  } else if (kind === 'wall') {
+    out.hp = num(t.hp, 10, 500, 120); out.dur = num(t.dur, 2, 15, 6); out.len = num(t.len, 3, 16, 8);
+  } else if (kind === 'jump') {
+    out.power = num(t.power, 15, 80, 30);
+  } else if (kind === 'blink') {
+    out.range = num(t.range, 4, 30, 14);
   } else if (kind === 'haste') {
     out.power = num(t.power, 1.1, 2.5, 1.6); out.dur = num(t.dur, 1, 15, 5);
   }
@@ -255,13 +315,19 @@ function techDesc(t) {
     case 'heal': return 'Pulihkan ' + t.damage + ' HP';
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
-    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan';
+    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
     case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
     case 'regen': return 'Pulih ' + t.damage + ' HP selama ' + t.dur + ' dtk';
     case 'ride': return 'Tunggangi elang terbang ' + t.dur + ' dtk (Lompat naik, Selam turun)';
-    case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg per sentuhan, bisa diarahkan ke atas, bawah, samping';
+    case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
+    case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
+    case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m)';
+    case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/gigitan, ' + t.hp + ' HP';
+    case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, memblokir bola & tebasan angin (bisa dilompati)';
+    case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
+    case 'blink': return 'Teleport ' + t.range + ' m ke depan';
     case 'haste': return 'Lari ' + t.power + 'x lebih cepat ' + t.dur + ' dtk';
   }
   return '';
@@ -284,28 +350,30 @@ function newRoomCode() {
 function makeRuntime(r) {
   return {
     code: r.code, name: r.name, max: r.max, created: r.created,
-    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true,
+    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], walls: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, chatLog: [], voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true,
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(); else initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
 function broadcast(room, obj, exceptId) {
   const s = JSON.stringify(obj);
-  for (const p of room.players.values()) if (p.id !== exceptId && !p.ws.closed) p.ws.send(s);
+  for (const p of room.players.values()) if (p.id !== exceptId && p.ws && !p.ws.closed) p.ws.send(s);
 }
 function scoreList(room) { return [...room.players.values()].map(p => [p.id, p.k, p.d]); }
 
+function spawnFor(room) { return room.duel ? standSpawn() : (room.train ? { x: r2((Math.random() - 0.5) * 4), z: -4 } : randomSpawn()); }
 function randomSpawn() {
   const sp = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
   return { x: r2(sp.x + (Math.random() - 0.5) * 10), z: r2(sp.z + (Math.random() - 0.5) * 10) };
 }
 
-let projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000;
+let projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000, wallSeq = 1;
 const GUARD_WINDOW = 3000, GUARD_MAX = 9, GUARD_BREAK_MS = 2500;
 const MAX_TRAPS = 6;
+const EAGLE_ORBIT = 10, EAGLE_HEIGHT = 7;   /* elang menunggu mengitari pemilik pada jarak ini (unit), tinggi di atas tanah */
 
 /* ---- target umum: pemain + pasukan benteng ---- */
 function victims(room) {
@@ -315,7 +383,14 @@ function victims(room) {
   for (const m of room.mobs) a.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
   return a;
 }
-function friendly(ownerId, v) { if (v.isMob) return v.o === ownerId; return v.id === ownerId || (v.isSol && v.owner === ownerId); }
+let CUR = null;
+const ffOn = room => !!(room && room.duel && room.duel.ff);   /* friendly fire per room (arena tim) */   /* room yang sedang diproses (untuk cek satu tim di arena) */
+function sameTeam(room, aId, bId) { const tm = room && room.duel && room.duel.team; return !!tm && !!tm[aId] && tm[aId] === tm[bId]; }
+function friendly(ownerId, v) {
+  if (v.isMob) { if (v.o === ownerId) return true; }
+  else if (v.id === ownerId || (v.isSol && v.owner === ownerId)) return true;
+  return !ffOn(CUR) && sameTeam(CUR, ownerId, v.isMob ? v.o : v.id);
+}
 function damageMob(room, m, dmg, attacker) {
   if (m.hp <= 0) return;
   if (attacker && attacker.id === m.o) return;
@@ -328,11 +403,15 @@ function damageMob(room, m, dmg, attacker) {
     broadcast(room, { t: 'mobx', id: m.id, dead: 1 });
   }
 }
+/* sasaran terbaru dulu: musuh yang kamu serang vs yang menyerangmu */
+function focusOrder(o) { const a = [o.focus, o.defFocus].filter(Boolean); if (a.length > 1 && a[1].until > a[0].until) a.reverse(); return a; }
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
+  if (!ffOn(room) && room.duel && attacker && sameTeam(room, attacker.id, v.isMob ? v.o : v.id)) return;   /* tidak melukai satu tim */
+  kx *= KNOCK_MULT; kz *= KNOCK_MULT;
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
-  /* pembalasan: saat kamu (atau elangmu) diserang, elangmu langsung mengincar penyerangnya */
-  const src = (opt && opt.src) || attacker, defender = v.isMob ? room.players.get(v.o) : (v.ws ? v : null);
-  if (defender && src && src !== BANDIT && src !== defender && !friendly(defender.id, src)) defender.focus = { v: src, until: now() + 7000 };
+  /* pembalasan: yang terakhir menyerangmu (atau elangmu) juga jadi sasaran; yang paling baru menang antara ini dan musuh yang kamu serang */
+  { const src = (opt && opt.src) || attacker, def = v.isMob ? room.players.get(v.o) : (v.ws ? v : null);
+    if (def && src && src !== BANDIT && src !== def && !friendly(def.id, src)) def.defFocus = { v: src, until: now() + 7000 }; }
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
@@ -342,7 +421,7 @@ function damageSoldier(room, s, dmg, attacker) {
   if (attacker && friendly(attacker.id, s)) return;
   dmg = Math.max(1, Math.round(dmg));
   s.hp = Math.max(0, s.hp - dmg);
-  broadcast(room, { t: 'sh', id: s.id, hp: s.hp, dmg });
+  broadcast(room, { t: 'sh', id: s.id, hp: s.hp, dmg, by: attacker ? attacker.id : 0 });
   if (s.hp <= 0) {
     s.dead = true;
     room.sols = room.sols.filter(x => x !== s);
@@ -407,6 +486,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   dmg = Math.max(1, Math.round(dmg));
   victim.hp = Math.max(0, victim.hp - dmg);
   broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0), hr: opt.hr ? r2(opt.hr) : 0 });
+  if (victim.bot) { victim.kx += kx || 0; victim.kz += kz || 0; }
   if (victim.hp <= 0) {
     victim.dead = true;
     victim.respawnAt = t + RESPAWN_MS;
@@ -435,16 +515,17 @@ function deflectProj(room, pr, by) {
   broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, sb: 1 });
   broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(dx), dy: r2(dy), dz: r2(dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
 }
-const WAVE = { speed: 17, life: 0.3, dmg: 20, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
+const WAVE = { speed: 17, life: 0.3, dmg: TUNING.waveDmg, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
 const MELEE_CONE = 0.64;   /* kerucut FPS: cos 50 derajat */
 function vName(v) { return v.name || (v.isSol ? (v.bandit ? 'Penyamun' : 'Prajurit') : (v.isMob ? 'Elang' : '?')); }
 /* apakah tebasan p (arah fx,fz, ay = arah vertikal bila FPS) mengenai v? */
-function meleeCheck(p, v, fx, fz, ay) {
+function meleeCheck(p, v, fx, fz, ay, rb) {
+  rb = rb || 0;
   const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
   if (ay !== undefined) {
     /* mode FPS: kerucut 3D mengikuti arah + (atas/bawah) */
     const dy = (v.y + 0.9) - (p.y + 1.45), d3 = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (d3 > MELEE.range + 0.6) return { ok: false, d: d3, why: 'terlalu jauh (' + d3.toFixed(1) + ' > ' + (MELEE.range + 0.6).toFixed(1) + ')' };
+    if (d3 > MELEE.range + rb + 0.6) return { ok: false, d: d3, why: 'terlalu jauh (' + d3.toFixed(1) + ' > ' + (MELEE.range + rb + 0.6).toFixed(1) + ')' };
     if (d3 > 1.3) {
       const hl = Math.sqrt(Math.max(0.0001, 1 - ay * ay));
       const cs = (dx * fx * hl + dz * fz * hl + dy * ay) / d3;
@@ -452,47 +533,54 @@ function meleeCheck(p, v, fx, fz, ay) {
     }
     return { ok: true, d, dx, dz, d3 };
   }
-  if (d > MELEE.range) return { ok: false, d, why: 'terlalu jauh (' + d.toFixed(1) + ' > ' + MELEE.range + ')' };
+  if (d > MELEE.range + rb) return { ok: false, d, why: 'terlalu jauh (' + d.toFixed(1) + ' > ' + (MELEE.range + rb) + ')' };
   if (Math.abs(v.y - p.y) > 2.8) return { ok: false, d, why: 'selisih tinggi ' + Math.abs(v.y - p.y).toFixed(1) + ' (batas 2.8)' };
   if (d > 0.01 && (dx * fx + dz * fz) / d < -0.1) return { ok: false, d, why: 'ada di belakangmu' };
   return { ok: true, d, dx, dz };
 }
 function doMelee(room, p, fx, fz, ay) {
   const t = now();
-  if (p.dead || t - p.atkAt < MELEE.cd - 60) return;
+  if (p.dead || t - p.atkAt < (p.atkCd || MELEE.cd) - 60) return;
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
+  /* kombo 3 tahap: tebasan 1-2 cepat, tebasan 3 (penutup) lebih kuat, jauh, dan jeda lebih lama */
+  p.combo = (t - (p.atkAt || 0) > 900 || !p.combo) ? 1 : (p.combo % 3) + 1;
+  const cb = p.combo, fin = cb === 3, dm = fin ? 1.6 : 1, rb = fin ? 0.7 : 0;
+  p.atkCd = fin ? 720 : MELEE.cd;
   p.atkAt = t; p.atkFx = fx; p.atkFz = fz;
-  broadcast(room, { t: 'atk', id: p.id, fx, fz });
+  broadcast(room, { t: 'atk', id: p.id, fx, fz, cb });
+  let hfSent = false;
+  const hf = (v) => { if (hfSent) return; hfSent = true; send(p.ws, { t: 'hf', cb, x: r2(v.x), y: r2(v.y), z: r2(v.z) }); };
   let landed = 0, nearMiss = null;
   const hitIds = new Set();
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
-    const ck = meleeCheck(p, v, fx, fz, ay);
-    if (!ck.ok) { if (room.debug && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
+    const ck = meleeCheck(p, v, fx, fz, ay, rb);
+    if (!ck.ok) { if ((room.debug || p.dbg) && ck.d < 10 && (!nearMiss || ck.d < nearMiss.d)) nearMiss = { d: ck.d, why: vName(v) + ': ' + ck.why }; continue; }
     const dx = ck.dx, dz = ck.dz, d = ck.d;
     const nx = d > 0.01 ? dx / d : fx, nz = d > 0.01 ? dz / d : fz;
     if (v.atkAt !== undefined && !v.dead && t - v.atkAt < CLASH_MS && (v.atkFx * -nx + v.atkFz * -nz) > 0.2 && t >= v.invuln) {
       /* pedang beradu: keduanya terpental, tanpa damage */
-      broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8), az: r2(-nz * MELEE.knock * 0.8), bx: r2(nx * MELEE.knock * 0.8), bz: r2(nz * MELEE.knock * 0.8) });
+      broadcast(room, { t: 'clash', a: p.id, b: v.id, ax: r2(-nx * MELEE.knock * 0.8 * KNOCK_MULT), az: r2(-nz * MELEE.knock * 0.8 * KNOCK_MULT), bx: r2(nx * MELEE.knock * 0.8 * KNOCK_MULT), bz: r2(nz * MELEE.knock * 0.8 * KNOCK_MULT) });
       v.atkAt = 0;
-      if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
+      if (room.debug || p.dbg) send(p.ws, { t: 'dbg', ok: 1, msg: 'Bentrok pedang dengan ' + vName(v) });
       landed++;
       continue;
     }
     landed++; hitIds.add(v.id);
-    if (room.debug) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
-    hurt(room, v, MELEE.dmg, p, nx * MELEE.knock, nz * MELEE.knock, { sx: -nx, sz: -nz });
+    if (room.debug || p.dbg) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
+    hurt(room, v, MELEE.dmg * dm, p, nx * MELEE.knock * dm, nz * MELEE.knock * dm, { sx: -nx, sz: -nz });
+    hf(v);
   }
   /* tebasan angin: gelombang pendek yang meluncur sedikit lebih jauh dari jangkauan pedang */
   {
     const ay2 = ay === undefined ? 0 : ay, hl = Math.sqrt(Math.max(0.0001, 1 - ay2 * ay2));
     const wdx = fx * hl, wdz = fz * hl;
-    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life, dmg: WAVE.dmg, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, skip: hitIds };
+    const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life * (fin ? 1.5 : 1), dmg: WAVE.dmg * dm, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, pierce: 3, skip: hitIds };
     room.projs.push(wv);
-    broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1 });
+    broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1, o: p.id });
   }
-  if (room.debug && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
+  if ((room.debug || p.dbg) && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
   /* tebasan menghancurkan bola yang melintas di depan */
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
@@ -522,6 +610,24 @@ function areaHit(room, p, radius, dmg, kb, stun) {
   }
 }
 
+/* ---- dinding: memblokir bola/tebasan angin/sinar dari lawan ---- */
+const WALL_H = 4, WALL_THICK = 0.9;
+function wallRemove(room, w, broke) {
+  const i = room.walls.indexOf(w); if (i < 0) return;
+  room.walls.splice(i, 1);
+  broadcast(room, { t: 'wallx', id: w.id, broke: broke ? 1 : 0 });
+}
+/* kena dinding musuh? kembalikan dinding bila titik (x,y,z) berada di dalamnya */
+function wallAt(room, ownerId, x, y, z) {
+  for (const w of room.walls) {
+    if (w.o === ownerId || sameTeam(room, w.o, ownerId)) continue;
+    if (y < w.y - 0.5 || y > w.y + WALL_H + 0.3) continue;
+    const rx = x - w.x, rz = z - w.z, along = rx * w.tx + rz * w.tz, dist = rx * w.nx + rz * w.nz;
+    if (Math.abs(along) <= w.len / 2 + 0.3 && Math.abs(dist) <= WALL_THICK) return w;
+  }
+  return null;
+}
+function wallDamage(room, w, dmg) { w.hp -= dmg; if (w.hp <= 0) wallRemove(room, w, true); else broadcast(room, { t: 'wallh', id: w.id, hp: Math.round(w.hp), max: w.max }); }
 function doCast(room, p, slot, ax, ay, az) {
   if (p.dead || slot < 0 || slot >= MAX_TECH_SLOTS) return;
   const code = p.slots[slot];
@@ -530,9 +636,10 @@ function doCast(room, p, slot, ax, ay, az) {
   if (!tech) { p.slots[slot] = null; send(p.ws, { t: 'slotclear', slot }); return; }
   const t = now();
   if (t < p.stunUntil) return;
-  if (tech.kind !== 'dash') {            /* dash: tanpa cooldown */
+  {
+    const cdv = (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : tech.cd) * (room.tune ? room.tune.cd : 1);   /* dash: cooldown min 3 dtk */
     if ((p.cdUntil[code] || 0) > t + 120) return;
-    p.cdUntil[code] = t + tech.cd * 1000;
+    p.cdUntil[code] = t + cdv * 1000;
   }
   if (p.guarding) setGuard(room, p, false);
   if (p.sleeping) setSleep(room, p, false);
@@ -551,7 +658,40 @@ function doCast(room, p, slot, ax, ay, az) {
         const ang = (i - (n - 1) / 2) * (tech.spread || 0), cs = Math.cos(ang), sn = Math.sin(ang);
         const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs;
         const size = tech.size || 1.6, boom = tech.boom == null ? 3 : tech.boom;
-        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: tech.speed, life: tech.life, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: BALL_SPEED, life: tech.life * tech.speed / BALL_SPEED, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
+        room.projs.push(pr);
+        broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(pr.dy), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
+      }
+      break;
+    }
+    case 'face': {
+      let tg = null, bd = tech.range || 60;
+      for (const v of victims(room)) { if (v === p || v.isMob || friendly(p.id, v)) continue; const dd = Math.hypot(v.x - p.x, v.z - p.z); if (dd < bd) { bd = dd; tg = v; } }
+      if (tg) {
+        const nx = (tg.x - p.x) / (bd || 1), nz = (tg.z - p.z) / (bd || 1);
+        p.fx = nx; p.fz = nz;
+        send(p.ws, { t: 'face', fx: r2(nx), fz: r2(nz) });
+        broadcast(room, { t: 'fx', k: 'face', id: p.id, tx: r2(tg.x), tz: r2(tg.z), c: tech.color });
+      }
+      break;
+    }
+    case 'lion': {
+      const n = tech.count || 1;
+      let have = room.mobs.filter(m => m.o === p.id).length;
+      for (let i = 0; i < n && have < 4; i++, have++) {
+        const mx = p.x + fx * 2.5 + (i - (n - 1) / 2) * 2, mz = p.z + fz * 2.5, hp = tech.hp || 90;
+        const m = { id: mobSeq++, o: p.id, k: 'lion', hp, x: mx, y: terrainH(mx, mz) + 1.2, z: mz, fx, fz, until: t + (tech.dur || 15) * 1000, dmg: tech.damage || 25, sp: tech.speed || 7, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        room.mobs.push(m);
+        broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'lion', hp, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
+      }
+      break;
+    }
+    case 'homing': {
+      const n = tech.count || 2;
+      for (let i = 0; i < n; i++) {
+        const ang = (i - (n - 1) / 2) * 0.7, cs = Math.cos(ang), sn = Math.sin(ang);
+        const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs, size = tech.size || 1.3;
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by, dz, sp: BALL_SPEED, life: tech.life || 7, dmg: tech.damage, stun: 0, c: tech.color, hr: 0.9 + 0.55 * size, boom: tech.boom == null ? 2.6 : tech.boom, size, grav: 0, home: tech.turn || 2.5 };
         room.projs.push(pr);
         broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(pr.dy), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
       }
@@ -559,7 +699,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'orb': {
       const r = tech.radius || 5.5;
-      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: tech.speed || 11, life: tech.life || 4, r, dmg: tech.damage, c: tech.color, hit: new Map() };
+      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: BALL_SPEED, life: (tech.life || 4) * (tech.speed || 11) / BALL_SPEED, r, dmg: tech.damage, c: tech.color, hit: new Map() };
       room.orbs.push(orb);
       broadcast(room, { t: 'orb', id: orb.id, o: p.id, x: r2(orb.x), y: r2(orb.y), z: r2(orb.z), dx: r2(bx), dy: r2(by), dz: r2(bz), sp: orb.sp, life: orb.life, r, c: orb.c });
       break;
@@ -581,6 +721,12 @@ function doCast(room, p, slot, ax, ay, az) {
     case 'beam': {
       let len = tech.range || 28;
       if (room.duel) { const ox = p.x - ARENA.x, oz = p.z - ARENA.z, bq = ox * fx + oz * fz, cq = ox * ox + oz * oz - ARENA.ringR * ARENA.ringR, disc = bq * bq - cq; if (disc >= 0) len = Math.min(len, Math.max(0, -bq + Math.sqrt(disc))); }
+      for (const w of [...room.walls]) {
+        if (w.o === p.id || sameTeam(room, w.o, p.id)) continue;
+        const den = fx * w.nx + fz * w.nz; if (Math.abs(den) < 0.001) continue;
+        const tt = ((w.x - p.x) * w.nx + (w.z - p.z) * w.nz) / den;
+        if (tt > 0 && tt < len && Math.abs((p.x + fx * tt - w.x) * w.tx + (p.z + fz * tt - w.z) * w.tz) <= w.len / 2 + 0.3) { len = tt; wallDamage(room, w, tech.damage); }
+      }
       broadcast(room, { t: 'fx', k: 'beam', id: p.id, fx: r2(fx), fz: r2(fz), len, c: tech.color });
       for (const v of victims(room)) {
         if (v === p || friendly(p.id, v)) continue;
@@ -607,7 +753,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: tech.speed || 12, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * TUNING.eagleSpeedMul, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
@@ -635,7 +781,27 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'ride': {
       p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
-      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: tech.speed || 24, c: tech.color });
+      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * TUNING.eagleSpeedMul, c: tech.color });
+      break;
+    }
+    case 'wall': {
+      const mine = room.walls.filter(w => w.o === p.id);
+      if (mine.length >= 3) wallRemove(room, mine[0], false);
+      const dist = 4.5, w = { id: wallSeq++, o: p.id, x: p.x + fx * dist, z: p.z + fz * dist, y: p.y, nx: fx, nz: fz, tx: -fz, tz: fx, len: tech.len || 8, hp: tech.hp || 120, max: tech.hp || 120, c: tech.color, until: t + (tech.dur || 6) * 1000 };
+      room.walls.push(w);
+      broadcast(room, { t: 'wall', id: w.id, o: p.id, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(fx), nz: r2(fz), len: w.len, hp: w.hp, dur: tech.dur || 6, c: tech.color });
+      break;
+    }
+    case 'jump': {
+      broadcast(room, { t: 'fx', k: 'hjump', id: p.id, pw: tech.power || 30, c: tech.color });
+      if (p.bot) p.vy = tech.power || 30;
+      break;
+    }
+    case 'blink': {
+      let x = p.x + fx * (tech.range || 14), z = p.z + fz * (tech.range || 14);
+      if (room.duel) { const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.5; if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; } }
+      broadcast(room, { t: 'fx', k: 'blink', id: p.id, x0: r2(p.x), z0: r2(p.z), x1: r2(x), z1: r2(z), c: tech.color });
+      teleportTo(p, x, z, fx, fz);
       break;
     }
     case 'dash': {
@@ -669,7 +835,7 @@ function doSnipe(room, p, ax, ay, az) {
 /* ---- benteng & pasukan ---- */
 function makeForts() { return FORTS.map(f => ({ id: f.id, name: f.name, x: f.x, z: f.z, owner: 0, ownerName: '', ownerCh: 0, cap: null, nextSpawn: 0 })); }
 function fortPublic(f) { return { id: f.id, owner: f.owner, name: f.ownerName, ch: f.ownerCh }; }
-function solPublic(s) { return { id: s.id, fort: s.fort, kind: s.kind, x: r2(s.x), z: r2(s.z), hp: s.hp, max: s.max, owner: s.owner, ch: s.ch, bandit: s.bandit ? 1 : 0 }; }
+function solPublic(s) { return { id: s.id, fort: s.fort, kind: s.kind, x: r2(s.x), z: r2(s.z), hp: s.hp, max: s.max, owner: s.owner, ch: s.ch, bandit: s.bandit ? 1 : 0, nm: s.nm || undefined }; }
 function spawnBandit(room, c, kind) {
   const a = Math.random() * Math.PI * 2, r = 2.5 + Math.random() * 4, sp = SOLDIER[kind];
   const s = { id: solSeq++, isSol: true, bandit: true, camp: c.id, fort: -1, owner: BANDIT_OWNER, ch: 0, kind, x: c.x + Math.cos(a) * r, y: 0, z: c.z + Math.sin(a) * r, fx: 0, fz: 1, hp: sp.hp, max: sp.hp, atkAt: 0, dead: false, atkFlag: 0, hx: c.x + Math.cos(a) * r, hz: c.z + Math.sin(a) * r, alert: 0 };
@@ -835,6 +1001,7 @@ function stepForts(room, dt, t) {
 }
 
 function stepRoom(room, dt, t) {
+  CUR = room;
   /* peluru / bola / anak panah */
   /* gelombang angin memukul balik bola yang dilewatinya */
   for (const w of room.projs.filter(q => q.wv)) {
@@ -846,8 +1013,28 @@ function stepRoom(room, dt, t) {
   }
   for (let i = room.projs.length - 1; i >= 0; i--) {
     const pr = room.projs[i];
+    if (pr.home) {   /* bola pengejar: membelok ke musuh terdekat */
+      let tg = null, bd = 45;
+      for (const v of victims(room)) { if (friendly(pr.o, v) || v.isMob) continue; const dd = Math.hypot(v.x - pr.x, v.y + 0.9 - pr.y, v.z - pr.z); if (dd < bd) { bd = dd; tg = v; } }
+      if (tg) {
+        const ex = tg.x - pr.x, ey = tg.y + 0.9 - pr.y, ez = tg.z - pr.z, el = Math.hypot(ex, ey, ez) || 1, k = Math.min(1, pr.home * dt);
+        let nx = pr.dx + (ex / el - pr.dx) * k, ny = (pr.dy || 0) + (ey / el - (pr.dy || 0)) * k, nz = pr.dz + (ez / el - pr.dz) * k;
+        const nl = Math.hypot(nx, ny, nz) || 1; pr.dx = nx / nl; pr.dy = ny / nl; pr.dz = nz / nl;
+      }
+      pr.hn = (pr.hn || 0) + 1;
+      if (pr.hn % 3 === 0) broadcast(room, { t: 'prd', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(pr.dx), dy: r2(pr.dy), dz: r2(pr.dz) });
+    }
     if (pr.grav) pr.dy -= pr.grav / Math.max(1, pr.sp) * dt;
     pr.x += pr.dx * pr.sp * dt; pr.y += (pr.dy || 0) * pr.sp * dt; pr.z += pr.dz * pr.sp * dt; pr.life -= dt;
+    {
+      const w = wallAt(room, pr.o, pr.x, pr.y, pr.z);
+      if (w) {
+        wallDamage(room, w, pr.dmg || 10);
+        broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1 });
+        room.projs.splice(i, 1);
+        continue;
+      }
+    }
     let hit = null;
     const hr = pr.hr || 1.35;
     for (const v of victims(room)) {
@@ -874,6 +1061,12 @@ function stepRoom(room, dt, t) {
       if (wd > ARENA.ringR - br * 0.5) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; }
       else if (pr.y > ARENA.height) { wall = true; pr.y = ARENA.height; }
     }
+    if (hit && pr.wv && !ground && !wall && pr.pierce > 1) {   /* tebasan angin tembus sampai 3 target */
+      const ow = room.players.get(pr.o) || null;
+      hurt(room, hit, pr.dmg, ow, pr.dx * 12, pr.dz * 12, { sx: -pr.dx, sz: -pr.dz, stun: 0, hr: 0 });
+      pr.skip.add(hit.id); pr.pierce--;
+      continue;
+    }
     if (hit || ground || wall) {
       const owner = pr.o === BANDIT_OWNER ? BANDIT : (room.players.get(pr.o) || null);
       if (hit) hurt(room, hit, pr.dmg, owner, pr.dx * (pr.wv ? 12 : 26), pr.dz * (pr.wv ? 12 : 26), { sx: -pr.dx, sz: -pr.dz, stun: pr.stun, hr: pr.wv ? 0 : (pr.hr || 1.35) });
@@ -894,6 +1087,7 @@ function stepRoom(room, dt, t) {
       room.projs.splice(i, 1);
     }
   }
+  for (const w of [...room.walls]) if (t >= w.until) wallRemove(room, w, false);
   /* bola biru raksasa */
   for (let i = room.orbs.length - 1; i >= 0; i--) {
     const o = room.orbs[i], owner = room.players.get(o.o);
@@ -904,28 +1098,30 @@ function stepRoom(room, dt, t) {
       const dx = v.x - o.x, dy = v.y + 0.9 - o.y, dz = v.z - o.z;
       if (dx * dx + dy * dy + dz * dz > (o.r + 0.5) * (o.r + 0.5)) continue;
       if (t < (o.hit.get(v.id) || 0)) continue;
-      o.hit.set(v.id, t + 450);
+      o.hit.set(v.id, Infinity);   /* satu hantaman besar per target */
       hurt(room, v, o.dmg, owner, o.dx * 5, o.dz * 5, { area: true });
     }
   }
-  /* mob elang */
+  /* mob elang (dan singa) */
   for (let i = room.mobs.length - 1; i >= 0; i--) {
     const m = room.mobs[i], owner = room.players.get(m.o);
     if (!owner || t > m.until) { room.mobs.splice(i, 1); broadcast(room, { t: 'mobx', id: m.id }); continue; }
-    /* sasaran = musuh yang terakhir kamu serang (7 dtk); tanpa sasaran elang hanya mengitarimu */
+    if (m.k === 'lion') { lionStep(room, m, owner, dt, t); continue; }
+    /* sasaran = musuh yang terakhir kamu serang atau yang terakhir menyerangmu (7 dtk); tanpa sasaran elang mengitari jauh dari kamu supaya tidak mengganggu */
     let tg = null, tp = null;
-    const fo = owner.focus;
-    if (fo && t < fo.until) {
+    /* utamakan musuh yang KAMU serang (bukan yang paling dekat); yang menyerangmu juga jadi sasaran, yang paling baru menang */
+    for (const fo of focusOrder(owner)) {
+      if (!fo || t >= fo.until) continue;
       const fv = fo.v;
-      let alive = false;
-      if (fv.isMob) { alive = room.mobs.includes(fv.m); tp = alive ? { x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z } : null; }
-      else if (fv.isSol) { alive = !fv.dead && room.sols.includes(fv); tp = alive ? { x: fv.x, y: fv.y || 0, z: fv.z } : null; }
-      else { alive = !fv.dead && room.players.get(fv.id) === fv && (!room.duel || duelFighting(room, fv)); tp = alive ? { x: fv.x, y: fv.y, z: fv.z } : null; }
-      if (alive && Math.hypot(tp.x - m.x, tp.z - m.z) < 90 && tp.x < 1000 === owner.x < 1000) tg = fv; else tp = null;
+      let alive = false, q = null;
+      if (fv.isMob) { alive = room.mobs.includes(fv.m); q = alive ? { x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z } : null; }
+      else if (fv.isSol) { alive = !fv.dead && room.sols.includes(fv); q = alive ? { x: fv.x, y: fv.y || 0, z: fv.z } : null; }
+      else { alive = !fv.dead && room.players.get(fv.id) === fv && (!room.duel || duelFighting(room, fv)); q = alive ? { x: fv.x, y: fv.y, z: fv.z } : null; }
+      if (alive && Math.hypot(q.x - m.x, q.z - m.z) < 90 && q.x < 1000 === owner.x < 1000) { tg = fv; tp = q; break; }
     }
     let tx, ty, tz;
     if (tg) { tx = tp.x; tz = tp.z; ty = tp.y + 2.6; }
-    else { const a = t / 900 + m.id; tx = owner.x + Math.cos(a) * 3.5; tz = owner.z + Math.sin(a) * 3.5; ty = owner.y + 3.2; }
+    else { const a = t / 1600 + m.id * 2.1, r = EAGLE_ORBIT + 1.5 * Math.sin(t / 2300 + m.id); tx = owner.x + Math.cos(a) * r; tz = owner.z + Math.sin(a) * r; ty = owner.y + EAGLE_HEIGHT; }
     const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
     const sp = m.sp * (dist > 12 ? 1.5 : 1), step = Math.min(dist, sp * dt);
     if (dist > 0.05) { m.x += dx / dist * step; m.z += dz / dist * step; }
@@ -956,7 +1152,7 @@ function stepRoom(room, dt, t) {
   if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
-  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
+  if (room.duel) duelTick(room, t, dt); else if (room.train) trainTick(room, dt, t); else stepBandits(room, dt, t);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -972,8 +1168,8 @@ function stepRoom(room, dt, t) {
       if (p.regenAcc >= 1) { const h = Math.floor(p.regenAcc); p.regenAcc -= h; if (p.hp < MAXHP) { p.hp = Math.min(MAXHP, p.hp + h); broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); } }
     }
     if (p.rideUntil && (t >= p.rideUntil || p.dead)) { p.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: p.id }); }
-    if (p.dead && t >= p.respawnAt) {
-      const s = room.duel ? standSpawn() : randomSpawn();
+    if (p.dead && !p.bot && t >= p.respawnAt) {
+      const s = spawnFor(room);
       p.dead = false; p.hp = MAXHP; p.x = s.x; p.z = s.z; p.y = 0; p.invuln = t + SPAWN_PROTECT_MS; p.shield = 0; p.regenUntil = 0; p.stunUntil = 0; p.gbUntil = 0; p.sleeping = false;
       broadcast(room, { t: 'resp', id: p.id, x: s.x, z: s.z });
     }
@@ -1010,25 +1206,37 @@ function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew() { return { a: 0, b: 0, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null }; }
-function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && (d.a === p.id || d.b === p.id); }
-function duelSlot(room, p) { const d = room.duel; return !!d && (d.a === p.id || d.b === p.id); }
+function duelNew(size, ff) { return { size: size || 1, ff: ff !== false, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
+function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
+function duelRebuild(room) {
+  const d = room.duel; d.team = {};
+  for (const side of ['teamA', 'teamB']) { d[side] = d[side].filter(id => room.players.has(id)); for (const id of d[side]) d.team[id] = side === 'teamA' ? 'a' : 'b'; }
+  for (const id of Object.keys(d.out)) if (!d.team[id]) delete d.out[id];
+}
 function duelState(room) {
   const d = room.duel;
-  const P = id => { const q = id && room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0 } : null; };
+  const P = id => { const q = room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0, o: d.out[id] ? 1 : 0, bot: q.bot ? 1 : 0 } : null; };
+  const ta = d.teamA.map(P).filter(Boolean), tb = d.teamB.map(P).filter(Boolean);
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
-  return { t: 'duel', top, st: d.st, a: P(d.a), b: P(d.b), q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+  return { t: 'duel', size: d.size, top, st: d.st, ta, tb, a: ta[0] || null, b: tb[0] || null, q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
 }
 function duelBroadcast(room) { broadcast(room, duelState(room)); }
 function teleportTo(p, x, z, fx, fz) {
   p.x = x; p.y = 0; p.z = z; p.fx = fx; p.fz = fz; p.tpUntil = now() + 350;
   send(p.ws, { t: 'tp', x: r2(x), z: r2(z), fx: r2(fx), fz: r2(fz) });
 }
-function duelSide(which) { return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z, fx: -1, fz: 0 }; }
+/* posisi awal: tim a di kiri, tim b di kanan, berjajar menurut jumlah anggota */
+function duelSide(which, idx, n) {
+  const zo = ((idx || 0) - ((n || 1) - 1) / 2) * 4.5;
+  return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z + zo, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z + zo, fx: -1, fz: 0 };
+}
+/* bersihkan peluru/bola/ranjau; elang pemilik yang ikut bertanding tetap ada */
 function duelClearCombat(room) {
+  const d = room.duel;
   room.projs = [];
-  for (const m of room.mobs) broadcast(room, { t: 'mobx', id: m.id });
-  room.mobs = [];
+  for (const w of [...room.walls]) wallRemove(room, w, false);
+  room.mobs = room.mobs.filter(m => { if (d.team[m.o]) return true; broadcast(room, { t: 'mobx', id: m.id }); return false; });
   for (const o of room.orbs) broadcast(room, { t: 'orbx', id: o.id });
   room.orbs = [];
   for (const tr of room.traps) broadcast(room, { t: 'trapx', id: tr.id, x: r2(tr.x), y: r2(tr.y), z: r2(tr.z) });
@@ -1044,56 +1252,272 @@ function duelNextAlive(room) {
   for (let i = 0; i < d.queue.length; i++) { const q = room.players.get(d.queue[i]); if (q && !q.dead) { d.queue.splice(i, 1); return q.id; } }
   return 0;
 }
-function duelTick(room, t) {
+/* ---- lawan komputer: pemain virtual (tanpa koneksi) yang memakai tebasan/kombo, teknik, lompat, dash, dan perisai seperti pemain ---- */
+function duelBotSpawn(room, side) {
+  const sb = duelSide(side === 'teamA' ? 'a' : 'b', 0, 1);
+  const p = {
+    id: room.nextPid++, uid: 'bot', name: 'Komputer', ch: Math.floor(Math.random() * 4), ws: null, room, bot: true,
+    x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, m: 0, a: 0, sw: 0, hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
+    invuln: 0, shield: 0, atkAt: 0, slots: ['637', '8472', '753', '481', '5551'], cdUntil: {},
+    guarding: false, gh: [], gbUntil: 0, stunUntil: 0, regenUntil: 0, regenRate: 0, regenAcc: 0, rideUntil: 0, sleeping: false, ammo: 0, snipeAt: 0,
+    vy: 0, kx: 0, kz: 0, ai: { style: 'melee', styleAt: 0, guardUntil: 0, lastAx: 0, lastAz: 0, avx: 0, avz: 0, lastAt: 0, seen: 0, strafe: 1, strafeAt: 0 }
+  };
+  room.players.set(p.id, p);
+  room.duel[side].push(p.id);
+  broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } });
+  broadcast(room, { t: 'sc', s: scoreList(room) });
+  return p;
+}
+function duelBotsClear(room) {
   const d = room.duel;
-  d.queue = d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
-  const A = d.a && room.players.get(d.a), B = d.b && room.players.get(d.b);
-  if (d.a && !A) d.a = 0;
-  if (d.b && !B) d.b = 0;
+  for (const p of [...room.players.values()]) if (p.bot) { delete d.team[p.id]; delete d.out[p.id]; d.teamA = d.teamA.filter(i => i !== p.id); d.teamB = d.teamB.filter(i => i !== p.id); removePlayer(room, p); }
+}
+function botReady(p, code, t) { return (p.cdUntil[code] || 0) <= t + 120; }
+function botCast(room, p, code, ax, ay, az) { p.slots[4] = code; doCast(room, p, 4, ax, ay, az); }
+function botDash(room, p, dx, dz, t) {
+  if (!botReady(p, '753', t) || t < p.stunUntil) return false;
+  const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  botCast(room, p, '753', dx, 0, dz);
+  p.kx += dx * 60; p.kz += dz * 60;
+  return true;
+}
+/* bidikan bola (bolt) dengan prediksi gerak dan kompensasi gravitasi */
+function botAim(bot, A, ai, spd) {
+  const dist0 = Math.hypot(A.x - bot.x, A.z - bot.z) || 1, tt = dist0 / spd;
+  const px = A.x + ai.avx * tt * 0.8, pz = A.z + ai.avz * tt * 0.8;
+  const dx = px - bot.x, dz = pz - bot.z, d = Math.hypot(dx, dz) || 1;
+  const dy = (A.y + 0.9) - (bot.y + 1.55), t2 = d / spd;
+  return { ax: dx / d, az: dz / d, ay: clampN((dy + 0.5 * BOLT_GRAVITY * t2 * t2) / d - 0.06, -0.6, 0.6) };
+}
+function duelBotStep(room, bot, enemies, dt, t) {
+  if (bot.dead) return;
+  let A = null, bd = 1e9;
+  for (const e of enemies) { if (e.dead) continue; const dd = Math.hypot(e.x - bot.x, e.z - bot.z); if (dd < bd) { bd = dd; A = e; } }
+  if (!A) return;
+  const ai = bot.ai;
+  if (ai.tgt !== A.id) { ai.tgt = A.id; ai.lastAt = 0; ai.avx = ai.avz = 0; }
+  const tm = room.duel.team, myT = tm[bot.id], isFoe = id => tm[id] && tm[id] !== myT;
+  if (ai.lastAt) { const dd = (t - ai.lastAt) / 1000; if (dd > 0.001) { ai.avx = ai.avx * 0.6 + (A.x - ai.lastAx) / dd * 0.4; ai.avz = ai.avz * 0.6 + (A.z - ai.lastAz) / dd * 0.4; } }
+  ai.lastAx = A.x; ai.lastAz = A.z; ai.lastAt = t;
+  const dx = A.x - bot.x, dz = A.z - bot.z, dist = Math.hypot(dx, dz) || 0.01, nx = dx / dist, nz = dz / dist;
+  const stunned = t < bot.stunUntil;
+  bot.focus = { v: A, until: t + 7000 };
+  if (!stunned) { bot.fx = nx; bot.fz = nz; }
+  if (t > ai.styleAt) { ai.style = Math.random() < 0.6 ? 'melee' : 'ranged'; ai.styleAt = t + 3000 + Math.random() * 3500; }
+  if (t > ai.strafeAt) { ai.strafe = Math.random() < 0.5 ? 1 : -1; ai.strafeAt = t + 900 + Math.random() * 1400; }
+  let mx = 0, mz = 0, sp = 6.3;
+  const grounded = bot.y <= terrainH(bot.x, bot.z) + 0.05;
+  if (!stunned) {
+    /* 1. ancaman: bola/sinar/orb dari lawan yang mengarah ke komputer */
+    let eta = 9, thr = null;
+    const scan = (o, rad) => {
+      const rx = bot.x - o.x, ry = bot.y + 0.9 - o.y, rz = bot.z - o.z, dy = o.dy || 0;
+      const along = rx * o.dx + ry * dy + rz * o.dz;
+      if (along < 0 || along > o.sp * 0.7) return;
+      const qx = rx - along * o.dx, qy = ry - along * dy, qz = rz - along * o.dz;
+      if (Math.hypot(qx, qy, qz) > rad) return;
+      const e = along / o.sp; if (e < eta) { eta = e; thr = o; }
+    };
+    for (const pr of room.projs) if (isFoe(pr.o)) scan(pr, (pr.hr || 1.35) + 0.8 + (pr.boom || 0) * 0.3);
+    for (const o of room.orbs) if (isFoe(o.o)) scan(o, o.r + 0.8);
+    if (thr) {
+      if (!ai.seen) ai.seen = t + 70 + Math.random() * 90;   /* waktu reaksi */
+      if (t >= ai.seen && eta < 0.42) {
+        const side = ai.strafe, px = -thr.dz * side, pz = thr.dx * side;
+        if (eta < 0.3 && botDash(room, bot, px, pz, t)) { /* dash menyamping: kebal sesaat */ }
+        else if (!thr.r && !thr.wv && botReady(bot, '777', t) && Math.random() < 0.5) botCast(room, bot, '777', nx, 0, nz);   /* tembok kode */
+        else if (thr.r && grounded && botReady(bot, '8181', t)) botCast(room, bot, '8181', nx, 0, nz);   /* loncat tinggi melewati orb */
+        else if (!thr.r && !thr.wv && grounded) ai.guardUntil = Math.max(ai.guardUntil, t + eta * 1000 + 220);
+        else if (grounded) { bot.vy = 18.5; }
+      }
+    } else ai.seen = 0;
+    /* 2. lawan baru saja menebas dari dekat: tangkis atau mundur */
+    if (dist < 4.4 && t - A.atkAt < 260 && t - (ai.lastDef || 0) > 500 && Math.random() < 0.8) {
+      ai.lastDef = t;
+      if (Math.random() < 0.3 && botDash(room, bot, -nx - nz * 0.6 * ai.strafe, -nz + nx * 0.6 * ai.strafe, t)) { }
+      else ai.guardUntil = t + 520;
+    }
+    const wantG = t < ai.guardUntil && t >= bot.gbUntil;
+    if (wantG !== !!bot.guarding) setGuard(room, bot, wantG);
+    if (bot.guarding) sp *= 0.5;
+    else {
+      /* 3. serangan */
+      const cast = (code, d2) => { const a = botAim(bot, A, ai, BALL_SPEED); botCast(room, bot, code, a.ax, a.ay, a.az); };
+      if (bot.hp < MAXHP * 0.42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
+      else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
+      else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
+      else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
+      else if (dist > 4 && botReady(bot, '637', t) && Math.random() < (ai.style === 'ranged' ? 0.5 : 0.2)) cast('637');
+      else if (bot.hp < MAXHP * 0.35 && dist < 5 && botReady(bot, '2929', t)) botCast(room, bot, '2929', -nx, 0, -nz);   /* kabur dengan teleport */
+      else if (bot.hp < MAXHP * 0.35 && dist < 6 && grounded && botReady(bot, '8181', t) && Math.random() < 0.2) botCast(room, bot, '8181', -nx, 0, -nz);
+      else if (dist > 12 && ai.style === 'melee' && Math.random() < 0.04 && botReady(bot, '2929', t)) botCast(room, bot, '2929', nx, 0, nz);   /* teleport mendekat */
+      else if (dist > 11 && ai.style === 'melee' && Math.random() < 0.03 && botDash(room, bot, nx, nz, t)) { }
+      if (dist < 3.1 && Math.random() < 0.92) doMelee(room, bot, r2(nx), r2(nz));
+      if (grounded && (Math.random() < 0.004 || (dist < 5 && A.y > bot.y + 0.8 && Math.random() < 0.05))) bot.vy = 18.5;
+    }
+    /* 4. gerak */
+    const perp = ai.strafe;
+    if (ai.style === 'ranged') {
+      if (dist < 8) { mx = -nx - nz * 0.4 * perp; mz = -nz + nx * 0.4 * perp; }
+      else if (dist > 13) { mx = nx; mz = nz; }
+      else { mx = -nz * perp; mz = nx * perp; sp = 4.5; }
+    } else {
+      const retreat = bot.combo === 3 && t - bot.atkAt < 450;
+      if (retreat) { mx = -nx; mz = -nz; sp = 5; }
+      else if (dist > 2.4) { mx = nx - nz * 0.25 * perp; mz = nz + nx * 0.25 * perp; }
+      else if (dist < 1.7) { mx = -nx; mz = -nz; sp = 3.5; }
+      else { mx = -nz * perp * 0.7; mz = nx * perp * 0.7; sp = 3.5; }
+    }
+  } else if (bot.guarding) setGuard(room, bot, false);
+  const ml = Math.hypot(mx, mz) || 1;
+  let vx = (mx / ml) * (mx || mz ? sp : 0) + bot.kx, vz = (mz / ml) * (mx || mz ? sp : 0) + bot.kz;
+  let x = bot.x + vx * dt, z = bot.z + vz * dt;
+  const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.2;
+  if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; }
+  if (Math.hypot(x - A.x, z - A.z) > 1.3 || Math.hypot(x - A.x, z - A.z) > dist) { bot.x = x; bot.z = z; }
+  const kd = Math.exp(-9 * dt); bot.kx *= kd; bot.kz *= kd;
+  const g = terrainH(bot.x, bot.z);
+  if (bot.y > g + 0.001 || bot.vy > 0) { bot.vy -= 30 * dt; bot.y += bot.vy * dt; if (bot.y <= g) { bot.y = g; bot.vy = 0; } }
+  bot.m = (mx || mz) ? (sp > 5 ? 2 : 1) : 0; bot.a = bot.y > g + 0.05 ? (bot.vy > 0 ? 1 : 2) : 0;
+}
+
+/* ---- mode latihan: target diam yang hidup lagi setelah dikalahkan ---- */
+const DUMMY_ATK = { id: -3, name: 'Target' };
+const DUMMY_SPOTS = [[-6, 6], [0, 9], [6, 6]];
+function trainResetDummies(room) {
+  for (const sl of room.sols.filter(q => q.dummy)) broadcast(room, { t: 'solx', id: sl.id });
+  room.sols = room.sols.filter(q => !q.dummy);
+}
+function trainTick(room, dt, t) {
+  const hpMul = room.tune ? room.tune.hp : 1;
+  DUMMY_SPOTS.forEach(([hx, hz], i) => {
+    const cur = room.sols.find(q => q.dummy && q.slot === i);
+    if (cur && room.tune && room.tune.fight && t >= (cur.atkAt || 0)) {   /* target menyerang balik pelan-pelan */
+      let tgt = null, bd = 3.4;
+      for (const pl of room.players.values()) { if (pl.dead) continue; const dd = Math.hypot(pl.x - cur.x, pl.z - cur.z); if (dd < bd) { bd = dd; tgt = pl; } }
+      if (tgt) { const nx = (tgt.x - cur.x) / (bd || 1), nz = (tgt.z - cur.z) / (bd || 1); cur.fx = nx; cur.fz = nz; cur.atkAt = t + 1500; cur.atkFlag = 1; hurt(room, tgt, 20, DUMMY_ATK, nx * 6, nz * 6, { sx: -nx, sz: -nz }); }
+    }
+    if (cur) {   /* kembali ke tempat setelah terpental */
+      const dx = hx - cur.x, dz = hz - cur.z; if (Math.hypot(dx, dz) > 0.05) { cur.x += dx * Math.min(1, 2 * dt); cur.z += dz * Math.min(1, 2 * dt); }
+      return;
+    }
+    const k = room.dummyDeadAt || (room.dummyDeadAt = DUMMY_SPOTS.map(() => t - 2000));
+    if (k[i] == null) { k[i] = t; return; }   /* baru dikalahkan */
+    if (t - k[i] < 2000) return;
+    k[i] = null;
+    const hp = Math.round(MAXHP * hpMul);
+    const sl = { id: solSeq++, isSol: true, bandit: true, dummy: true, slot: i, nm: 'Target', camp: -1, fort: -1, owner: BANDIT_OWNER, ch: 0, kind: 'brute', x: hx, y: 0, z: hz, fx: 0, fz: -1, hp, max: hp, atkAt: 0, dead: false, atkFlag: 0, hx, hz };
+    room.sols.push(sl); broadcast(room, { t: 'sol', s: solPublic(sl) });
+  });
+}
+/* singa: pemburu darat. Mengejar musuh yang kamu serang, atau musuh terdekat dalam 14 m; kalau sepi menjaga di dekatmu */
+function lionStep(room, m, owner, dt, t) {
+  let tg = null, bd = 1e9;
+  /* utamakan musuh yang KAMU serang; yang menyerangmu hanya cadangan; bukan yang paling dekat */
+  for (const fo of focusOrder(owner)) {
+    if (!fo || t >= fo.until) continue;
+    const fv = fo.v;
+    if (!fv.isMob && !fv.dead && (fv.isSol ? room.sols.includes(fv) : room.players.get(fv.id) === fv) && (!room.duel || fv.isSol || duelFighting(room, fv)) && (fv.x < 1000) === (owner.x < 1000)) { tg = fv; bd = Math.hypot(fv.x - m.x, fv.z - m.z); break; }
+  }
+  let tx, tz, sp = m.sp;
+  if (tg) { tx = tg.x; tz = tg.z; if (bd > 12) sp *= 1.5; }
+  else { const a = t / 1600 + m.id * 2.1, r = EAGLE_ORBIT + 1.5 * Math.sin(t / 2300 + m.id); tx = owner.x + Math.cos(a) * r; tz = owner.z + Math.sin(a) * r; if (Math.hypot(tx - m.x, tz - m.z) > 12) sp *= 1.6; }
+  const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
+  const stopAt = tg ? 1.7 : 1.0;
+  if (dist > stopAt) { const step = Math.min(dist - stopAt, sp * dt); m.x += dx / dist * step; m.z += dz / dist * step; }
+  if (dist > 0.3) { m.fx = dx / dist; m.fz = dz / dist; }
+  m.y = terrainH(m.x, m.z) + 1.2;
+  if (tg && dist < 2.7 && Math.abs((tg.y || 0) - (m.y - 1.2)) < 2.6 && t >= m.atkAt) {
+    m.atkAt = t + 1100; m.atkFlag = 1;
+    hurt(room, tg, m.dmg, owner, m.fx * 8, m.fz * 8, { sx: -m.fx, sz: -m.fz });
+  }
+}
+function duelToWait(room, d) { duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
+function duelTick(room, t, dt) {
+  const d = room.duel;
+  d.queue = d.queue.filter(id => room.players.has(id) && !d.team[id]);
+  duelRebuild(room);
   let changed = false;
+  const mA = duelMembers(room, 'teamA'), mB = duelMembers(room, 'teamB');
+  const alive = ms => ms.some(p => !p.dead && !d.out[p.id]);
+  for (const p of [...mA, ...mB]) if (p.dead && d.st === 'fight' && !d.out[p.id]) { d.out[p.id] = 1; changed = true; }
   if (d.st === 'fight') {
-    const aDead = !A || A.dead, bDead = !B || B.dead;
-    if (aDead || bDead) {
-      const winner = !aDead ? A : (!bDead ? B : null), loser = winner === A ? B : A;
-      if (winner) {
-        d.streak[winner.id] = (d.streak[winner.id] || 0) + 1;
-        d.total[winner.id] = (d.total[winner.id] || 0) + 1; d.names[winner.id] = winner.name; d.best[winner.id] = Math.max(d.best[winner.id] || 0, d.streak[winner.id]);
-        d.last = { win: winner.name, lose: loser ? loser.name : '', w: d.streak[winner.id] };
-        if (winner.hp < MAXHP) { winner.hp = MAXHP; broadcast(room, { t: 'hp', id: winner.id, hp: winner.hp }); }
-      } else d.last = null;
-      if (loser) { d.streak[loser.id] = 0; if (d.a === loser.id) d.a = 0; if (d.b === loser.id) d.b = 0; if (!d.queue.includes(loser.id)) d.queue.push(loser.id); }
-      if (!winner) { d.a = 0; d.b = 0; }
+    const aA = alive(mA), aB = alive(mB);
+    if (!aA || !aB) {
+      const wSide = aA ? 'teamA' : (aB ? 'teamB' : null), lSide = wSide === 'teamA' ? 'teamB' : (wSide === 'teamB' ? 'teamA' : null);
+      const winners = wSide ? duelMembers(room, wSide) : [], losers = wSide ? duelMembers(room, lSide) : [...mA, ...mB];
+      const wn = winners.filter(p => !p.bot).map(p => p.name), ln = losers.filter(p => !p.bot).map(p => p.name);
+      let wmax = 0;
+      for (const p of winners) {
+        if (p.bot) continue;
+        d.streak[p.id] = (d.streak[p.id] || 0) + 1; wmax = Math.max(wmax, d.streak[p.id]);
+        d.total[p.id] = (d.total[p.id] || 0) + 1; d.names[p.id] = p.name; d.best[p.id] = Math.max(d.best[p.id] || 0, d.streak[p.id]);
+        if (p.hp < MAXHP && !p.dead) { p.hp = MAXHP; broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); }
+      }
+      d.last = wSide ? { win: wn.length ? wn.join(' & ') : 'Komputer', names: wn, lose: ln.length ? ln.join(' & ') : 'Komputer', w: wn.length ? wmax : 0 } : null;
+      for (const p of losers) {
+        if (p.bot) continue;
+        d.streak[p.id] = 0;
+        const key = d.team[p.id] === 'a' ? 'teamA' : 'teamB';
+        d[key] = d[key].filter(i => i !== p.id);
+        delete d.team[p.id]; delete d.out[p.id];
+        if (!d.queue.includes(p.id)) d.queue.push(p.id);
+      }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
     }
   } else if (d.st === 'over') {
-    if (t >= d.until) { d.st = 'wait'; changed = true; }
+    if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
-    if (!A || !B || A.dead || B.dead) { d.st = 'wait'; changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; A.invuln = 0; B.invuln = 0; changed = true; }
+    if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; for (const p of [...mA, ...mB]) p.invuln = 0; changed = true; }
   }
   if (d.st === 'wait') {
-    if (!d.a) { const id = duelNextAlive(room); if (id) { d.a = id; changed = true; } }
-    if (!d.b) { const id = duelNextAlive(room); if (id) { d.b = id; changed = true; } }
-    const A2 = d.a && room.players.get(d.a), B2 = d.b && room.players.get(d.b);
-    if (A2 && B2) {
-      duelClearCombat(room);
-      duelRefresh(room, A2); duelRefresh(room, B2);
-      const sa = duelSide('a'), sb = duelSide('b');
-      teleportTo(A2, sa.x, sa.z, sa.fx, sa.fz); teleportTo(B2, sb.x, sb.z, sb.fx, sb.fz);
-      A2.invuln = t + DUEL_COUNT_MS + 200; B2.invuln = t + DUEL_COUNT_MS + 200;
-      d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
+    /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
+    for (;;) {
+      const na = d.teamA.length, nb = d.teamB.length;
+      if (na >= d.size && nb >= d.size) break;
+      const side = (na <= nb && na < d.size) ? 'teamA' : (nb < d.size ? 'teamB' : 'teamA');
+      const id = duelNextAlive(room); if (!id) break;
+      d[side].push(id); changed = true;
     }
+    duelRebuild(room);
+    const humans = d.teamA.length + d.teamB.length;
+    if (humans > 0) {
+      let go = humans >= d.size * 2;
+      if (!go) { if (!d.aloneAt) d.aloneAt = t; else if (t - d.aloneAt > 2500) go = true; } else d.aloneAt = 0;
+      if (go) {
+        while (d.teamA.length < d.size) duelBotSpawn(room, 'teamA');
+        while (d.teamB.length < d.size) duelBotSpawn(room, 'teamB');
+        duelRebuild(room);
+        duelClearCombat(room);
+        ['teamA', 'teamB'].forEach(side => {
+          const ms = duelMembers(room, side), w = side === 'teamA' ? 'a' : 'b';
+          ms.forEach((p, i) => {
+            const sd = duelSide(w, i, ms.length);
+            duelRefresh(room, p); teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); p.invuln = t + DUEL_COUNT_MS + 200;
+            if (p.bot) { p.vy = 0; p.kx = p.kz = 0; p.combo = 0; }
+          });
+        });
+        d.out = {};
+        d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; d.aloneAt = 0; changed = true;
+      }
+    } else d.aloneAt = 0;
   }
-  /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
+  if (d.st === 'fight') {
+    for (const bot of [...mA, ...mB]) if (bot.bot && !d.out[bot.id]) duelBotStep(room, bot, d.team[bot.id] === 'a' ? mB : mA, dt || 0.033, t);
+  }
+  /* batas ring: penonton & yang sudah gugur tidak boleh masuk, petarung tidak boleh keluar */
   for (const p of room.players.values()) {
     if (p.dead || t < (p.tpUntil || 0) + 150) continue;
     const dx = p.x - ARENA.x, dz = p.z - ARENA.z, dist = Math.hypot(dx, dz) || 0.01;
-    const slot = d.a === p.id ? 'a' : (d.b === p.id ? 'b' : null);
+    const slot = d.team[p.id] && !d.out[p.id] ? d.team[p.id] : null;
     if (slot && p.y > ARENA.height + 2) { teleportTo(p, p.x, p.z, p.fx, p.fz); continue; }
     if (slot && (d.st === 'fight' || d.st === 'count')) {
-      if (d.st === 'count') { const sd = duelSide(slot); if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); }
-      else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
-    } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3) {
+      if (d.st === 'count') {
+        const ms = duelMembers(room, slot === 'a' ? 'teamA' : 'teamB'), sd = duelSide(slot, ms.indexOf(p), ms.length);
+        if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz);
+      } else if (dist > ARENA.ringR + 0.5) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
+    } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3 && !p.bot) {
       const k = (ARENA.ringR + 3.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, dx / dist, dz / dist);
     }
   }
@@ -1106,6 +1530,7 @@ function removePlayer(room, p) {
   room.projs = room.projs.filter(x => x.o !== p.id);
   room.mobs = room.mobs.filter(x => { if (x.o === p.id) { broadcast(room, { t: 'mobx', id: x.id }); return false; } return true; });
   room.traps = room.traps.filter(x => x.o !== p.id);
+  for (const w of [...room.walls]) if (w.o === p.id) wallRemove(room, w, false);
   room.orbs = room.orbs.filter(x => { if (x.o === p.id) { broadcast(room, { t: 'orbx', id: x.id }); return false; } return true; });
   for (const f of room.forts) { if (f.owner === p.id) setFortOwner(room, f, null); if (f.cap && f.cap.by === p.id) { f.cap = null; broadcast(room, { t: 'cap', fort: f.id, cancel: 1 }); } }
   broadcast(room, { t: 'pl', id: p.id });
@@ -1131,9 +1556,9 @@ function onJoin(ws, m) {
   for (const p of room.players.values()) {
     if (p.name.toLowerCase() === lower) return send(ws, { t: 'err', msg: 'Nama "' + name + '" sudah dipakai di room ini. Pakai nama lain.' });
   }
-  if (room.players.size >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
+  if ([...room.players.values()].filter(q => !q.bot).length >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
 
-  const s = room.duel ? standSpawn() : randomSpawn();
+  const s = spawnFor(room);
   const p = {
     id: room.nextPid++, uid, name, ch, ws, room,
     x: s.x, y: 0, z: s.z, fx: 0, fz: 1, m: 0, a: 0, sw: 0,
@@ -1145,8 +1570,8 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
-    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
+    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : (room.train ? 'train' : 'world') }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
+    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), walls: room.walls.map(w => ({ id: w.id, o: w.o, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(w.nx), nz: r2(w.nz), len: w.len, hp: Math.round(w.hp), dur: Math.max(0.1, (w.until - now()) / 1000), c: w.c || '#b8a27a' })), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
     players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
   });
@@ -1166,7 +1591,7 @@ function onMessage(ws, text) {
   if (m.t === 'join') return onJoin(ws, m);
   const p = ws.player;
   if (!p) return;
-  const room = p.room;
+  const room = p.room; CUR = room;
   switch (m.t) {
     case 's': {
       if (p.dead || now() < (p.tpUntil || 0)) break;
@@ -1178,6 +1603,15 @@ function onMessage(ws, text) {
       break;
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
+    case 'tune': {   /* mode latihan: pengatur cooldown teknik & darah target */
+      if (!room.train) break;
+      const tu = room.tune || (room.tune = { cd: 1, hp: 1 });
+      const hpOld = tu.hp;
+      tu.cd = num(m.cd, 0, 3, tu.cd); tu.hp = num(m.hp, 1, 10, tu.hp); tu.fight = !!m.fight;
+      if (tu.hp !== hpOld) trainResetDummies(room);
+      break;
+    }
+    case 'pref': { p.dbg = !!m.dbg; break; }   /* pemain menyalakan notifikasi hasil tebasan di Pengaturan */
     case 'atk': {
       if (room.duel && !duelFighting(room, p)) break;
       let fx = num(m.fx, -1, 1, 0), fz = num(m.fz, -1, 1, 1); const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
@@ -1413,7 +1847,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -1458,7 +1892,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : 'world' };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -1512,7 +1946,7 @@ async function handleAdmin(req, res, pathname) {
       const max = Math.round(Number(r.max));
       if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
       seenR.add(r.code);
-      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : 'world' });
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false });
     }
     for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
     DB.rooms = rs; DB.techniques = techs;
@@ -1522,6 +1956,7 @@ async function handleAdmin(req, res, pathname) {
     return json(res, 200, { ok: true, rooms: DB.rooms.length, techniques: DB.techniques.length });
   }
   if (pathname === '/api/admin/techniques' && method === 'GET') return json(res, 200, { techniques: DB.techniques });
+  if (pathname === '/api/admin/techniques/defaults' && method === 'GET') return json(res, 200, { techniques: DEFAULT_TECHS });
   if (pathname === '/api/admin/techniques' && method === 'PUT') {
     const b = await readBody(req, 128 * 1024);
     if (!Array.isArray(b.techniques)) return json(res, 400, { error: 'Format salah' });
@@ -1562,7 +1997,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
-    if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML);
+    if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';</script>'));
     if (pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
     if (pathname === '/healthz') return json(res, 200, { ok: true });
     html(res, '<!doctype html><meta charset="utf-8"><title>404</title><body style="font-family:sans-serif;background:#0b1020;color:#fff;text-align:center;padding:60px"><h1>404</h1><p>Halaman tidak ada.</p><a style="color:#4de1ff" href="/">Kembali</a>', 404);
@@ -1730,12 +2165,13 @@ button:disabled{opacity:.5}
       <h2>Buat room baru</h2>
       <label>Nama room</label><input id="rname" maxlength="30" placeholder="Misal: Duel Sabtu Malam">
       <label>Mode room</label>
-      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel">Arena Duel 1 vs 1</option></select>
+      <select id="rmode"><option value="world">Dunia biasa</option><option value="duel1">Arena Duel 1 vs 1</option><option value="duel2">Arena Tim 2 vs 2</option><option value="duel3">Arena Tim 3 vs 3</option><option value="train">Mode Latihan (target diam + pengatur kecepatan/cooldown)</option></select>
       <label>Maksimal pemain</label>
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
       <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
+      <label class="chk"><input type="checkbox" id="rff" checked> Friendly fire (khusus Arena Tim): teman satu tim bisa saling melukai</label>
       <label class="chk"><input type="checkbox" id="rdebug"> Mode uji hit: tampilkan alasan serangan meleset di layar penyerang (untuk mencari bug)</label>
       <div id="rmsg"></div>
       <button class="pri" id="rcreate" style="margin-top:12px">Buat room</button>
@@ -1781,10 +2217,10 @@ button:disabled{opacity:.5}
 const $=id=>document.getElementById(id);
 let token=null;try{token=localStorage.getItem('dw_admin')}catch(e){}
 let techs=[],pollT=null;
-const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
+const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)',wall:'Dinding (wall)',jump:'Loncat tinggi (jump)',blink:'Teleport (blink)',homing:'Bola pengejar (homing)',lion:'Panggil singa (lion)',face:'Hadap lawan terdekat (face)'};
 const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
-  orb:[['damage','Damage per sentuhan'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
+  orb:[['damage','Damage (sekali hantam)'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
   beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
   slam:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius']],
@@ -1795,7 +2231,13 @@ const FIELDS={ // kind -> [field,label]
   regen:[['damage','Total HP pulih'],['cd','Cooldown (dtk)'],['dur','Durasi (dtk)']],
   shield:[['dur','Durasi (dtk)'],['cd','Cooldown (dtk)']],
   haste:[['power','Pengali kecepatan'],['cd','Cooldown (dtk)'],['dur','Durasi (dtk)']],
-  dash:[['speed','Daya lesat'],['cd','Cooldown (dtk)']]
+  dash:[['speed','Daya lesat'],['cd','Cooldown (dtk)']],
+  wall:[['hp','Kekuatan dinding (HP)'],['cd','Cooldown (dtk)'],['dur','Lama bertahan (dtk)'],['len','Lebar dinding (m)']],
+  jump:[['power','Daya lompat'],['cd','Cooldown (dtk)']],
+  blink:[['range','Jarak teleport (m)'],['cd','Cooldown (dtk)']],
+  face:[['range','Jarak cari lawan (m)'],['cd','Cooldown (dtk)']],
+  lion:[['damage','Damage per gigitan'],['cd','Cooldown (dtk)'],['count','Jumlah singa (maks 2)'],['dur','Durasi (dtk)'],['speed','Kecepatan lari'],['hp','HP singa']],
+  homing:[['damage','Damage per bola'],['cd','Cooldown (dtk)'],['count','Jumlah bola'],['life','Lama mengejar (dtk)'],['size','Ukuran bola'],['boom','Radius ledakan'],['turn','Ketajaman belok']]
 };
 async function api(path,opt){
   opt=opt||{};const h={'Content-Type':'application/json'};if(token)h.Authorization='Bearer '+token;
@@ -1829,7 +2271,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 function roomLink(code){return location.origin+'/r/'+code;}
@@ -1842,7 +2284,7 @@ async function loadRooms(){
   j.rooms.forEach(r=>{
     const d=document.createElement('div');d.className='room';
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA DUEL 1v1':' · dunia biasa')+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -1865,7 +2307,8 @@ async function loadRooms(){
 }
 
 /* techniques */
-async function loadTech(){const j=await api('/techniques');techs=j.techniques;renderTech();const st=await api('/settings');$('showBook').checked=!!st.showBook;}
+let defTechs=[];
+async function loadTech(){const j=await api('/techniques');techs=j.techniques;try{defTechs=(await api('/techniques/defaults')).techniques;}catch(e){}renderTech();const st=await api('/settings');$('showBook').checked=!!st.showBook;}
 $('showBook').addEventListener('change',async()=>{try{await api('/settings',{method:'PUT',body:{showBook:$('showBook').checked}});msg($('tmsg'),$('showBook').checked?'Buku tampil di game':'Buku disembunyikan dari game','ok');}catch(e){msg($('tmsg'),e.message);}});
 function renderTech(){
   const box=$('techList');box.innerHTML='';
@@ -1875,7 +2318,10 @@ function renderTech(){
     const em=document.createElement('input');em.className='em';em.value=t.emoji||'✨';em.maxLength=4;em.addEventListener('input',()=>t.emoji=em.value);
     const nm=document.createElement('input');nm.className='nm';nm.value=t.name;nm.maxLength=24;nm.placeholder='Nama teknik';nm.addEventListener('input',()=>t.name=nm.value);
     const rm=document.createElement('button');rm.className='bad';rm.textContent='✕';rm.addEventListener('click',()=>{techs.splice(idx,1);renderTech();});
-    hd.appendChild(em);hd.appendChild(nm);hd.appendChild(rm);d.appendChild(hd);
+    const df=defTechs.find(x=>x.code===t.code);
+    if(df){const rb=document.createElement('button');rb.textContent='Bawaan';rb.title='Kembalikan teknik ini ke angka bawaan (lalu tekan Simpan)';rb.style.marginRight='6px';rb.addEventListener('click',()=>{techs[idx]=Object.assign({},df);renderTech();msg($('tmsg'),'"'+df.name+'" dikembalikan ke bawaan. Tekan Simpan untuk menyimpan.','ok');});hd.appendChild(em);hd.appendChild(nm);hd.appendChild(rb);hd.appendChild(rm);}
+    else{hd.appendChild(em);hd.appendChild(nm);hd.appendChild(rm);}
+    d.appendChild(hd);
     const g=document.createElement('div');g.className='g';
     function field(label,el){const w=document.createElement('div');const l=document.createElement('label');l.textContent=label;w.appendChild(l);w.appendChild(el);g.appendChild(w);}
     const code=document.createElement('input');code.className='code';code.value=t.code;code.maxLength=12;code.inputMode='numeric';code.addEventListener('input',()=>{code.value=code.value.replace(/[^1-9]/g,'');t.code=code.value;});field('Kode (1-9)',code);
@@ -1930,7 +2376,7 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
-<title>Digital War</title>
+<!--TUNING--><title>Digital War</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--s:clamp(46px,8vh,60px)}
@@ -1981,6 +2427,16 @@ body.playing .hudf{display:flex}
 .key{display:inline-block;background:#fff;color:#234;border-radius:6px;padding:1px 8px;margin-right:6px;font-size:13px}
 #hint{left:12px;bottom:10px;font-size:11px;font-weight:600;opacity:.8;max-width:60vw;white-space:normal;border-radius:12px}
 #uw{position:fixed;inset:0;background:rgba(20,100,170,.5);opacity:0;transition:opacity .15s;pointer-events:none;z-index:2}
+#fxScr{position:fixed;inset:0;pointer-events:none;z-index:2}
+#fxScr .fl{position:absolute;inset:0;opacity:0;transition:opacity .6s}
+#fxIce{background:radial-gradient(ellipse at center,rgba(120,190,255,.2) 25%,rgba(80,160,255,.52) 62%,rgba(160,220,255,.9) 100%)}
+#fxShield{box-shadow:inset 0 0 100px 22px rgba(108,212,255,.5);border:4px solid rgba(190,240,255,.45)}
+#fxHaste{box-shadow:inset 0 0 110px 20px rgba(255,235,90,.5)}
+#fxRegen{box-shadow:inset 0 0 120px 24px rgba(80,255,150,.5);animation:fxPulse 1.4s ease-in-out infinite}
+@keyframes fxPulse{0%,100%{filter:brightness(.7)}50%{filter:brightness(1.3)}}
+#fxGuard{box-shadow:inset 0 0 70px 6px rgba(150,205,255,.38)}
+#fxBreak{box-shadow:inset 0 0 130px 40px rgba(255,150,40,.55)}
+#fxRide{box-shadow:inset 0 0 110px 16px rgba(255,224,176,.4)}
 #hurt{position:fixed;inset:0;box-shadow:inset 0 0 120px 30px rgba(255,40,40,.75);opacity:0;pointer-events:none;z-index:2;transition:opacity .35s}
 #ko{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(40,0,10,.45);z-index:5;text-align:center;pointer-events:none}
 #ko h2{font-size:44px;margin:0;letter-spacing:4px;text-shadow:0 4px 18px #000}
@@ -2037,6 +2493,8 @@ body.playing #slots{display:flex}
 .slot .nm{font-size:8.5px;font-weight:700;max-width:96%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9;margin-top:1px}
 .slot.empty .ic{opacity:.55;font-weight:300}
 .slot.filled{border-color:var(--c,#fff);box-shadow:0 0 12px var(--c,#fff) inset}
+.slot.filled.avail{border-color:#fff;box-shadow:0 0 0 2px var(--c,#fff),0 0 16px 3px var(--c,#fff),0 0 12px var(--c,#fff) inset}
+.slot.filled:not(.avail){border-color:rgba(255,255,255,.22);opacity:.8}
 .slot .cd{position:absolute;left:0;right:0;bottom:0;height:0;background:rgba(0,0,0,.65);pointer-events:none}
 .slot.down{transform:scale(.93)}
 .slot.ready{animation:rd .5s}
@@ -2063,6 +2521,8 @@ body.playing #slots{display:flex}
 body.playing #lcol.hud{display:flex!important}
 #lcol button{position:relative;width:36px;height:34px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
 #lcol button svg{width:20px;height:20px}
+#lcol.collapsed button:not(#lcolTog){display:none}
+#lcolTog{background:rgba(10,16,32,.8)!important}
 #lcol button.active{background:rgba(30,111,255,.85)}
 #lcol .vo.off{display:none}
 .badge{position:absolute;top:-4px;right:-4px;background:#ff4d4d;color:#fff;font-size:10px;font-weight:700;border-radius:8px;padding:1px 5px;display:none;font-style:normal}
@@ -2172,9 +2632,16 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 #uiShow{display:none;position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:30;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid rgba(160,210,255,.5);background:rgba(10,18,40,.82);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;cursor:pointer}
 #uiShow span{display:flex;width:18px;height:18px}#uiShow svg{width:18px;height:18px}
 body.playing.uihide.uiask #uiShow{display:flex}
-body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar){display:none!important}
+body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar,.hud,.pill:not(#toast),#mini,#hpBox,#oxyBox,#roomTag,#net,#clock,#board,#feed,#chatFeed,#duelBox,#capBox){display:none!important}
 #duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
 body.playing.duel #duelBox{display:block}
+body.noduelbar #duelBox{display:none!important}
+#trainBox{display:none;position:fixed;left:calc(max(10px,env(safe-area-inset-left)) + 120px);top:calc(max(10px,env(safe-area-inset-top)) + 52px);z-index:6;width:min(200px,40vw);background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:14px;padding:8px 10px;color:#fff;font:600 12px Poppins,system-ui,sans-serif}
+body.playing.train #trainBox{display:block}
+body:not(.train) #trainBox{display:none!important}
+#trainBox b{display:block;color:#ffd84d;margin-bottom:4px}
+#trainBox label{display:block;margin:5px 0 0}#trainBox label span{float:right;color:#6cd4ff}
+#trainBox input{width:100%;accent-color:#4de1ff;margin:2px 0 0}
 #duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 #duelBox .vs i{font-style:normal;color:#ffd84d;font-size:12px}
 #duelBox .vs span.w{color:#6cd4ff;font-weight:600;font-size:11px}
@@ -2182,6 +2649,18 @@ body.playing.duel #duelBox{display:block}
 #duelBox .me{color:#7dffae;font-weight:700}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
+#netRep{display:none;position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:9;width:min(92vw,340px);background:rgba(8,14,34,.94);border:1px solid rgba(160,190,255,.25);border-left:6px solid var(--nc,#4de27a);border-radius:14px;padding:12px 40px 14px 14px;font-family:Poppins,system-ui,sans-serif;color:#eaf1ff;box-shadow:0 10px 36px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;animation:netIn .22s ease-out}
+#netRep.show{display:block}
+@keyframes netIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+#netRep .nh{font-size:12px;font-weight:600;color:#9fb4dd;letter-spacing:.4px;text-transform:uppercase}
+#netRep .nq{font-size:22px;font-weight:800;color:var(--nc,#4de27a);line-height:1.15;margin:2px 0 6px}
+#netRep .nl{font-size:13px;font-weight:500;line-height:1.5}
+#netRep .nl b{font-weight:700;color:#fff}
+#netRep .nx{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:17px;line-height:28px;text-align:center;cursor:pointer;padding:0}
+#netRep .nx:hover{background:rgba(255,255,255,.22)}
+#netRep .nb{position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--nc,#4de27a);transform-origin:left;opacity:.85}
+#netRep.show .nb{animation:netBar 5s linear forwards}
+@keyframes netBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #duelBig b{display:block;font-size:min(22vw,120px);line-height:1}
 #duelBig small{display:block;font-size:min(5vw,22px);font-weight:600;margin-top:6px;color:#cfe3ff}
 body.cine #duelBox,body.cine #duelBig{display:none!important}
@@ -2203,11 +2682,25 @@ body.playing.dbg #dbgBox{display:flex}
 #setBox .card{width:min(92vw,440px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 8px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
 #setBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 #setBox h3{margin:0;font-size:18px;color:#6cd4ff}
+#tipBox{display:none;position:fixed;inset:0;z-index:55;background:rgba(2,6,18,.7);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
+#tipBox.show{display:flex}
+#tipBox .card{width:min(92vw,460px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 16px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#tipBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#tipBox h3{margin:0;font-size:18px;color:#ffd84d}
+#tipBox .tp{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(120,190,255,.15)}
+#tipBox .tp i{flex:0 0 34px;height:34px;border-radius:10px;background:#10264a;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:19px}
+#tipBox .tp b{display:block;font-size:14px;color:#6cd4ff}
+#tipBox .tp small{display:block;margin-top:2px;font-size:12.5px;line-height:1.45;color:#cfe0f6}
+#tipX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+#tipX svg{width:16px;height:16px}
+#tipOk{margin-top:10px;width:100%;border:0;border-radius:12px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font:700 15px Poppins,system-ui,sans-serif;padding:11px;cursor:pointer}
+body.cine #tipBox{display:none!important}
 #setX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
 #setX svg{width:16px;height:16px}
 .srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid rgba(120,190,255,.15);cursor:pointer}
 .srow span{display:block;flex:1}.srow b{display:block;font-size:14px}.srow small{display:block;margin-top:2px;font-size:11.5px;line-height:1.4;color:#9db4d6}
 .srow input{display:none}
+.sens{padding:11px 0;border-top:1px solid rgba(120,190,255,.15)}.sens b{display:flex;justify-content:space-between;font-size:14px}.sens small{display:block;margin:2px 0 8px;font-size:11.5px;line-height:1.4;color:#9db4d6}.sens input{width:100%;accent-color:#4de1ff}
 .srow .sw{flex:0 0 auto;width:46px;height:26px;border-radius:999px;background:#26344f;position:relative;transition:background .15s}
 .srow .sw:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
 .srow input:checked+.sw{background:#1e6fff}.srow input:checked+.sw:after{transform:translateX(20px)}
@@ -2222,8 +2715,10 @@ body.cine #setBox{display:none!important}
 <div id="night"></div>
 <div id="fade"></div>
 <div id="lcol" class="hud">
+  <button id="lcolTog" title="Sembunyikan / tampilkan tombol" aria-label="Sembunyikan atau tampilkan tombol" style="font-size:13px">▲</button>
   <button id="camBtn" data-ico="eye" title="Kamera FPS (C)" aria-label="Kamera FPS"></button>
   <button id="uiBtn" data-ico="hideui" title="Sembunyikan tombol (H)" aria-label="Sembunyikan tombol"></button>
+  <button id="tipBtn" title="Tips &amp; trik" aria-label="Tips dan trik" style="font-size:17px">💡</button>
   <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
@@ -2235,6 +2730,7 @@ body.cine #setBox{display:none!important}
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
 <div id="hurt"></div>
+<div id="fxScr"><div class="fl" id="fxIce"></div><div class="fl" id="fxShield"></div><div class="fl" id="fxHaste"></div><div class="fl" id="fxRegen"></div><div class="fl" id="fxGuard"></div><div class="fl" id="fxBreak"></div><div class="fl" id="fxRide"></div></div>
 
 <div id="hpBox" class="hud"><div id="hpName"><span id="myName"></span><span id="kd"></span></div><div class="bar"><i id="hpFill"></i></div></div>
 <div id="oxyBox" class="hud"><small>🫧 Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
@@ -2248,15 +2744,35 @@ body.cine #setBox{display:none!important}
 <div id="board" class="hud"></div>
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
+<div id="tipBox"><div class="card"><div class="sh"><h3>📖 Tips &amp; Trik</h3><button id="tipX" type="button" aria-label="Tutup" data-ico="close"></button></div>
+<div class="tp"><i>⚔️</i><div><b>Pedang bisa menebas bola</b><small>Tebas bola yang meluncur ke arahmu: bola hancur atau terpukul balik ke penembaknya. Tebasan angin juga memukul balik bola yang dilewatinya.</small></div></div>
+<div class="tp"><i>🛡️</i><div><b>Perisai bisa memantulkan bola</b><small>Tahan perisai menghadap bola yang datang dan bola itu dipantulkan balik ke penembak. Awas: perisai hanya menahan serangan dari depan dan bisa pecah kalau dihantam terus.</small></div></div>
+<div class="tp"><i>💥</i><div><b>Tebasan pedang itu besar sekali</b><small>Satu tebasan 50 damage. Tebas 3 kali berturut-turut untuk kombo: tebasan ketiga (penutup) 80 damage, jangkauannya lebih jauh, dan angin tebasannya melesat lebih jauh.</small></div></div>
+<div class="tp"><i>⚡</i><div><b>Dash itu kebal sesaat</b><small>Lesat saat bola atau tebasan lawan hampir kena, kamu kebal sebentar dan lolos.</small></div></div>
+<div class="tp"><i>🧱</i><div><b>Dinding dan lompat tinggi</b><small>Tembok Kode memblokir bola dan sinar lawan. Loncat Tinggi membuatmu bisa melompati dinding.</small></div></div>
+<div class="tp"><i>🦅</i><div><b>Elang dan Singa Rimba</b><small>Jangan gunakan Elang atau Singa Rimba di laga yang ada kawanmu di sekitar, karena mereka bisa ikut menyerang kawan. Mereka mengejar musuh yang kamu serang atau yang menyerangmu (yang paling baru menang), bukan yang paling dekat.</small></div></div>
+<button id="tipOk" type="button">Mengerti</button>
+</div></div>
 <div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
+<div class="sens"><b><span>Sensitivitas kamera</span><span id="sensVal">1.0x</span></b><small>Seberapa cepat kamera menoleh saat layar digeser (atau tombol Q/R). Geser ke kanan untuk lebih cepat.</small><input type="range" id="sensIn" min="0.5" max="3" step="0.1" value="1"></div>
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
+<label class="srow"><span><b>Auto aim bola</b><small>Di mode non-FPS, teknik bola (bola lempar dan bola biru) langsung dilempar ke musuh terdekat dalam 40 unit. Tidak ada musuh: bidik manual seperti biasa. Mode FPS tetap bidik sendiri.</small></span><input type="checkbox" data-set="autoAimBall"><i class="sw"></i></label>
+<label class="srow"><span><b>Notifikasi hasil tebasan</b><small>Pesan kecil di bawah layar: kena siapa atau kenapa meleset. Untuk menguji serangan. Default mati.</small></span><input type="checkbox" data-set="hitDbg"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
 <label class="srow"><span><b>Tampilkan body fisika</b><small>Garis kerangka badan karakter 2D (pemain, prajurit, penyamun, elang) dan cincin jangkauan tebasan.</small></span><input type="checkbox" data-set="physics"><i class="sw"></i></label>
+<label class="srow"><span><b>Teks besar di tengah layar</b><small>Hitung mundur, FIGHT!, pengumuman pemenang, dan layar KO di arena.</small></span><input type="checkbox" data-set="bigText"><i class="sw"></i></label>
+<label class="srow"><span><b>Dinding arena berkilau</b><small>Efek dinding biru transparan di sekeliling arena saat hitung mundur dan terkena.</small></span><input type="checkbox" data-set="arenaWall"><i class="sw"></i></label>
+<label class="srow"><span><b>Pesan notifikasi di tengah layar</b><small>Tulisan info yang muncul di tengah layar (misal "Naik elang!", "Tunggu hitungan mundur"). Mati secara bawaan.</small></span><input type="checkbox" data-set="toast"><i class="sw"></i></label>
+<label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
+<label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
+<label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
-<div id="duelBox"></div><div id="duelBig"></div><div id="dbgBox"></div>
-<div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
+<div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
+<div id="duelBox"></div><div id="duelBig"></div>
+<div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
+<div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
@@ -2330,7 +2846,7 @@ const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
 const damp=(k,dt)=>1-Math.exp(-k*dt);
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const ROOM=(location.pathname.split('/')[2]||'').toUpperCase();
-const MAXHP=100;
+const MAXHP=TUNING.maxHp;
 /* ---------- ikon SVG buatan sendiri ---------- */
 const ICO={
  book:'<path d="M2.5 5.5c3.2-1.6 6.3-1.4 9.5 1v13c-3.200-2.400-6.300-2.600-9.500-1z"/><path d="M21.500 5.500c-3.200-1.600-6.300-1.400-9.500 1v13c3.200-2.400 6.300-2.600 9.500-1z"/>',
@@ -2373,6 +2889,11 @@ const ICO={
  regen:'<path d="M20 12a8 8 0 1 1-2.700-6"/><path d="M20 3.500v4.500h-4.500"/><path d="M12 9v6M9 12h6"/>',
  haste:'<path d="M4.500 5l7 7-7 7M12.500 5l7 7-7 7"/>',
  dash:'<path d="M13.500 2L4.500 14h7l-1 8 9-12h-7z" fill="currentColor" fill-opacity=".2"/>',
+ wall:'<path d="M3 5h18v4H3zM3 9h18v5H3zM3 14h18v5H3zM9 5v4M15 9v5M9 14v5"/>',
+ blink:'<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="12" r="2.500" fill="currentColor" fill-opacity=".3"/><path d="M9.500 12h5M12.500 9l3 3-3 3"/>',
+ homing:'<circle cx="6" cy="7" r="3" fill="currentColor" fill-opacity=".25"/><circle cx="6" cy="17" r="3" fill="currentColor" fill-opacity=".25"/><path d="M9 7c5 0 7 3 9 5M9 17c5 0 7-3 9-5"/><circle cx="20" cy="12" r="1.500"/>',
+ lion:'<circle cx="12" cy="12.500" r="9" fill="currentColor" fill-opacity=".22"/><circle cx="12" cy="12.500" r="5" fill="currentColor" fill-opacity=".35"/><circle cx="6.500" cy="5.500" r="2"/><circle cx="17.500" cy="5.500" r="2"/>',
+ face:'<circle cx="12" cy="12" r="7.500"/><circle cx="12" cy="12" r="2.500" fill="currentColor"/><path d="M12 1.500v4M12 18.500v4M1.500 12h4M18.500 12h4"/>',
  spark:'<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>'
 };
 function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO.spark)+'</svg>';}
@@ -2405,8 +2926,8 @@ const CAVE={x:-15,z:87},CX=3000,CZ=0,CAVE_R=32;
 const FORT_DEFS=[{id:0,name:'Benteng Fajar',x:62,z:-52},{id:1,name:'Benteng Senja',x:-72,z:-52},{id:2,name:'Benteng Bayu',x:40,z:78}];
 const FORT_RANGE=7;
 const CAMP_DEFS=[{id:0,x:88,z:0},{id:1,x:-90,z:0},{id:2,x:0,z:-92}];
-const ARENA={x:0,z:58,ringR:25,side:14,h:20};
-const flats=[{x:ARENA.x,z:ARENA.z,r:33,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
+const ARENA={x:-85,z:85,ringR:38,side:22,h:24};
+const flats=[{x:ARENA.x,z:ARENA.z,r:ARENA.ringR+8,b:12},{x:0,z:0,r:22,b:14},{x:LAKE.x,z:LAKE.z,r:16,b:10},{x:CAVE.x,z:CAVE.z,r:9,b:9}].concat(FORT_DEFS.map(f=>({x:f.x,z:f.z,r:15,b:9}))).concat(CAMP_DEFS.map(c=>({x:c.x,z:c.z,r:16,b:8})));
 const houseSpecs=[];
 for(let i=0;i<5;i++){const th=i/5*Math.PI*2+0.5,x=Math.cos(th)*14.5,z=Math.sin(th)*14.5;houseSpecs.push({x,z,rot:Math.atan2(-Math.cos(th),-Math.sin(th))});}
 [[62,34],[-70,-22],[18,-82]].forEach(([x,z],i)=>{houseSpecs.push({x,z,rot:i*Math.PI/2+0.4,far:true});flats.push({x,z,r:8,b:10});});
@@ -2421,7 +2942,9 @@ function terrainH(x,z){
   for(const f of flats){const d=Math.hypot(x-f.x,z-f.z);if(d<f.r+f.b){const t=d<=f.r?0:(d-f.r)/f.b;const s=t*t*(3-2*t);if(s<m)m=s;}}
   const hills=(fbm(x*0.018,z*0.018)-0.5)*22+(fbm(x*0.06+50,z*0.06+50)-0.5)*3;
   const e=clamp((Math.hypot(x,z)-100)/42,0,1);
-  return hills*m+e*e*(3-2*e)*38-lakeDepth(x,z);
+  const da=Math.hypot(x-ARENA.x,z-ARENA.z),fa=ARENA.ringR+8;let ma=1;
+  if(da<fa+12){const t=da<=fa?0:(da-fa)/12;ma=t*t*(3-2*t);}
+  return hills*m+e*e*(3-2*e)*38*ma-lakeDepth(x,z);
 }
 function nearFlat(x,z,pad){for(const f of flats)if(Math.hypot(x-f.x,z-f.z)<f.r+pad)return true;return false}
 const pathSegs=[];
@@ -2460,6 +2983,7 @@ const lakeMesh=new THREE.Mesh(new THREE.CircleGeometry(LAKE.R+2.5,48).rotateX(-M
 
 /* ---------- colliders ---------- */
 const circles=[],platforms=[],obbs=[];
+const walls=new Map();
 const PR=0.4;
 function groundAt(x,z,y){let g=terrainH(x,z);for(const p of platforms){const dx=x-p.x,dz=z-p.z;if(dx*dx+dz*dz<(p.r+0.15)*(p.r+0.15)&&y>=p.top-0.35&&p.top>g)g=p.top;}return g;}
 
@@ -3008,10 +3532,12 @@ function updSlashes(dt){
 /* floating text */
 const floats=[];
 function floatText(x,y,z,txt,col){
+  {let on=true;try{on=/^[-+]?\d/.test(String(txt))?SET.dmgText:SET.fxText;}catch(e){}if(on===false)return;}
   const cv=document.createElement('canvas');cv.width=128;cv.height=48;const c=cv.getContext('2d');
   c.font='bold 34px sans-serif';c.textAlign='center';c.textBaseline='middle';c.lineWidth=6;c.strokeStyle='rgba(10,10,30,.9)';c.strokeText(txt,64,24);c.fillStyle=col;c.fillText(txt,64,24);
   const tex=new THREE.CanvasTexture(cv);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true,fog:false}));
-  sp.scale.set(2,0.75,1);sp.renderOrder=22;sp.position.set(x,y,z);scene.add(sp);floats.push({sp,tex,t:0});
+  const wk=/^[-+]?\d/.test(String(txt))?1:0.5;   /* tulisan efek (MANTUL, dll) 2x lebih kecil dari angka damage */
+  sp.scale.set(2*wk,0.75*wk,1);sp.renderOrder=22;sp.position.set(x,y,z);scene.add(sp);floats.push({sp,tex,t:0});
 }
 function updFloats(dt){
   for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.t+=dt;f.sp.position.y+=dt*1.7;f.sp.material.opacity=clamp(1.2-f.t,0,1);
@@ -3035,6 +3561,7 @@ const SFX_RANGE=45,VOICE_RANGE=40;
 /* jarak dengar per jenis suara (unit); di atas jarak ini tidak terdengar sama sekali */
 const SFX_R={swing:24,hit:26,clang:26,clash:30,block:24,twang:26,arrowHit:24,soldierDie:24,gbreak:26,
   throw:30,dash:26,orb:38,beam:36,shield:26,heal:26,regen:22,haste:22,eagle:30,step:16,land:18,jump:18,stroke:18,splash:26,sleep:14,
+  roar:34,wall:26,wallbreak:34,blink:28,hjump:24,
   boom:55,snipe:70,horn:70,fanfare:60,chestOpen:30};
 let sfxWin=[];
 function distVol(d,R){return d>=R?0:Math.pow(1-d/R,2.2);}
@@ -3042,7 +3569,15 @@ function sfxAt(name,x,z){if(!AC||!sfx[name])return;const R=SFX_R[name]||SFX_RANG
   /* batasi tumpukan suara jauh: maksimal 4 suara pelan per 150 ms */
   const tn=performance.now();sfxWin=sfxWin.filter(t=>tn-t<150);if(v<0.35){if(sfxWin.length>=4)return;sfxWin.push(tn);}
   SV=v;const a=Array.prototype.slice.call(arguments,3);try{sfx[name].apply(null,a);}catch(e){}SV=1;}
+let techClickT=0;
 const sfx={
+  /* klik pribadi saat teknik berhasil dipakai: retak tajam lalu serpihan kaca berdenting, cukup keras. Hanya didengar pemilik, bukan suara berjarak */
+  techClick(){
+    const n=performance.now();if(n-techClickT<110)return;techClickT=n;
+    noiseHit(0.035,0.95,7500,0,'highpass');tone(3400,1700,0.045,'square',0.17,0);tone(1500,800,0.1,'sine',0.14,0);
+    noiseHit(0.26,0.55,5200,0.012,'highpass');noiseHit(0.18,0.35,3000,0.02,'bandpass',2);
+    for(let k=0;k<8;k++){const f=rnd(2300,7600);tone(f,f*rnd(0.65,0.95),rnd(0.05,0.16),'triangle',0.1,0.014+k*rnd(0.012,0.03));}
+  },
   /* langkah */
   step(k){
     if(k==='wood'){noiseHit(0.06,0.11,520,0);tone(rnd(95,135),60,0.07,'triangle',0.1);}
@@ -3091,6 +3626,11 @@ const sfx={
   trapset(){tone(900,900,0.03,'square',0.05);tone(700,700,0.04,'square',0.05,0.09);noiseHit(0.1,0.06,2500,0.15,'highpass');},
   heal(){[523,659,784,1047].forEach((f,i)=>tone(f,f,0.22,'triangle',0.1,i*0.07));tone(2093,2093,0.35,'sine',0.03,0.28);},
   regen(){[392,494,587].forEach((f,i)=>tone(f,f*1.01,0.5,'sine',0.06,i*0.15));},
+  wall(){noiseHit(0.5,0.18,300,0,'lowpass');tone(90,60,0.5,'sawtooth',0.07);tone(180,320,0.25,'square',0.04,0.1);noiseHit(0.15,0.2,900,0.35,'lowpass');},
+  wallbreak(){noiseHit(0.6,0.25,1200,0,'bandpass',0.7);tone(300,60,0.5,'sawtooth',0.06);noiseHit(0.3,0.2,2500,0.1,'highpass');},
+  blink(){tone(1500,200,0.25,'sine',0.08);tone(400,2000,0.2,'triangle',0.05,0.12);noiseHit(0.2,0.1,3000,0,'highpass');},
+  hjump(){tone(180,900,0.35,'sine',0.12);noiseHit(0.25,0.12,1800,0,'highpass');tone(400,1200,0.25,'triangle',0.06,0.1);},
+  roar(){tone(150,55,0.6,'sawtooth',0.12);tone(110,70,0.5,'square',0.05,0.05);noiseHit(0.5,0.12,500,0,'lowpass');},
   dash(){noiseHit(0.3,0.25,1500,0,'highpass');tone(200,900,0.2,'sawtooth',0.05);},
   haste(){tone(300,1200,0.3,'sawtooth',0.05);tone(450,1800,0.3,'triangle',0.04,0.06);noiseHit(0.25,0.12,2500,0,'highpass');},
   orb(){tone(120,260,0.9,'sine',0.14);tone(180,90,0.9,'sawtooth',0.05);noiseHit(0.5,0.18,600,0);tone(60,60,1,'sine',0.12);},
@@ -3130,6 +3670,7 @@ $('btnJump').addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- state ---------- */
 const pos=new THREE.Vector3(0,0,6),vel=new THREE.Vector3();
+let comboN=0,comboT=0;
 let vy=0,grounded=true,coyote=0,jumpBuf=0,jumping=false,started=false,tAll=0;
 const cam={yaw:0,yawT:0,pitch:0.55,pitchT:0.55,dist:14,distT:14,tx:pos.x,ty:0,tz:pos.z,fov:50};
 let faceX=0,faceZ=1,viewK=0,walkT=0,idleT=0,lastStepIdx=-1;
@@ -3145,6 +3686,15 @@ let ws=null,joined=false,hourBase=9,hourAt=0,netT=0,netIdle=0;
 const others=new Map();
 const projs=[];
 const slots=[null,null,null,null,null],slotCd=[0,0,0,0,0],slotCdMax=[1,1,1,1,1];
+/* teknik yang terpasang disimpan per room di localStorage (tiap room datanya beda) */
+let hjT=0,restoreN=0,trainSpd=1,trainJump=1,trainCd=1;
+function slotsKey(){return 'dw_slots_'+ROOM;}
+function saveSlots(){LS.set(slotsKey(),JSON.stringify(slots.map(t=>t?t.code:null)));}
+function restoreSlots(){
+  let sv=[];try{sv=JSON.parse(LS.get(slotsKey())||'[]');}catch(e){}
+  restoreN=0;
+  sv.forEach((c,i)=>{if(c&&i<slots.length&&!slots[i]){restoreN++;netSend({t:'learn',slot:i,code:String(c)});}});
+}
 let modalSlot=-1,typed='',modalOpen=false,pendingLearn=false;
 let boardRows=[];
 let atkSide=false,strokeT=0,ambT=3,hbT=0,humT=0,inCave=false,fade=null,sleeping=false,sleepHouse=null,sleepPos=null,ammo=0,snipeCd=0,chestOpen=false,zT=0,fountT=0;
@@ -3152,8 +3702,8 @@ const zTex=(function(){const c=document.createElement('canvas');c.width=c.height
 let guarding=false,guardPips=9,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,myRegenT=0,bookOpen=false,bookEnabled=false,bookData=[],bookPage=0,guardLbl='',rideT=0,ridePw=13,myMount=null;
 
 /* ---------- UI helpers ---------- */
-let toastT=0;
-function toast(msg,secs){const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=secs||2.2;}
+let toastT=0;   /* waktu habis (jam nyata, ms), bukan jam game, supaya tetap pas walau frame rate rendah */
+function toast(msg,secs){let on=false;try{on=SET.toast;}catch(e){}if(!on)return;const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=performance.now()+(secs||2.2)*1000;}
 function feed(txt){const f=$('feed'),d=document.createElement('div');d.textContent=txt;f.appendChild(d);while(f.children.length>4)f.removeChild(f.firstChild);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},5000);}
 function nearestDoor(){let best=null,bd=3.1,bi=-1;doors.forEach((d,i)=>{const dist=Math.hypot(d.wx-pos.x,d.wz-pos.z);if(dist<bd&&Math.abs(pos.y)<3){bd=dist;best=d;bi=i;}});return best?{d:best,i:bi}:null;}
 function netSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
@@ -3225,6 +3775,15 @@ function interact(){
   else if(a.type==='cap')netSend({t:'cap',fort:a.fort});
   else netSend({t:'door',i:a.i});
 }
+/* auto aim bola (non-FPS): vektor 3D ke musuh terdekat dalam 40 unit, atau null */
+function ballAim(){
+  let best=null,bd=40;
+  const eh=pos.y+1.45;
+  const test=(x,y,z)=>{const dx=x-pos.x,dz=z-pos.z,d=Math.hypot(dx,dz);if(d<1||d>=bd)return;bd=d;const dy=(y+0.9)-eh,l=Math.hypot(d,dy);best={x:dx/l,y:dy/l,z:dz/l};};
+  for(const o of others.values()){if(o.dead)continue;test(o.x,o.y||0,o.z);}
+  for(const o of sols.values()){if(o.dead||o.owner===me.id)continue;test(o.x,terrainH(o.x,o.z),o.z);}
+  return best;
+}
 function aim(){
   if(!SET.autoAim)return {x:faceX,z:faceZ};
   let fx=faceX,fz=faceZ,best=null,bs=-9;
@@ -3235,6 +3794,7 @@ function aim(){
   }
   return best?{x:best[0],z:best[1]}:{x:fx,z:fz};
 }
+function comboStep(){comboN=comboT>0?comboN%3+1:1;comboT=0.9;return comboN===3;}
 function doAttack(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||attackT>0||atkCool>0)return;
   if(duelBlock())return;
@@ -3242,11 +3802,11 @@ function doAttack(){
   if(guarding)setGuard(false);
   if(fps&&started){
     const v=aimVec(),hl=Math.hypot(v.x,v.z)||1,ax=v.x/hl,az=v.z/hl;faceX=ax;faceZ=az;
-    attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
+    {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
     netSend({t:'atk',fx:+ax.toFixed(3),fz:+az.toFixed(3),fy:+v.y.toFixed(3)});return;
   }
   const a=aim();faceX=a.x;faceZ=a.z;
-  attackT=0.32;atkCool=0.42;sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
+  {const f=comboStep();attackT=f?0.45:0.32;atkCool=f?0.74:0.42;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,a.x,a.z,0xbfe9ff,1,atkSide);
   netSend({t:'atk',fx:a.x,fz:a.z});
 }
 function updSlotUI(i){
@@ -3261,15 +3821,16 @@ function castSlot(i){
   if(sleeping)wakeUp();
   const s=slots[i];if(!s){cancelAim();openModal(i);return;}
   if(duelBlock())return;
-  if(aiming===i){fireAim();return;}
+  if(aiming===i){sfx.techClick();fireAim();return;}
   if(slotCd[i]>0)return;
-  if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}enterAim(i);return;}
+  sfx.techClick();   /* tombol teknik benar-benar tertekan dan jalan */
+  if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}if(SET.autoAimBall&&(s.kind==='bolt'||s.kind==='orb')){const bv=ballAim();if(bv){castAimed(i,bv);return;}}enterAim(i);return;}
   if(aiming>=0)cancelAim();
   if(guarding)setGuard(false);
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
-  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?0:s.cd);
+  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?Math.max(s.cd,TUNING.dashMinCd):s.cd)*trainCd;
   attackT=s.kind==='dash'?0:Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
 }
@@ -3304,7 +3865,7 @@ document.querySelectorAll('#pad button').forEach(b=>b.addEventListener('click',(
 $('mBack').addEventListener('click',()=>{typed=typed.slice(0,-1);renderCode();});
 $('mCancel').addEventListener('click',closeModal);
 $('mOk').addEventListener('click',submitCode);
-$('mClear').addEventListener('click',()=>{const i=modalSlot;slots[i]=null;slotCd[i]=0;updSlotUI(i);netSend({t:'clear',slot:i});closeModal();});
+$('mClear').addEventListener('click',()=>{const i=modalSlot;slots[i]=null;slotCd[i]=0;updSlotUI(i);saveSlots();netSend({t:'clear',slot:i});closeModal();});
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal();});
 document.querySelectorAll('.slot').forEach(el=>{
   const i=+el.dataset.i;let timer=null,longDone=false;
@@ -3363,7 +3924,7 @@ window.addEventListener('pointermove',e=>{
     let dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;const Rr=55,m=Math.hypot(dx,dy);if(m>Rr){dx=dx/m*Rr;dy=dy/m*Rr;}
     joy.x=dx/Rr;joy.y=-dy/Rr;$('joyKnob').style.left=(joy.cx+dx)+'px';$('joyKnob').style.top=(joy.cy+dy)+'px';
   }else if(e.pointerId===look.id){
-    cam.yawT-=(e.clientX-look.lx)*0.0065;if(fps)fpsPitch=clamp(fpsPitch-(e.clientY-look.ly)*0.004,-1.3,1.3);else cam.pitchT=clamp(cam.pitchT+(e.clientY-look.ly)*0.004,0.22,1.1);look.lx=e.clientX;look.ly=e.clientY;
+    const sn=(typeof SET!=='undefined'&&SET.sens>0)?SET.sens:1;cam.yawT-=(e.clientX-look.lx)*0.0065*sn;if(fps)fpsPitch=clamp(fpsPitch-(e.clientY-look.ly)*0.004*sn,-1.3,1.3);else cam.pitchT=clamp(cam.pitchT+(e.clientY-look.ly)*0.004*sn,0.22,1.1);look.lx=e.clientX;look.ly=e.clientY;
   }
 });
 function endPtr(e){
@@ -3440,7 +4001,7 @@ function openBook(){
     $('book').classList.add('show');renderBook();sfx.plop();
   }).catch(()=>toast('Gagal memuat buku',2));
 }
-function closeBook(){if(typeof setOpen!=='undefined'&&setOpen){closeSet();return;}bookOpen=false;$('book').classList.remove('show');}
+function closeBook(){if(typeof tipOpen!=='undefined'&&tipOpen){closeTips();return;}if(typeof setOpen!=='undefined'&&setOpen){closeSet();return;}bookOpen=false;$('book').classList.remove('show');}
 function bookGo(d){bookPage+=d;renderBook();sfx.plop();}
 $('bookBtn').addEventListener('click',()=>{if(bookOpen)closeBook();else openBook();});
 $('bookBtn').addEventListener('pointerdown',e=>e.stopPropagation());
@@ -3502,15 +4063,57 @@ function eagleSet(o,fx,fz,rgt,fwd,frame){
   o.tex.offset.set(frame*0.5,1-(ROWMAP[o.vk]+1)/5);
   return o.vk>4;
 }
+/* singa: sprite 5 arah x 2 frame, sama susunannya dengan elang */
+const lionCv=document.createElement('canvas');lionCv.width=EW*2;lionCv.height=EH*5;
+(function(){
+  const x=lionCv.getContext('2d');
+  const fur='#e0a84c',fd='#b57a2a',fl='#f4cf86',mane='#8a4f1c',md='#5e3512',nose='#2a1a12',eye='#1a1a1a',wh='#ffffff';
+  function draw(row,f){
+    const ox=f*EW,oy=row*EH;const E=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(ox+a,oy+b,w,h);};
+    const lg=f?1:0;
+    const legsSide=()=>{E(16-lg*2,13,2,4,fd);E(13+lg*2,13,2,3,fur);E(6+lg*2,13,2,4,fd);E(9-lg*2,13,2,3,fur);E(16-lg*2,16,2,1,md);E(6+lg*2,16,2,1,md);};
+    const tail=()=>{E(2,8,4,1,fd);E(1,6,2,4,md);E(2,7,1,2,mane);};
+    /* singa tanpa wajah: kepala polos (tanpa mata, hidung, mulut) */
+    if(row===0){   /* samping, menghadap kanan */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,3,6,11,mane);E(11,3,2,11,md);E(14,4,3,1,md);
+      E(15,4,9,9,fur);E(16,4,7,1,fl);E(21,8,5,4,fl);E(15,2,3,3,fur);E(16,3,1,1,fd);
+    }else if(row===1){   /* depan */
+      E(6,2,16,14,mane);E(6,2,16,2,md);E(6,13,16,3,md);E(7,1,3,3,fur);E(18,1,3,3,fur);E(8,2,1,1,md);E(19,2,1,1,md);
+      E(9,5,10,9,fur);E(10,6,8,1,fl);E(11,10,6,4,fl);
+      E(9,14-lg,3,4,fur);E(16,14-(1-lg),3,4,fur);E(9,17-lg,3,1,md);E(16,17-(1-lg),3,1,md);
+    }else if(row===2){   /* belakang */
+      E(9,0,3,3,fur);E(16,0,3,3,fur);E(10,1,1,1,fd);E(17,1,1,1,fd);
+      E(8,2,12,1,mane);E(6,3,16,6,mane);E(7,9,14,2,mane);E(9,11,10,1,mane);
+      E(6,3,16,1,md);E(7,4,2,5,md);E(19,4,2,5,md);E(10,4,8,2,'#a36228');
+      E(8,10,12,5,fur);E(8,10,5,5,fd);E(15,10,5,5,fd);E(13,9,2,6,fur);
+      E(13,10,2,5,fd);E(12,14,4,3,md);E(13,13,2,1,mane);
+      E(8,15-lg,4,3,md);E(16,15-(1-lg),4,3,md);E(9,15-lg,2,1,fd);E(17,15-(1-lg),2,1,fd);
+    }else if(row===3){   /* 3/4 depan, menghadap kanan */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(20,2,2,3,fur);
+      E(13,5,9,8,fur);E(15,10,6,3,fl);
+    }else{   /* 3/4 belakang, menghadap kanan */
+      E(4,8,12,6,fur);E(5,12,10,2,fl);legsSide();tail();
+      E(11,2,12,12,mane);E(11,2,12,2,md);E(11,12,12,2,md);E(12,2,2,3,fur);E(19,2,2,3,fur);E(13,5,6,6,md);
+      E(19,4,7,8,fur);E(23,9,4,3,fl);E(20,3,3,2,fur);
+    }
+  }
+  for(let r=0;r<5;r++)for(let f=0;f<2;f++)draw(r,f);
+  outlineCv(lionCv,EW,EH);
+})();
+const lionBase=new THREE.CanvasTexture(lionCv);lionBase.magFilter=lionBase.minFilter=THREE.NearestFilter;lionBase.generateMipmaps=false;
+function lionTex(){const t=lionBase.clone();t.needsUpdate=true;t.repeat.set(0.5,0.2);return t;}
 const mobs=new Map();
 function addMob(m){
   if(mobs.has(m.id))return;
-  const tex=eagleTex();
+  const lion=m.k==='lion';
+  const tex=lion?lionTex():eagleTex();
   const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
-  const mine=m.o===me.id;const lab=makeLabel();const mo={friend:mine,name:mine?'Elangmu':'Elang',hp:m.hp||40,max:m.hp||40,lab};
-  mobs.set(m.id,{lab,friend:mine,name:mo.name,max:mo.max,hp:m.hp||40,flash:0,id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
-  drawMobLabel(mobs.get(m.id));burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfxAt('eagle',m.x,m.z);
+  const mine=m.o===me.id||isMate(m.o);const lab=makeLabel();const mo={friend:mine,name:lion?(mine?'Singamu':'Singa'):(mine?'Elangmu':'Elang'),hp:m.hp||40,max:m.hp||40,lab};
+  mobs.set(m.id,{lion,lab,friend:mine,name:mo.name,max:mo.max,hp:m.hp||40,flash:0,id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
+  drawMobLabel(mobs.get(m.id));burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfxAt(lion?'roar':'eagle',m.x,m.z);
 }
 function drawMobLabel(o){drawLabel({name:o.name,hp:o.hp/o.max*MAXHP,shieldT:0,lab:o.lab,friend:o.friend});}
 function removeMob(id,quiet){
@@ -3521,12 +4124,12 @@ function removeMob(id,quiet){
 function updMobs(dt,rgt,fwd){
   for(const m of mobs.values()){
     const k=damp(10,dt);m.x+=(m.tx-m.x)*k;m.y+=(m.ty-m.y)*k;m.z+=(m.tz-m.z)*k;m.atkT=Math.max(0,m.atkT-dt);
-    const sc=1+(m.atkT>0?0.35:0);
+    const sc=(m.lion?1.45:1)*(1+(m.atkT>0?0.35:0));
     m.mesh.position.set(m.x,m.y,m.z);m.mesh.rotation.y=cam.yaw;m.mesh.rotation.x=-cam.pitch*0.55;
-    const fl=eagleSet(m,m.fx,m.fz,rgt,fwd,Math.floor(tAll*10+m.id)%2);
+    const fl=eagleSet(m,m.fx,m.fz,rgt,fwd,Math.floor(tAll*(m.lion?6:10)+m.id)%2);
     m.flash=Math.max(0,m.flash-dt);m.mesh.material.color.setHex(m.flash>0?0xff7a7a:0xffffff);m.mesh.scale.set(fl?-sc:sc,sc,1);
     const gy=Math.max(groundAt(m.x,m.z,m.y),WATER_Y);
-    m.lab.sp.visible=!inCave&&Math.hypot(m.x-pos.x,m.z-pos.z)<40;m.lab.sp.position.set(m.x,m.y+1.3,m.z);
+    m.lab.sp.visible=!inCave&&Math.hypot(m.x-pos.x,m.z-pos.z)<40;m.lab.sp.position.set(m.x,m.y+(m.lion?1.9:1.3),m.z);
     m.sh.position.set(m.x,gy+0.07,m.z);m.sh.scale.setScalar(clamp(1-(m.y-gy)*0.1,0.3,1)*1.2);
   }
 }
@@ -3552,6 +4155,31 @@ function addTrap(m){
   const core=new THREE.Mesh(new THREE.CircleGeometry(0.35,10).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:m.c,transparent:true,opacity:0.9,fog:false}));core.position.set(m.x,m.y+0.13,m.z);scene.add(core);
   traps.set(m.id,{ring,mm,core,t:0});
 }
+/* dinding teknik: kotak tembus pandang + penghalang gerak (bisa dilompati) */
+function addWall(m){
+  if(walls.has(m.id))return;
+  const gy=terrainH(m.x,m.z),H=4;
+  const mat=new THREE.MeshPhongMaterial({color:m.c||'#b8a27a',flatShading:true,transparent:true,opacity:0.85,emissive:new THREE.Color(m.c||'#b8a27a'),emissiveIntensity:0.18});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(m.len,H,0.9),mat);
+  mesh.position.set(m.x,gy+H/2,m.z);mesh.rotation.y=Math.atan2(-m.nx,-m.nz);mesh.scale.y=0.05;scene.add(mesh);
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.9,fog:false}));mesh.add(edge);
+  const cs=[],tx=-m.nz,tz=m.nx,n=Math.max(2,Math.ceil(m.len/1.3));
+  for(let i=0;i<n;i++){const a=(i/(n-1)-0.5)*(m.len-0.8),c={x:m.x+tx*a,z:m.z+tz*a,r:0.85,top:gy+H};circles.push(c);cs.push(c);}
+  walls.set(m.id,{mesh,cs,t:0,gy,H,hp:m.hp});
+  burst(m.x,gy+1,m.z,m.c||'#b8a27a',14,4);
+  for(let i=0;i<24;i++){const a=(Math.random()-0.5)*m.len;emit(m.x+tx*a,gy+0.2,m.z+tz*a,(Math.random()-0.5)*1.5,1.5+Math.random()*2.5,(Math.random()-0.5)*1.5,0.8,0.9,'#cdbf9a',0,0.7,1.2);}   /* debu naik dari tanah */
+  ringFx(m.x,gy+0.15,m.z,m.len*0.55,m.c||'#b8a27a');sfxAt('wall',m.x,m.z);
+}
+function removeWall(id,broke){
+  const w=walls.get(id);if(!w)return;walls.delete(id);
+  for(const c of w.cs){const i=circles.indexOf(c);if(i>=0)circles.splice(i,1);}
+  if(broke){const wx=w.mesh.position.x,wz=w.mesh.position.z,len=w.mesh.geometry.parameters.width,ry=w.mesh.rotation.y,tx=Math.cos(ry),tz=-Math.sin(ry);
+    for(let i=0;i<40;i++){const a=(Math.random()-0.5)*len;emit(wx+tx*a,w.gy+0.5+Math.random()*3.5,wz+tz*a,(Math.random()-0.5)*7,2+Math.random()*5,(Math.random()-0.5)*7,0.9,0.8,Math.random()<0.5?'#d9c9a0':'#8a7a5a',14,0.95,0.2);}
+    burst(wx,w.gy+2,wz,'#d9c9a0',18,6);sfxAt('wallbreak',wx,wz);if(Math.hypot(wx-pos.x,wz-pos.z)<22)shake=Math.max(shake,0.3);}
+  scene.remove(w.mesh);w.mesh.geometry.dispose();w.mesh.material.dispose();
+}
+function updTrail(dt){if(hjT>0){hjT-=dt;if(!grounded)emit(pos.x+(Math.random()-0.5)*0.6,pos.y+0.4,pos.z+(Math.random()-0.5)*0.6,0,-0.5,0,0.5,0.55,'#9dffb0',0,0.7,0.8);}}
+function updWalls(dt){updTrail(dt);walls.forEach(w=>{w.t+=dt;if(w.mesh.scale.y<1)w.mesh.scale.y=Math.min(1,w.mesh.scale.y+dt*6);w.mesh.position.y=w.gy+w.H/2*w.mesh.scale.y;});}
 function removeTrap(id,hit){
   const t=traps.get(id);
   if(t){scene.remove(t.ring);scene.remove(t.core);t.mm.dispose();t.core.material.dispose();t.core.geometry.dispose();traps.delete(id);}
@@ -3640,7 +4268,7 @@ function addSol(info){
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
   const owner=info.owner===me.id?me.name:((others.get(info.owner)||{}).name||'Pasukan');
   const bnm={sword:'Penyamun Pedang',archer:'Penyamun Panah',brute:'Penyamun Brute'}[info.kind];
-  const o={id:info.id,isSol:true,kind:info.kind,fort:info.fort,owner:info.owner,x:info.x,z:info.z,tx:info.x,tz:info.z,fx:0,fz:1,hp:info.hp,max:info.max,name:info.bandit?bnm:((info.kind==='sword'?'Pedang ':'Panah ')+owner),bandit:!!info.bandit,sc:info.kind==='brute'?1.3:1,shieldT:0,
+  const o={id:info.id,isSol:true,kind:info.kind,fort:info.fort,owner:info.owner,x:info.x,z:info.z,tx:info.x,tz:info.z,fx:0,fz:1,hp:info.hp,max:info.max,name:info.nm?info.nm:info.bandit?bnm:((info.kind==='sword'?'Pedang ':'Panah ')+owner),bandit:!!info.bandit,sc:info.kind==='brute'?1.3:1,shieldT:0,
     mesh,tex,mat:m,sh,lab:makeLabel(),viewK:0,wt:Math.random()*4,atkT:0,flash:0,moving:false};
   o.hpv=o.hp/o.max*MAXHP;
   drawSolLabel(o);sols.set(o.id,o);
@@ -3694,13 +4322,13 @@ function enterAim(i){
   $('aimbar').classList.add('show');toast('Bidik dulu: geser kamera, lalu Tembak',1.8);sfx.plop();
 }
 function cancelAim(){aiming=-1;document.querySelectorAll('.slot').forEach(x=>x.classList.remove('aiming'));$('aimbar').classList.remove('show');aimRet.visible=false;aimLine.visible=false;}
-function castAimed(i){
+function castAimed(i,vOverride){
   const s=slots[i];
   if(!s||slotCd[i]>0||!started||dead||modalOpen||bookOpen||stunT>0||fade)return false;
-  const v=aimVec(),hl=Math.hypot(v.x,v.z)||1;
+  const v=vOverride||aimVec(),hl=Math.hypot(v.x,v.z)||1;
   faceX=v.x/hl;faceZ=v.z/hl;
   if(guarding)setGuard(false);if(sleeping)wakeUp();
-  slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);
+  slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);sfx.techClick();
   netSend({t:'cast',slot:i,fx:+v.x.toFixed(3),fy:+v.y.toFixed(3),fz:+v.z.toFixed(3)});
   return true;
 }
@@ -3880,7 +4508,7 @@ function updOthers(dt,rgt,fwd){
   }
 }
 /* projectiles */
-let boomFlash=null;const BOLT_G=2.6;
+let boomFlash=null;const BOLT_G=0.08;   /* sama dengan server */
 const boltLight=new THREE.PointLight(0xffffff,0,18,2);scene.add(boltLight);
 const poolGeo=new THREE.CircleGeometry(1,28).rotateX(-Math.PI/2);
 function waveGeo(){
@@ -3888,7 +4516,9 @@ function waveGeo(){
   sh.moveTo(tipA[0],tipA[1]);sh.absarc(0,0,1.6,-1.15,1.15,false);sh.absarc(-1.4611,0,2.5611,0.6,-0.6,true);
   return new THREE.ShapeGeometry(sh,24).rotateX(-Math.PI/2);
 }
+const waveSide=new Map();   /* sisi miring tebasan terakhir tiap penyerang: kiri, kanan, kiri, ... */
 function addWave(m){
+  const side=!waveSide.get(m.o);waveSide.set(m.o,side);
   const g=new THREE.Group(),s=new THREE.Group();
   const col=new THREE.Color(m.c||'#cfeeff');
   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
@@ -3896,7 +4526,7 @@ function addWave(m){
   const hi=new THREE.Mesh(waveGeo(),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));hi.scale.set(0.42,1,0.68);hi.position.x=0.3;
   s.add(core,hi);g.add(s);g.rotation.order='YZX';
   const l=Math.hypot(m.dx,m.dz)||1,el=Math.asin(clamp(m.dy||0,-0.95,0.95));
-  g.rotation.y=Math.atan2(-m.dz/l,m.dx/l);g.rotation.z=el;s.rotation.x=0.5;
+  g.rotation.y=Math.atan2(-m.dz/l,m.dx/l);g.rotation.z=el;s.rotation.x=side?0.5:-0.5;   /* true = miring kiri, false = miring kanan */
   g.position.set(m.x,m.y,m.z);scene.add(g);
   projs.push({wave:true,pool:null,sm:false,big:false,sz:0.5,id:m.id,g,x:m.x,y:m.y,z:m.z,dx:m.dx,dy:m.dy||0,dz:m.dz,sp:m.sp,life:m.life,maxLife:m.life,c:m.c,tr:9,mats:[mat,hi.material]});
 }
@@ -3971,16 +4601,18 @@ function renderBoard(){
   $('roomTag').textContent=(roomInfo.name||'Room')+' '+rows.length+'/'+(roomInfo.max||'?');
 }
 let roomInfo={name:'',max:0};
-function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>35?'':'linear-gradient(#ff8080,#d63a3a)';}
+function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>MAXHP*0.35?'':'linear-gradient(#ff8080,#d63a3a)';}
 function applyDoor(i,open,silent){const d=doors[i];if(!d)return;if(d.open===open)return;d.open=open;d.target=open?1.65:0;if(!silent)sfxAt(open?'doorOpen':'doorClose',d.wx,d.wz);}
 function onMsg(m){
+  netTrackMsg();
   switch(m.t){
     case 'welcome':{
-      me.id=m.id;roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();
+      me.id=m.id;roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();slots.fill(null);
       setHp(m.hp==null?MAXHP:m.hp);me.k=0;me.d=0;
       {const f=findFree(m.spawn.x,m.spawn.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;cam.ty=0;
       chestOpen=!!m.chest;if(chest){chest.open=chestOpen;chest.target=chest.ang=chestOpen?1.25:0;}ammo=0;sleeping=false;$('night').style.opacity=0;fade=null;$('fade').style.opacity=0;
       cam.yaw=cam.yawT=0;
+      walls.forEach((_,id)=>removeWall(id,false));(m.walls||[]).forEach(addWall);if(roomMode==='train')setTimeout(()=>netSend({t:'tune',cd:trainCd,hp:parseInt($('trHp').value,10)}),300);
       others.forEach((o,id)=>removeOther(id));mobs.forEach((_,id)=>removeMob(id,true));traps.forEach((_,id)=>removeTrap(id));
       bookEnabled=!!m.book;$('bookBtn').classList.toggle('off',!bookEnabled);
       m.players.forEach(p=>{if(p.id!==me.id)addOther(p);});
@@ -3989,13 +4621,13 @@ function onMsg(m){
       sols.forEach((_,id)=>removeSol(id));orbs.forEach((_,id)=>removeOrb(id,true));(m.sols||[]).forEach(addSol);
       $('chatList').innerHTML='';(m.chat||[]).forEach(c=>addChatLine(c,false));
       closeAllPeers();{const vo=voiceEnabled();document.querySelectorAll('.vo').forEach(b=>b.classList.toggle('off',!vo));micOn=false;spkOn=true;setMicUI();setSpkUI();if(vo)m.players.forEach(pl=>{if(pl.id!==me.id)ensurePeer(pl.id);});}
-      joined=true;started=true;
+      joined=true;started=true;slots.forEach((_,i)=>{slotCd[i]=0;updSlotUI(i);});restoreSlots();
       document.body.classList.add('playing');$('start').classList.add('hide');canvas.focus();
       playerRoot.visible=true;pShadow.visible=true;
       toast('Siapkan teknikmu! Tekan ＋ di kanan untuk menulis kode',3.4);
-      roomMode=(m.room&&m.room.mode)==='duel'?'duel':'world';
-      document.body.classList.toggle('dbg',!!(m.room&&m.room.debug));
-      if(roomMode==='duel'){document.body.classList.add('duel');buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast('Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.4);showDuelHelp();renderBoard();break;}
+      roomMode=(m.room&&m.room.mode)==='duel'?'duel':((m.room&&m.room.mode)==='train'?'train':'world');document.body.classList.toggle('train',roomMode==='train');
+      applySet();netSend({t:'pref',dbg:SET.hitDbg?1:0});
+      if(roomMode==='duel'){document.body.classList.add('duel');duelSize=(m.duel&&m.duel.size)||1;buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast(duelSize>1?'Arena Tim '+duelSize+' vs '+duelSize+': tim menang lanjut. Kalau kurang pemain, komputer jadi rekan & lawan!':'Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.6);showDuelHelp();renderBoard();break;}
       renderBoard();startIntro();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed('➕ '+m.p.name+' bergabung');renderBoard();}break;}
@@ -4009,16 +4641,21 @@ function onMsg(m){
         if(o.fresh===undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;o.fresh=false;}
       });break;}
     case 'atk':{const o=others.get(m.id);if(o){o.atkT=0.32;o.fx=m.fx;o.fz=m.fz;sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,o.y,o.z,m.fx,m.fz,0xffd9a0,1,o.side);}break;}
+    case 'hf':{const big=m.cb===3;shake=Math.max(shake,big?0.5:0.22);burst(m.x,m.y+1.1,m.z,big?'#ffd84d':'#ffffff',big?16:8,big?6:4);if(big)floatText(m.x,m.y+2.8,m.z,'PENUTUP!','#ffd84d');break;}
     case 'door':applyDoor(m.i,!!m.open);break;
     case 'learned':{
-      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);pendingLearn=false;closeModal();sfx.learn();toast(m.tech.emoji+' '+m.tech.name+' siap dipakai!',2);break;}
-    case 'learnerr':if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',2);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
+      const i=m.slot;slots[i]=m.tech;slotCd[i]=0;slotCdMax[i]=m.tech.cd;updSlotUI(i);saveSlots();
+      if(restoreN>0){restoreN--;break;}   /* pemulihan otomatis: tanpa suara/pesan */
+      pendingLearn=false;closeModal();sfx.learn();toast(m.tech.name+' siap dipakai!',3);break;}
+    case 'learnerr':if(restoreN>0){restoreN--;break;}if(document.body.classList.contains('pickmode')){pendingLearn=false;toast(m.msg||'Gagal memasang teknik',3);sfx.bad();}else modalErr(m.msg||'Kode salah');break;
     case 'techs':renderPick(m.list);break;
-    case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);toast('Teknik itu sudah tidak tersedia',2);break;}
+    case 'slotclear':{slots[m.slot]=null;updSlotUI(m.slot);saveSlots();toast('Teknik itu sudah tidak tersedia',3);break;}
+    case 'face':{faceX=m.fx;faceZ=m.fz;cam.yawT=Math.atan2(-m.fx,-m.fz);break;}
+    case 'prd':{const q=projs.find(p=>p.id===m.id);if(q){q.x=m.x;q.y=m.y;q.z=m.z;q.dx=m.dx;q.dy=m.dy;q.dz=m.dz;}break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
-    case 'pong':{const r=performance.now()-m.ts;netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
+    case 'pong':{const r=performance.now()-m.ts;netTrackPing(r);netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
     case 'hp':{if(m.id===me.id)setHp(m.hp);else{const o=others.get(m.id);if(o){o.hp=m.hp;drawLabel(o);}}break;}
@@ -4030,25 +4667,28 @@ function onMsg(m){
       if(m.id===me.id){dead=false;$('ko').style.display='none';setHp(MAXHP);{const f=findFree(m.x,m.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;invuln=2;stunT=0;gbT=0;myRegenT=0;hasteT=0;sfx.respawn();toast('Kembali bertarung!',1.6);}
       else{const o=others.get(m.id);if(o){o.dead=false;o.hp=MAXHP;o.tx=o.x=m.x;o.tz=o.z=m.z;o.ty=o.y=0;drawLabel(o);}}break;}
     case 'guard':{if(m.id===me.id){guarding=!!m.on;$('btnGuard').classList.toggle('on',!!m.on);}else{const o=others.get(m.id);if(o){o.guard=!!m.on;if(m.on)sfxAt('shield',o.x,o.z);}}break;}
-    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah! 💥',1.6);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
-    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku! ❄️',1.4);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
+    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah!',3);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
+    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku!',3);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
     case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
     case 'mh':{const o=mobs.get(m.id);if(o){showHitbox(o,0,0);o.hp=m.hp;drawMobLabel(o);o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
     case 'ms':m.m.forEach(r=>{const o=mobs.get(r[0]);if(!o)return;o.tx=r[1];o.ty=r[2];o.tz=r[3];o.fx=r[4];o.fz=r[5];if(r[6])o.atkT=0.3;});break;
     case 'trap':addTrap(m);break;
     case 'trapx':removeTrap(m.id,m.quiet?null:m);break;
+    case 'wall':addWall(m);break;
+    case 'wallx':removeWall(m.id,!!m.broke);break;
+    case 'wallh':{const w=walls.get(m.id);if(w){w.hp=m.hp;w.mesh.material.opacity=0.45+0.4*Math.max(0,m.hp/m.max);}break;}
     case 'sleep':{if(m.id===me.id){if(!m.on&&sleeping)wakeUp(true);}else{const o=others.get(m.id);if(o)o.sleep=!!m.on;}break;}
     case 'chest':{chestOpen=!!m.open;if(chest){chest.open=chestOpen;chest.target=chestOpen?1.25:0;}if(m.open)sfxAt('chestOpen',CX,CZ);break;}
     case 'wpn':{const had=ammo;ammo=m.ammo|0;if(ammo>0&&had===0)toast('Sniper didapat! Peluru '+ammo+' (tombol Sniper / H)',3.2);else if(ammo===0&&had>0)toast('Peluru sniper habis',1.8);break;}
-    case 'toast':toast(m.msg,2.4);break;
+    case 'toast':toast(m.msg,3);break;
     case 'fort':{setFortState(m.f);{const ff=forts[m.f.id];if(ff&&m.f.owner)sfxAt('fanfare',ff.x,ff.z);}if(capState&&capState.fort===m.f.id){capState=null;$('capBox').classList.remove('show');}break;}
     case 'sol':addSol(m.s);break;
     case 'solx':{const o=sols.get(m.id);if(o&&m.dead)sfxAt('soldierDie',o.x,o.z);removeSol(m.id,!!m.dead);break;}
     case 'bshout':{const o=sols.get(m.id);if(o){sfxAt(Math.random()<0.3?'banditLaugh':'bandit',o.x,o.z);}break;}
     case 'bloot':{sfx.loot();toast('Penyamun kalah! +'+m.heal+' HP',1.6);break;}
     case 'ss':m.s.forEach(r=>{const o=sols.get(r[0]);if(!o)return;o.tx=r[1];o.tz=r[2];o.fx=r[3];o.fz=r[4];if(r[5]){o.atkT=0.3;if(o.kind==='archer')sfxAt('twang',o.x,o.z);else{sfxAt('swing',o.x,o.z);o.side=!o.side;slashFx(o.x,terrainH(o.x,o.z),o.z,o.fx,o.fz,o.bandit?0xff6a5a:0xfff0c0,o.kind==='brute'?1.4:1,o.side);}}});break;
-    case 'sh':{const o=sols.get(m.id);if(o){showHitbox({get x(){return o.x},get z(){return o.z},get y(){return terrainH(o.x,o.z)}},0.9,0);o.hp=m.hp;o.flash=0.18;drawSolLabel(o);sfxAt(Math.random()<0.5?'clang':'hit',o.x,o.z);floatText(o.x,terrainH(o.x,o.z)+2.1,o.z,'-'+m.dmg,'#ffd84d');}break;}
+    case 'sh':{if(roomMode==='train'&&m.by===me.id&&m.dmg>0)dpsAdd(m.dmg);const o=sols.get(m.id);if(o){showHitbox({get x(){return o.x},get z(){return o.z},get y(){return terrainH(o.x,o.z)}},0.9,0);o.hp=m.hp;o.flash=0.18;drawSolLabel(o);sfxAt(Math.random()<0.5?'clang':'hit',o.x,o.z);floatText(o.x,terrainH(o.x,o.z)+2.1,o.z,'-'+m.dmg,'#ffd84d');}break;}
     case 'cap':onCap(m);break;
     case 'orb':addOrb(m);break;
     case 'orbx':removeOrb(m.id);break;
@@ -4061,14 +4701,25 @@ function entPos(id){if(id===me.id)return {x:pos.x,y:pos.y,z:pos.z};const o=other
 function onFx(m){
   const p=entPos(m.id);if(!p)return;const near=Math.hypot(p.x-pos.x,p.z-pos.z)<45;
   const col=m.c||'#ffffff';
-  if(m.k==='cast'){if(m.id!==me.id){const o=others.get(m.id);if(o){o.atkT=0.32;if(m.fx!=null){o.fx=m.fx;o.fz=m.fz;}}}burst(p.x,p.y+1.1,p.z,col,8,3);{const kk=m.kind;const mp={bolt:'zap',beam:'beam',summon:'eagle',ride:'eagle',orb:'orb',slam:'slam',dash:null,nova:null,heal:null,regen:null,shield:null,haste:null,trap:null};const nm=mp[kk];if(nm)sfxAt(nm,p.x,p.z);if(kk==='trap'&&m.id===me.id)sfx.trapset();}}
+  if(m.k==='cast'){if(m.id!==me.id){const o=others.get(m.id);if(o){o.atkT=0.32;if(m.fx!=null){o.fx=m.fx;o.fz=m.fz;}}}burst(p.x,p.y+1.1,p.z,col,8,3);{const kk=m.kind;const mp={bolt:'zap',beam:'beam',summon:'eagle',lion:'roar',ride:'eagle',orb:'orb',slam:'slam',dash:null,nova:null,heal:null,regen:null,shield:null,haste:null,trap:null};const nm=mp[kk];if(nm)sfxAt(nm,p.x,p.z);if(kk==='trap'&&m.id===me.id)sfx.trapset();}}
   else if(m.k==='nova'){ringFx(p.x,p.y+0.2,p.z,m.r,col);burst(p.x,p.y+0.8,p.z,col,22,7);sfxAt('boom',p.x,p.z);if(m.id===me.id)shake=Math.max(shake,0.3);}
   else if(m.k==='heal'){for(let i=0;i<14;i++)emit(p.x+(Math.random()-0.5)*1.2,p.y+0.2,p.z+(Math.random()-0.5)*1.2,0,1.5+Math.random()*2,0,1,0.45,i%2?'#7dffae':'#ffffff',0,0.9,0.2);floatText(p.x,p.y+2.2,p.z,'+'+(m.v||''),'#6dff96');sfxAt('heal',p.x,p.z);}
   else if(m.k==='shield'){if(m.id===me.id)myShieldT=m.dur;else{const o=others.get(m.id);if(o){o.shieldT=m.dur;drawLabel(o);}}burst(p.x,p.y+1,p.z,col,10,3);sfxAt('shield',p.x,p.z);}
-  else if(m.k==='ride'){if(m.id===me.id){rideT=m.dur;ridePw=m.pw;setGuard(false);toast('Naik elang! Lompat = naik, Selam = turun \uD83E\uDD85',2.6);sfx.eagle();}else{const o=others.get(m.id);if(o)o.ride=true;sfxAt('eagle',p.x,p.z);}burst(p.x,p.y+1,p.z,col,14,4);}
+  else if(m.k==='ride'){if(m.id===me.id){rideT=m.dur;ridePw=m.pw;setGuard(false);toast('Naik elang! Lompat = naik, Selam = turun',3);sfx.eagle();}else{const o=others.get(m.id);if(o)o.ride=true;sfxAt('eagle',p.x,p.z);}burst(p.x,p.y+1,p.z,col,14,4);}
   else if(m.k==='rideend'){if(m.id===me.id){rideT=0;}else{const o=others.get(m.id);if(o)o.ride=false;}}
   else if(m.k==='snipe'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,'#ffffff',0.07);burst(p.x+m.fx,p.y+1,p.z+m.fz,'#fff6a0',6,3);sfxAt('snipe',p.x,p.z);}
   else if(m.k==='beam'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,col);burst(p.x+m.fx,p.y+1,p.z+m.fz,col,8,4);sfxAt('beam',p.x,p.z);}
+  else if(m.k==='face'){ringFx(m.tx,terrainH(m.tx,m.tz)+0.2,m.tz,2.2,col);burst(m.tx,terrainH(m.tx,m.tz)+1.2,m.tz,col,10,3);sfxAt('click',p.x,p.z);}
+  else if(m.k==='hjump'){if(m.id===me.id){vy=m.pw;grounded=false;jumping=false;sq.y=1.35;hjT=1.4;shake=Math.max(shake,0.15);}
+    ringFx(p.x,p.y+0.15,p.z,5,col);burst(p.x,p.y+0.3,p.z,col,14,5);
+    for(let i=0;i<16;i++){const a=Math.random()*6.28,r=Math.random()*1.2;emit(p.x+Math.cos(a)*r,p.y+0.2,p.z+Math.sin(a)*r,0,5+Math.random()*5,0,0.7,0.5,col,0,0.8,0.6);}
+    sfxAt('hjump',p.x,p.z);}
+  else if(m.k==='blink'){
+    const g0=terrainH(m.x0,m.z0),g1=terrainH(m.x1,m.z1);
+    ringFx(m.x0,g0+0.2,m.z0,3,col);ringFx(m.x1,g1+0.2,m.z1,4.5,col);
+    burst(m.x0,g0+1,m.z0,col,16,5);burst(m.x1,g1+1,m.z1,col,20,6);
+    for(let i=0;i<=18;i++){const t=i/18;emit(m.x0+(m.x1-m.x0)*t,g0+(g1-g0)*t+1,m.z0+(m.z1-m.z0)*t,0,0.6,0,0.35+0.5*t,1.1,col,0,0.8,0.8);}   /* bayangan di sepanjang lintasan */
+    sfxAt('blink',m.x0,m.z0);sfxAt('blink',m.x1,m.z1);}
   else if(m.k==='leap'){if(m.id===me.id){vy=15.5;grounded=false;jumping=false;kb.x+=m.fx*9;kb.z+=m.fz*9;sq.y=1.3;sfx.jump();}burst(p.x,p.y+0.3,p.z,col,12,4);}
   else if(m.k==='regen'){if(m.id===me.id)myRegenT=m.dur;else{const o=others.get(m.id);if(o)o.regenT=m.dur;}sfxAt('regen',p.x,p.z);}
   else if(m.k==='haste'){if(m.id===me.id){hasteT=m.dur;hastePw=m.pw;}else{const o=others.get(m.id);if(o)o.hasteT=m.dur;}burst(p.x,p.y+0.8,p.z,col,10,3);sfxAt('haste',p.x,p.z);}
@@ -4100,7 +4751,7 @@ function onHit(m){
 function onDie(m){
   feed('✖ '+m.name+(m.by&&m.by!==m.id?' dikalahkan '+m.byName:' kalah sendiri'));
   if(m.by===me.id&&m.id!==me.id)sfx.kill();
-  if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display='flex';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
+  if(m.id===me.id){dead=true;deadT=m.ms/1000;$('ko').style.display=(SET.bigText||roomMode!=='duel')?'flex':'none';$('koTxt').textContent=m.by&&m.by!==m.id?'Dikalahkan oleh '+m.byName:'Kamu kalah';sfx.ko();attackT=0;rideT=0;if(sleeping){sleeping=false;$('night').style.opacity=0;}setHp(0);}
   else{const o=others.get(m.id);if(o){o.ride=false;o.dead=true;o.hp=0;drawLabel(o);burst(o.x,o.y+1,o.z,'#ffffff',16,5);}}
 }
 function showDc(t,p){$('dcT').textContent=t;$('dcP').textContent=p;$('dc').style.display='flex';}
@@ -4233,7 +4884,7 @@ function drawMini(){
 }
 
 /* ---------- physics ---------- */
-const SPEED_WALK=6.5,SPEED_RUN=10,GRAV=30,JUMPV=15.56; /* lompat 2x lebih tinggi (v^2 x2) */
+const SPEED_WALK=TUNING.walk,SPEED_RUN=TUNING.run,GRAV=30,JUMPV=TUNING.jump; /* lompat 2x lebih tinggi (v^2 x2) */
 function canMove(nx,nz,step,swim){
   const g=groundAt(nx,nz,pos.y);const rise=g-pos.y;
   const maxRise=swim?1.6:(grounded?0.9*step+0.03:0.45);
@@ -4241,7 +4892,7 @@ function canMove(nx,nz,step,swim){
 }
 function resolve(){
   if(roomMode==='duel'&&duel&&(duel.st==='fight'||duel.st==='count')&&duelMine()){const dx=pos.x-ARENA.x,dz=pos.z-ARENA.z,d=Math.hypot(dx,dz),lim=ARENA.ringR-0.7;if(d>lim){pos.x=ARENA.x+dx/d*lim;pos.z=ARENA.z+dz/d*lim;}if(pos.y>ARENA.h-1.2){pos.y=ARENA.h-1.2;if(vy>0)vy=0;}}
-  for(const c of circles){const dx=pos.x-c.x,dz=pos.z-c.z,rr=c.r+PR,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||0.001;pos.x=c.x+dx/d*rr;pos.z=c.z+dz/d*rr;}}
+  for(const c of circles){if(c.top!==undefined&&pos.y>=c.top-0.35)continue;const dx=pos.x-c.x,dz=pos.z-c.z,rr=c.r+PR,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||0.001;pos.x=c.x+dx/d*rr;pos.z=c.z+dz/d*rr;}}
   for(const p of platforms){if(pos.y>=p.top-0.35)continue;const dx=pos.x-p.x,dz=pos.z-p.z,rr=p.r+PR,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||0.001;pos.x=p.x+dx/d*rr;pos.z=p.z+dz/d*rr;}}
   for(const o of obbs){
     if(!o.enabled)continue;
@@ -4253,6 +4904,16 @@ function resolve(){
       else{const px=o.hx-Math.abs(lx),pz=o.hz-Math.abs(lz);if(px<pz){nx=(lx<0?-1:1)*(o.hx+PR);nz=lz;}else{nz=(lz<0?-1:1)*(o.hz+PR);nx=lx;}}
       pos.x=o.cx+nx*o.c+nz*o.s;pos.z=o.cz-nx*o.s+nz*o.c;
     }
+  }
+}
+/* ---------- efek layar saat mode FPS (karakter tidak terlihat, jadi status ditampilkan di layar) ---------- */
+const fxCache={};
+function updFxScr(){
+  const on=started&&fps&&!dead;
+  const want={fxIce:on&&stunT>0,fxShield:on&&myShieldT>0,fxHaste:on&&hasteT>0,fxRegen:on&&myRegenT>0,fxGuard:on&&guarding&&gbT<=0,fxBreak:on&&gbT>0,fxRide:on&&rideT>0};
+  for(const id in want){
+    const v=want[id];if(fxCache[id]===v)continue;fxCache[id]=v;
+    const el=$(id);el.style.transitionDuration=v?'.15s':'.6s';el.style.opacity=v?1:0;
   }
 }
 function dust(n,spread,up,col){for(let i=0;i<n;i++){const a=Math.random()*6.28;emit(pos.x+Math.cos(a)*0.3,pos.y+0.08,pos.z+Math.sin(a)*0.3,Math.cos(a)*spread*(0.4+Math.random()),up*(0.5+Math.random()),Math.sin(a)*spread*(0.4+Math.random()),0.45+Math.random()*0.3,0.35+Math.random()*0.25,col||'#e8dcb8',-1.5,0.6,1.3);}}
@@ -4278,7 +4939,7 @@ function update(dt){
   if(live){
     if(keys.has('KeyA')||keys.has('ArrowLeft'))ix-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))ix+=1;
     if(keys.has('KeyW')||keys.has('ArrowUp'))iy+=1;if(keys.has('KeyS')||keys.has('ArrowDown'))iy-=1;
-    if(keys.has('KeyQ'))cam.yawT+=1.9*dt;if(keys.has('KeyR'))cam.yawT-=1.9*dt;
+    {const sn=SET.sens>0?SET.sens:1;if(keys.has('KeyQ'))cam.yawT+=1.9*dt*sn;if(keys.has('KeyR'))cam.yawT-=1.9*dt*sn;}
     run=keys.has('ShiftLeft')||keys.has('ShiftRight');
     if(keys.has('KeyV')||keys.has('ControlLeft')||keys.has('KeyZ'))diveHeld=true;
     if(joy.id!==null){ix+=joy.x;iy+=joy.y;}
@@ -4290,7 +4951,7 @@ function update(dt){
   const wd=waterDepthAt(pos.x,pos.z);
   let swim=wd>0.5&&pos.y<WATER_Y-0.1&&!dead&&!riding;
   const jumpHeld=live&&(keys.has('Space')||jumpBtnHeld);
-  if(swim&&jumpBuf>0&&pos.y>SURF_Y-0.45){vy=JUMPV*0.82;jumpBuf=0;jumping=true;swim=false;grounded=false;sfx.jump();}
+  if(swim&&jumpBuf>0&&pos.y>SURF_Y-0.45){vy=JUMPV*trainJump*0.82;jumpBuf=0;jumping=true;swim=false;grounded=false;sfx.jump();}
   swimNow=swim;
   if(swim&&!wasSwim){sfx.splash();for(let i=0;i<14;i++)emit(pos.x,WATER_Y+0.1,pos.z,(Math.random()-0.5)*4,2+Math.random()*3,(Math.random()-0.5)*4,0.7,0.45,'#cfeeff',8,0.9,0.3);}
   if(!swim&&wasSwim&&vy>0){}
@@ -4301,6 +4962,7 @@ function update(dt){
   if(swim)speed*=0.55;
   if(guarding)speed*=0.5;
   if(hasteT>0)speed*=hastePw;
+  speed*=trainSpd;
   if(riding)speed=(joy.id!==null&&mag>0.02?ridePw*Math.min(1,mag/0.9):ridePw);
   if(attackT>0)speed*=0.55;
   if(!live||sleeping)speed=0;
@@ -4324,7 +4986,7 @@ function update(dt){
   }else{
     if(grounded)coyote=0.1;else coyote-=dt;
     jumpBuf-=dt;
-    if(jumpBuf>0&&coyote>0&&live){vy=JUMPV;grounded=false;coyote=0;jumpBuf=0;jumping=true;sq.y=1.28;sq.v=0;sfx.jump();dust(6,2.2,0.6);}
+    if(jumpBuf>0&&coyote>0&&live){vy=JUMPV*trainJump;grounded=false;coyote=0;jumpBuf=0;jumping=true;sq.y=1.28;sq.v=0;sfx.jump();dust(6,2.2,0.6);}
     if(jumping&&!jumpHeld&&vy>0){vy*=0.5;jumping=false;}
     if(!grounded)vy-=GRAV*dt;
   }
@@ -4379,11 +5041,12 @@ function update(dt){
     h.wallMats.forEach(m=>{m.opacity=h.wallOp;m.transparent=h.wallOp<0.99;m.depthWrite=h.wallOp>0.99;});
   }
 
-  atkCool=Math.max(0,atkCool-dt);invuln=Math.max(0,invuln-dt);hurtFlash=Math.max(0,hurtFlash-dt);shake=Math.max(0,shake-dt*2);
+  atkCool=Math.max(0,atkCool-dt);comboT=Math.max(0,comboT-dt);invuln=Math.max(0,invuln-dt);hurtFlash=Math.max(0,hurtFlash-dt);shake=Math.max(0,shake-dt*2);
   if(myShieldT>0)myShieldT-=dt;
   if(rideT>0)rideT-=dt;
   if(stunT>0){stunT-=dt;if(Math.random()<dt*10)emit(pos.x+Math.cos(tAll*8)*0.5,pos.y+2.0,pos.z+Math.sin(tAll*8)*0.5,0,0,0,0.5,0.3,'#fff6a0',0,1,0);}
   if(gbT>0)gbT-=dt;
+  updFxScr();
   if(hasteT>0&&Math.random()<dt*9)emit(pos.x,pos.y+0.8,pos.z,-faceX*2,0.3,-faceZ*2,0.4,0.6,'#fff27a',0,0.8,0.5);
   if(hasteT>0)hasteT-=dt;
   if(myRegenT>0){myRegenT-=dt;if(Math.random()<dt*9)emit(pos.x+(Math.random()-0.5)*1.2,pos.y+0.3,pos.z+(Math.random()-0.5)*1.2,0,1.4,0,0.9,0.4,'#7dffae',0,0.9,0.2);}
@@ -4394,6 +5057,7 @@ function update(dt){
   if(dead){deadT-=dt;$('koTxt').dataset.t=Math.max(0,Math.ceil(deadT));}
   /* slot cooldown ui */
   for(let i=0;i<5;i++){
+    document.querySelector('.slot[data-i="'+i+'"]').classList.toggle('avail',!!slots[i]&&slotCd[i]<=0);
     if(slotCd[i]>0){slotCd[i]=Math.max(0,slotCd[i]-dt);const el=document.querySelector('.slot[data-i="'+i+'"] .cd');el.style.height=(slotCd[i]/slotCdMax[i]*100)+'%';if(slotCd[i]===0)document.querySelector('.slot[data-i="'+i+'"]').classList.add('ready');}
     else{const sl=document.querySelector('.slot[data-i="'+i+'"]');if(sl.classList.contains('ready'))setTimeout(()=>sl.classList.remove('ready'),500);}
   }
@@ -4454,7 +5118,7 @@ function update(dt){
     humT-=dt;if(humT<=0){humT=0.75;let nd=1e9;orbs.forEach(o=>{nd=Math.min(nd,Math.hypot(o.x-pos.x,o.y-pos.y,o.z-pos.z));});if(nd<SFX_RANGE){SV=distVol(nd,SFX_RANGE);sfx.orbHum();SV=1;}}
   }
   if(peers.size){peers.forEach((pe,id)=>{const o=others.get(id);let v=0;if(o&&!o.dead&&((o.x>1000)===inCave)){v=distVol(Math.hypot(o.x-pos.x,(o.y-pos.y)*0.5,o.z-pos.z),VOICE_RANGE);}pe.el.volume=clamp(v,0,1);});}
-  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updForts(dt);updCamps(dt);updAim();
+  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updWalls(dt);updForts(dt);updCamps(dt);updAim();
   if(capState){const kk=clamp(1-(capState.end-performance.now())/capState.ms,0,1);$('capFill').style.width=(kk*100)+'%';}
   if(chest){chest.vel+=(-70*(chest.ang-chest.target)-9*chest.vel)*dt;chest.ang+=chest.vel*dt;chest.pivot.rotation.x=-chest.ang;chest.glow.material.opacity=chestOpen?0.15:0.5+0.15*Math.sin(tAll*3);}
   if(inCave){updBats(dt,rgt);for(const c of crystals){c.mat.emissiveIntensity=0.75+0.35*Math.sin(tAll*1.6+c.ph);c.glow.material.opacity=0.5+0.2*Math.sin(tAll*1.6+c.ph);}}
@@ -4492,7 +5156,7 @@ function update(dt){
   {const sn=$('btnSnipe');sn.classList.toggle('on',ammo>0&&started);sn.classList.toggle('broken',snipeCd>0);const sl='Sniper '+ammo;if(sn.dataset.l!==sl){sn.dataset.l=sl;sn.querySelector('small').textContent=sl;}}
   $('btnDive').classList.toggle('on',(swim||riding)&&started);
   {const gl=gbT>0?'Pecah':(guardPips<9?guardPips+'/9':'Tahan');if(gl!==guardLbl){guardLbl=gl;$('btnGuard').querySelector('small').textContent=gl;}$('btnGuard').classList.toggle('broken',gbT>0);}
-  if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').classList.remove('show');}
+  if(toastT>0&&performance.now()>=toastT){toastT=0;$('toast').classList.remove('show');}
   if(dead)$('ko').querySelector('h2').textContent='KO!  '+Math.max(0,Math.ceil(deadT));
 
   for(const c of clouds){c.position.x+=dt*1.2;if(c.position.x>190)c.position.x=-190;}
@@ -4535,7 +5199,7 @@ let last=performance.now();
 
 
 /* ---------- ARENA DUEL 1 vs 1 ---------- */
-let roomMode='world',arenaBuilt=false,duel=null,duelAt=0,duelPrevSt='';
+let duelSize=1,roomMode='world',arenaBuilt=false,duel=null,duelAt=0,duelPrevSt='';
 function buildArena(){
   if(arenaBuilt)return;arenaBuilt=true;
   const g=new THREE.Group();g.position.set(ARENA.x,0,ARENA.z);scene.add(g);
@@ -4582,8 +5246,8 @@ function buildArena(){
   /* papan nama */
   const lc=document.createElement('canvas');lc.width=512;lc.height=128;const lx=lc.getContext('2d');
   lx.fillStyle='rgba(8,14,34,.85)';lx.fillRect(0,0,512,128);lx.strokeStyle='#6cd4ff';lx.lineWidth=6;lx.strokeRect(6,6,500,116);
-  lx.fillStyle='#ffffff';lx.font='800 54px Poppins,sans-serif';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('ARENA 1 vs 1',256,50);
-  lx.fillStyle='#ffd84d';lx.font='600 26px Poppins,sans-serif';lx.fillText('Menang lanjut, kalah antri',256,96);
+  lx.fillStyle='#ffffff';lx.font='800 54px Poppins,sans-serif';lx.textAlign='center';lx.textBaseline='middle';lx.fillText('ARENA '+duelSize+' vs '+duelSize,256,50);
+  lx.fillStyle='#ffd84d';lx.font='600 26px Poppins,sans-serif';lx.fillText(duelSize>1?'Tim menang lanjut, kalah antri':'Menang lanjut, kalah antri',256,96);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(6,1.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc),side:THREE.DoubleSide}));sign.position.set(0,5.2,-(R+3.2));g.add(sign);
   const sp1=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,6),wood),sp2=sp1.clone();sp1.position.set(-2.8,2.5,-(R+3.2));sp2.position.set(2.8,2.5,-(R+3.2));g.add(sp1,sp2);
 }
@@ -4596,12 +5260,15 @@ function updArena(dt){
     if(duel&&duel.st==='count')tgt=0.4;
     else if(duel&&duel.st==='fight'&&sinceFight<1.6)tgt=0.4*Math.max(0,1-sinceFight/1.6);
     wallPulse=Math.max(0,wallPulse-dt*2.2);
-    const goal=Math.max(tgt,wallPulse*0.5);
+    const goal=SET.arenaWall?Math.max(tgt,wallPulse*0.5):0;
     wallA+=(goal-wallA)*Math.min(1,dt*(goal>wallA?8:3));
     arenaWallMat.opacity=wallA;arenaWallParts.forEach(m=>m.visible=wallA>0.012);
   }
   if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
-function duelMine(){if(!duel)return 0;if(duel.a&&duel.a.id===me.id)return 1;if(duel.b&&duel.b.id===me.id)return 2;return 0;}
+/* teman satu tim (arena tim): bar HP hijau */
+function isMate(id){if(!duel||!id||id===me.id)return false;const mt=duelMine();if(!mt)return false;const l=mt===1?duel.ta:duel.tb;return !!(l&&l.some(x=>x.id===id));}
+function refreshMates(){others.forEach(o=>{const f=isMate(o.id);if(o.friend!==f){o.friend=f;drawLabel(o);}});mobs.forEach(m=>{const f=m.o===me.id||isMate(m.o);if(m.friend!==f){m.friend=f;drawMobLabel(m);}});}
+function duelMine(){if(!duel)return 0;const f=l=>(l||[]).some(x=>x.id===me.id&&!x.o);if(f(duel.ta))return 1;if(f(duel.tb))return 2;return 0;}
 function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
 let duelWarnT=0;
 function duelBlock(){
@@ -4612,7 +5279,8 @@ function duelBlock(){
 function renderDuelBox(){
   const el=$('duelBox');if(!duel||roomMode!=='duel'){el.innerHTML='';return;}
   const nm=p=>p?esc(p.name)+(p.w>0?' <span class="w">'+p.w+'x menang</span>':''):'?';
-  let h='<div class="vs"><span>'+nm(duel.a)+'</span><i>VS</i><span>'+nm(duel.b)+'</span></div>';
+  const side=l=>(l&&l.length?l.map(x=>nm(x)+(x.o?' ✖':'')).join(' &amp; '):'?');
+  let h='<div class="vs"><span>'+side(duel.ta)+'</span><i>VS</i><span>'+side(duel.tb)+'</span></div>';
   const mine=duelMine();let q='';
   if(mine)q='<span class="me">Kamu bertarung!</span>';
   else{const i=duel.q.findIndex(x=>x.id===me.id);q=i>=0?'Antrianmu: <b>#'+(i+1)+'</b>':'';}
@@ -4623,16 +5291,59 @@ function renderDuelBox(){
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function onDuel(m){
-  duel=m;duelAt=performance.now();
+  duel=m;duelAt=performance.now();refreshMates();
   const prev=duelPrevSt;duelPrevSt=m.st;
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
-  if(m.st==='fight'&&prev!=='fight')fightAt=performance.now();
-  if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.win&&me.name===m.last.win)sfx.fanfare&&sfx.fanfare();}
+  if(m.st==='fight'&&prev!=='fight'){fightAt=performance.now();if(duelMine())netTrackStart();else netTrk=null;}
+  if(m.st!=='fight'&&prev==='fight')netTrackFinish();
+  if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
+/* ---------- catatan jaringan saat bertarung di ring ---------- */
+const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
+let netTrk=null,netMsgT=0,netRepTimer=0;
+function netTrackStart(){netTrk={t0:performance.now(),pings:[],stalls:[],hid:0};netMsgT=performance.now();}
+function netTrackMsg(){
+  const n=performance.now();
+  if(netTrk){
+    const gap=n-netMsgT;
+    if(netMsgT&&gap>NET_STALL_MS&&document.visibilityState==='visible')netTrk.stalls.push(gap);
+  }
+  netMsgT=n;
+}
+function netTrackPing(r){if(netTrk)netTrk.pings.push(r);}
+function netTrackFinish(){
+  const k=netTrk;netTrk=null;if(!k)return;
+  const dur=(performance.now()-k.t0)/1000,pg=k.pings;
+  const avg=pg.length?pg.reduce((a,b)=>a+b,0)/pg.length:-1,mn=pg.length?Math.min.apply(null,pg):-1,mx=pg.length?Math.max.apply(null,pg):-1;
+  const sc=k.stalls.length,longest=sc?Math.max.apply(null,k.stalls)/1000:0,total=k.stalls.reduce((a,b)=>a+b,0)/1000;
+  let q=0;   /* 0 baik, 1 cukup, 2 buruk */
+  if(avg>=120||sc>=1||mx>=300)q=1;
+  if(avg>=220||sc>=2||longest>=1.5||mx>=600)q=2;
+  showNetRep(q,{dur,avg,mn,mx,sc,longest,total});
+}
+function showNetRep(q,d){
+  const el=$('netRep');if(!el)return;
+  const names=['BAIK','CUKUP','BURUK'],cols=['#4de27a','#ffd84d','#ff6a6a'];
+  const tips=['Koneksimu lancar selama bertarung.','Ada sedikit gangguan. Serangan bisa terasa terlambat sesekali.','Jaringanmu buruk. Serangan dan gerakan bisa tertunda atau meleset. Coba pindah ke sinyal lebih baik.'];
+  el.style.setProperty('--nc',cols[q]);
+  $('netQ').textContent=names[q];
+  const f=v=>v<0?'-':Math.round(v)+' ms';
+  $('netL').innerHTML=
+    'Lama bertarung: <b>'+Math.round(d.dur)+' dtk</b><br>'+
+    'Ping rata-rata: <b>'+f(d.avg)+'</b> (terendah '+f(d.mn)+', tertinggi '+f(d.mx)+')<br>'+
+    'Nyandet: <b>'+(d.sc?d.sc+' kali, terlama '+d.longest.toFixed(1)+' dtk':'tidak ada')+'</b><br>'+
+    '<span style="color:#9fb4dd">'+tips[q]+'</span>';
+  /* ulang animasi bar 5 detik */
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+  clearTimeout(netRepTimer);netRepTimer=setTimeout(hideNetRep,5000);
+}
+function hideNetRep(){clearTimeout(netRepTimer);netRepTimer=0;const el=$('netRep');if(el)el.classList.remove('show');}
+$('netRep').addEventListener('click',hideNetRep);
+$('netRep').addEventListener('pointerdown',e=>e.stopPropagation());
 let duelBigT=0;
-function duelBig(t,sub,ms){const el=$('duelBig');el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
+function duelBig(t,sub,ms){const el=$('duelBig');if(!SET.bigText)return;el.innerHTML='<b style="'+(t.length>8?'font-size:min(11vw,64px)':'')+'">'+esc(t)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'');el.classList.add('show');duelBigT=performance.now()+ms;}
 function updDuel(){
   if(roomMode!=='duel')return;
   const now=performance.now();
@@ -4640,20 +5351,46 @@ function updDuel(){
   if(duel&&duel.st==='count'){
     const rem=Math.max(0,duel.ms-(now-duelAt)),n=Math.ceil(rem/1000);
     if(n>0&&n!==duelCntN){duelCntN=n;sfx.click&&sfx.click();}
-    $('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;
+    if(SET.bigText){$('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;}else $('duelBig').classList.remove('show');
   }else duelCntN=0;
 }
 let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
-function applySet(){document.body.classList.toggle('nonet',!SET.net);}
+const SET=Object.assign({autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
-function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
+function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}
 function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
 let setOpen=false;
-document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
+/* popup buku tips & trik */
+let dpsLog=[],dpsTotal=0;
+function dpsAdd(d){dpsLog.push([performance.now(),d]);dpsTotal+=d;}
+setInterval(()=>{if(roomMode!=='train')return;const now=performance.now();dpsLog=dpsLog.filter(x=>now-x[0]<5000);let sum=0;dpsLog.forEach(x=>sum+=x[1]);const span=dpsLog.length?Math.max(1,Math.min(5,(now-dpsLog[0][0])/1000)):5;$('dpsV').textContent=Math.round(sum/span);$('dpsT').textContent=dpsTotal;},300);
+$('dpsR').addEventListener('click',()=>{dpsLog=[];dpsTotal=0;});$('dpsR').addEventListener('pointerdown',e=>e.stopPropagation());
+let tipOpen=false;
+/* tombol kiri: collapse / expand (diingat di browser) */
+function setLcol(c){$('lcol').classList.toggle('collapsed',c);$('lcolTog').textContent=c?'▼':'▲';try{localStorage.setItem('dw_lcol',c?'1':'0');}catch(e){}}
+$('lcolTog').addEventListener('click',()=>setLcol(!$('lcol').classList.contains('collapsed')));$('lcolTog').addEventListener('pointerdown',e=>e.stopPropagation());
+try{if(localStorage.getItem('dw_lcol')==='1')setLcol(true);}catch(e){}
+function openTips(){if(!started||modalOpen||chatOpen||setOpen||tipOpen)return;tipOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);$('tipBox').classList.add('show');try{localStorage.setItem('dw_tips_seen','1');}catch(e){}}
+function closeTips(){if(!tipOpen)return;tipOpen=false;bookOpen=false;$('tipBox').classList.remove('show');}
+$('tipBtn').addEventListener('click',openTips);$('tipBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('tipX').addEventListener('click',closeTips);$('tipOk').addEventListener('click',closeTips);$('tipBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('tipBox'))closeTips();});
+/* tampil otomatis satu kali di awal: tunggu intro & bantuan arena selesai */
+(function(){let seen=false;try{seen=localStorage.getItem('dw_tips_seen')==='1';}catch(e){}if(seen)return;
+  const iv=setInterval(()=>{if(!started)return;if(document.body.classList.contains('cine')||$('duelHelp').classList.contains('show')||modalOpen||chatOpen||setOpen)return;clearInterval(iv);setTimeout(openTips,600);},1500);})();
+document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();if(i.dataset.set==='hitDbg')netSend({t:'pref',dbg:SET.hitDbg?1:0});}));
+$('sensIn').addEventListener('input',()=>{SET.sens=parseFloat($('sensIn').value)||1;$('sensVal').textContent=SET.sens.toFixed(1)+'x';saveSet();});
+{
+  const sync=()=>{const sp=parseFloat($('trSpd').value),jm=parseFloat($('trJmp').value),cd=parseFloat($('trCd').value),hp=parseInt($('trHp').value,10);
+    trainSpd=sp;trainJump=jm;trainCd=cd;$('tvSpd').textContent=sp.toFixed(1)+'x';$('tvJmp').textContent=jm.toFixed(1)+'x';$('tvCd').textContent=cd.toFixed(1)+'x';$('tvHp').textContent=hp+'x';
+    return {cd,hp,fight:$('trFight').checked};};
+  $('trFight').addEventListener('change',()=>{const v=sync();if(roomMode==='train')netSend({t:'tune',cd:v.cd,hp:v.hp,fight:v.fight});});$('trFight').addEventListener('pointerdown',e=>e.stopPropagation());
+  ['trSpd','trJmp','trCd','trHp'].forEach(id=>{$(id).addEventListener('input',()=>{const v=sync();if(roomMode==='train')netSend({t:'tune',cd:v.cd,hp:v.hp,fight:v.fight});});$(id).addEventListener('pointerdown',e=>e.stopPropagation());});
+  $('trainBox').addEventListener('pointerdown',e=>e.stopPropagation());
+}
 $('setBtn').addEventListener('click',openSet);$('setBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('setX').addEventListener('click',closeSet);$('setBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('setBox'))closeSet();});
 applySet();
@@ -4792,6 +5529,7 @@ function drawNet(){
   el.title=q>=3?'Jaringan bagus':q===2?'Jaringan lumayan':q===1?'Jaringan jelek':'Jaringan sangat jelek / terputus';
 }
 setInterval(()=>{if(!joined)return;netPingT=performance.now();netSend({t:'ping',ts:netPingT});drawNet();},2000);
+setInterval(()=>{if(joined&&netTrk)netSend({t:'ping',ts:performance.now()});},700);
 drawNet();
 
 /* ---------- efek kena (0.5 dtk): gaya 'flash' (siluet+cincin) atau 'glass' (silinder kaca) atau 'lines' ---------- */
@@ -4829,7 +5567,7 @@ function frame(now){
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
-window.__dw={mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
+window.__dw={lionCv,mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
 })();
 </script>
