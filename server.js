@@ -124,8 +124,8 @@ function terrainH(x, z) {
   if (da < fa + 12) { const t = da <= fa ? 0 : (da - fa) / 12; ma = t * t * (3 - 2 * t); }
   return hills * m + e * e * (3 - 2 * e) * 38 * ma - ld;
 }
-const BOLT_SLOW = 3;   /* bola (bolt & orb) 3x lebih lambat; jarak jangkau tetap */
-const BOLT_GRAVITY = 2.6 / (BOLT_SLOW * BOLT_SLOW);
+const BALL_SPEED = 5;   /* semua bola (bolt & orb) melaju 5; jarak jangkau tetap (life disesuaikan) */
+const BOLT_GRAVITY = 0.08;
 
 /* ====================================================================
  *  PENYIMPANAN
@@ -611,7 +611,7 @@ function doCast(room, p, slot, ax, ay, az) {
         const ang = (i - (n - 1) / 2) * (tech.spread || 0), cs = Math.cos(ang), sn = Math.sin(ang);
         const dx = bx * cs - bz * sn, dz = bx * sn + bz * cs;
         const size = tech.size || 1.6, boom = tech.boom == null ? 3 : tech.boom;
-        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: tech.speed / BOLT_SLOW, life: tech.life * BOLT_SLOW, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
+        const pr = { id: projSeq++, o: p.id, x: p.x + dx * 1.2, y: p.y + 1.55 + by * 1.2, z: p.z + dz * 1.2, dx, dy: by + 0.06, dz, sp: BALL_SPEED, life: tech.life * tech.speed / BALL_SPEED, dmg: tech.damage, stun: tech.stun || 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: BOLT_GRAVITY };
         room.projs.push(pr);
         broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: r2(dx), dy: r2(pr.dy), dz: r2(dz), sp: pr.sp, life: pr.life, c: pr.c, sz: size });
       }
@@ -619,7 +619,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'orb': {
       const r = tech.radius || 5.5;
-      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: (tech.speed || 11) / BOLT_SLOW, life: (tech.life || 4) * BOLT_SLOW, r, dmg: tech.damage, c: tech.color, hit: new Map() };
+      const orb = { id: orbSeq++, o: p.id, x: p.x + bx * (r + 1), y: p.y + 1.2 + by * (r + 1), z: p.z + bz * (r + 1), dx: bx, dy: by, dz: bz, sp: BALL_SPEED, life: (tech.life || 4) * (tech.speed || 11) / BALL_SPEED, r, dmg: tech.damage, c: tech.color, hit: new Map() };
       room.orbs.push(orb);
       broadcast(room, { t: 'orb', id: orb.id, o: p.id, x: r2(orb.x), y: r2(orb.y), z: r2(orb.z), dx: r2(bx), dy: r2(by), dz: r2(bz), sp: orb.sp, life: orb.life, r, c: orb.c });
       break;
@@ -1247,7 +1247,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
     if (bot.guarding) sp *= 0.5;
     else {
       /* 3. serangan */
-      const cast = (code, d2) => { const k = ({ '637': 24, '8472': 38 }[code] || 24) / BOLT_SLOW; const a = botAim(bot, A, ai, k); botCast(room, bot, code, a.ax, a.ay, a.az); };
+      const cast = (code, d2) => { const a = botAim(bot, A, ai, BALL_SPEED); botCast(room, bot, code, a.ax, a.ay, a.az); };
       if (bot.hp < MAXHP * 0.42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
       else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
       else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
@@ -4203,7 +4203,7 @@ function updOthers(dt,rgt,fwd){
   }
 }
 /* projectiles */
-let boomFlash=null;const BOLT_G=2.6/9;   /* sama dengan server: bola 3x lebih lambat */
+let boomFlash=null;const BOLT_G=0.08;   /* sama dengan server */
 const boltLight=new THREE.PointLight(0xffffff,0,18,2);scene.add(boltLight);
 const poolGeo=new THREE.CircleGeometry(1,28).rotateX(-Math.PI/2);
 function waveGeo(){
