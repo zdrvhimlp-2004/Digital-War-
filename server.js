@@ -627,6 +627,31 @@ function wallAt(room, ownerId, x, y, z) {
   }
   return null;
 }
+/* bola ketemu bola (beda pemilik, bukan satu tim): dua-duanya hancur */
+function ballFoes(room, a, b) { return a !== b && !(!ffOn(room) && room.duel && sameTeam(room, a, b)); }
+function isBall(pr) { return pr.size !== undefined && !pr.wv; }
+function ballBurst(room, x, y, z, c, id) { broadcast(room, { t: 'px', id, x: r2(x), y: r2(y), z: r2(z), boom: 0, c, fizz: 1, bb: 1 }); }
+/* tembok menghalangi badan (pemain, prajurit, penyamun, singa): apakah langkah (x0,z0)->(x1,z1) pada ketinggian y menembus tembok? Yang sudah berada di dalam tembok boleh keluar. */
+function wallCrosses(room, x0, z0, x1, z1, y) {
+  for (const w of room.walls) {
+    if (y < w.y - 2.5 || y >= w.y + WALL_H - 0.35) continue;   /* terlalu rendah, atau melompat di atas tembok */
+    const hl = w.len / 2 + 0.3;
+    const a0 = (x0 - w.x) * w.tx + (z0 - w.z) * w.tz, d0 = (x0 - w.x) * w.nx + (z0 - w.z) * w.nz;
+    const a1 = (x1 - w.x) * w.tx + (z1 - w.z) * w.tz, d1 = (x1 - w.x) * w.nx + (z1 - w.z) * w.nz;
+    const in0 = Math.abs(a0) <= hl && Math.abs(d0) <= WALL_THICK, in1 = Math.abs(a1) <= hl && Math.abs(d1) <= WALL_THICK;
+    if (in1 && !in0) return w;
+    if (d0 * d1 < 0) { const f = d0 / (d0 - d1), ac = a0 + (a1 - a0) * f; if (Math.abs(ac) <= hl) return w; }
+  }
+  return null;
+}
+/* gerakkan unit server (darat) dengan tembok sebagai penghalang, meluncur di sepanjang tembok bila bisa */
+function wallMove(room, o, nx, nz) {
+  if (!room.walls.length) { o.x = nx; o.z = nz; return; }
+  const y = terrainH(o.x, o.z);
+  if (!wallCrosses(room, o.x, o.z, nx, nz, y)) { o.x = nx; o.z = nz; }
+  else if (!wallCrosses(room, o.x, o.z, nx, o.z, y)) o.x = nx;
+  else if (!wallCrosses(room, o.x, o.z, o.x, nz, y)) o.z = nz;
+}
 /* periksa sepanjang lintasan (bukan hanya titik akhir) supaya bola cepat tidak menembus tembok */
 function wallCross(room, ownerId, x0, y0, z0, x1, y1, z1) {
   if (!room.walls.length) return null;
@@ -900,7 +925,7 @@ function stepBandits(room, dt, t) {
       let nx = s.x + ddx / dd * step, nz = s.z + ddz / dd * step;
       const fd = Math.hypot(nx - c.x, nz - c.z);
       if (fd > BANDIT_LEASH) { nx = c.x + (nx - c.x) / fd * BANDIT_LEASH; nz = c.z + (nz - c.z) / fd * BANDIT_LEASH; }
-      s.x = nx; s.z = nz;
+      wallMove(room, s, nx, nz);
       if (!best) { s.fx = ddx / dd; s.fz = ddz / dd; }
     }
   }
@@ -1002,7 +1027,7 @@ function stepForts(room, dt, t) {
       const step = Math.min(dd, speed * dt);
       let nx = s.x + ddx / dd * step, nz = s.z + ddz / dd * step;
       if (!escort) { const fd = Math.hypot(nx - f.x, nz - f.z); if (fd > FORT_LEASH) { nx = f.x + (nx - f.x) / fd * FORT_LEASH; nz = f.z + (nz - f.z) / fd * FORT_LEASH; } }
-      s.x = nx; s.z = nz;
+      wallMove(room, s, nx, nz);
       if (!best) { s.fx = ddx / dd; s.fz = ddz / dd; }
     }
   }
@@ -1043,6 +1068,19 @@ function stepRoom(room, dt, t) {
         room.projs.splice(i, 1);
         continue;
       }
+    }
+    if (isBall(pr)) {
+      let clash = false;
+      for (let j = room.projs.length - 1; j > i; j--) {
+        const q = room.projs[j];
+        if (!isBall(q) || !ballFoes(room, pr.o, q.o)) continue;
+        const rr = ((pr.hr || 1.35) + (q.hr || 1.35)) * 0.6;
+        if ((pr.x - q.x) ** 2 + ((pr.y || 0) - (q.y || 0)) ** 2 + (pr.z - q.z) ** 2 > rr * rr) continue;
+        ballBurst(room, q.x, q.y, q.z, q.c, q.id); room.projs.splice(j, 1);
+        ballBurst(room, pr.x, pr.y, pr.z, pr.c, pr.id); room.projs.splice(i, 1);
+        clash = true; break;
+      }
+      if (clash) continue;
     }
     let hit = null;
     const hr = pr.hr || 1.35;
@@ -1104,6 +1142,23 @@ function stepRoom(room, dt, t) {
     o.x += o.dx * o.sp * dt; o.y += o.dy * o.sp * dt; o.z += o.dz * o.sp * dt; o.life -= dt;
     { const w = wallCross(room, o.o, ox0, oy0, oz0, o.x, o.y, o.z); if (w) { wallDamage(room, w, o.dmg || 10); room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; } }   /* bola biru juga tertahan tembok */
     if (!owner || o.life <= 0 || (room.duel && (Math.hypot(o.x - ARENA.x, o.z - ARENA.z) > ARENA.ringR || o.y > ARENA.height))) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
+    {   /* Bola Biru bentrok dengan bola lain (bola biasa atau Bola Biru lawan): keduanya hancur */
+      let clash = false;
+      for (let j = room.projs.length - 1; j >= 0 && !clash; j--) {
+        const q = room.projs[j];
+        if (!isBall(q) || !ballFoes(room, o.o, q.o)) continue;
+        if ((q.x - o.x) ** 2 + ((q.y || 0) - o.y) ** 2 + (q.z - o.z) ** 2 > (o.r + 0.5) * (o.r + 0.5)) continue;
+        ballBurst(room, q.x, q.y, q.z, q.c, q.id); room.projs.splice(j, 1); clash = true;
+      }
+      for (let j = room.orbs.length - 1; j > i && !clash; j--) {
+        const q = room.orbs[j];
+        if (!ballFoes(room, o.o, q.o)) continue;
+        const rr = (o.r + q.r) * 0.7;
+        if ((q.x - o.x) ** 2 + (q.y - o.y) ** 2 + (q.z - o.z) ** 2 > rr * rr) continue;
+        room.orbs.splice(j, 1); broadcast(room, { t: 'orbx', id: q.id }); clash = true;
+      }
+      if (clash) { room.orbs.splice(i, 1); broadcast(room, { t: 'orbx', id: o.id }); continue; }
+    }
     for (const v of victims(room)) {
       if (friendly(o.o, v)) continue;
       const dx = v.x - o.x, dy = v.y + 0.9 - o.y, dz = v.z - o.z;
@@ -1162,7 +1217,7 @@ function stepRoom(room, dt, t) {
   }
   if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
-  for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
+  for (const s of room.sols) { if (s.kx || s.kz) { wallMove(room, s, s.x + s.kx * dt, s.z + s.kz * dt); const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
   if (room.duel) duelTick(room, t, dt); else if (room.train) trainTick(room, dt, t); else stepBandits(room, dt, t);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
@@ -1435,7 +1490,7 @@ function lionStep(room, m, owner, dt, t) {
   else { const a = t / 1600 + m.id * 2.1, r = EAGLE_ORBIT + 1.5 * Math.sin(t / 2300 + m.id); tx = owner.x + Math.cos(a) * r; tz = owner.z + Math.sin(a) * r; if (Math.hypot(tx - m.x, tz - m.z) > 12) sp *= 1.6; }
   const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
   const stopAt = tg ? 1.7 : 1.0;
-  if (dist > stopAt) { const step = Math.min(dist - stopAt, sp * dt); m.x += dx / dist * step; m.z += dz / dist * step; }
+  if (dist > stopAt) { const step = Math.min(dist - stopAt, sp * dt); wallMove(room, m, m.x + dx / dist * step, m.z + dz / dist * step); }
   if (dist > 0.3) { m.fx = dx / dist; m.fz = dz / dist; }
   m.y = terrainH(m.x, m.z) + 1.2;
   if (tg && dist < 2.7 && Math.abs((tg.y || 0) - (m.y - 1.2)) < 2.6 && t >= m.atkAt) {
@@ -1609,6 +1664,7 @@ function onMessage(ws, text) {
       if (p.dead || now() < (p.tpUntil || 0)) break;
       const x = num(m.x, -200, 5200, null), y = num(m.y, -12, 80, null), z = num(m.z, -200, 200, null);
       if (x === null || y === null || z === null) break;
+      if (room.walls.length && wallCrosses(room, p.x, p.z, x, z, y)) { teleportTo(p, p.x, p.z, p.fx, p.fz); break; }   /* pemain tidak boleh menembus tembok (kecuali melompatinya) */
       p.x = x; p.y = y; p.z = z;
       p.fx = num(m.fx, -1, 1, p.fx); p.fz = num(m.fz, -1, 1, p.fz);
       p.m = clampN(m.m | 0, 0, 2); p.a = clampN(m.a | 0, 0, 2); p.sw = clampN(m.sw | 0, 0, 2);
@@ -4667,7 +4723,7 @@ function onMsg(m){
     case 'face':{faceX=m.fx;faceZ=m.fz;cam.yawT=Math.atan2(-m.fx,-m.fz);if(typeof m.fy==='number'){if(fps)fpsPitch=clamp(Math.asin(m.fy),-1.3,1.3);else cam.pitchT=clamp(0.55-m.fy/1.6,0.22,1.1);}break;}
     case 'prd':{const q=projs.find(p=>p.id===m.id);if(q){q.x=m.x;q.y=m.y;q.z=m.z;q.dx=m.dx;q.dy=m.dy;q.dz=m.dz;}break;}
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
-    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
+    case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.bb){floatText(m.x,m.y+0.8,m.z,'BENTROK!','#ffd24d');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#ffd24d',14,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
     case 'pong':{const r=performance.now()-m.ts;netTrackPing(r);netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
