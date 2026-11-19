@@ -113,7 +113,7 @@ const DEFAULT_TECHS = [
   { code: '2929', name: 'Kedip Teleport', kind: 'blink', emoji: '🌀', color: '#c79bff', range: 14, cd: 16 },
   { code: '6464', name: 'Bola Pengejar', kind: 'homing', emoji: '🧿', color: '#ff7ad9', damage: 30, cd: 10, count: 2, life: 7, size: 1.3, boom: 2.6, turn: 2.5 },
   { code: '8182', name: 'Loncat Super', kind: 'jump', emoji: '🚀', color: '#7dffb2', power: 60, cd: 10 },
-  { code: '4141', name: 'Kunci Lawan', kind: 'face', emoji: '🎯', color: '#ffe066', range: 60, cd: 1 },
+  { code: '4141', name: 'Kunci Lawan', kind: 'face', emoji: '🎯', color: '#ffe066', range: 60, cd: 0 },
   { code: '4343', name: 'Singa Rimba', kind: 'lion', emoji: '🦁', color: '#f0b45a', damage: 25, cd: 24, count: 1, dur: 15, speed: 7, hp: 90 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 6 }
 ];
@@ -637,7 +637,7 @@ function doCast(room, p, slot, ax, ay, az) {
   const t = now();
   if (t < p.stunUntil) return;
   {
-    const cdv = (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : tech.cd) * (room.tune ? room.tune.cd : 1);   /* dash: cooldown min 3 dtk */
+    const cdv = tech.kind === 'face' ? 0 : (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : tech.cd) * (room.tune ? room.tune.cd : 1);   /* Kunci Lawan: tanpa cooldown */   /* dash: cooldown min 3 dtk */
     if ((p.cdUntil[code] || 0) > t + 120) return;
     p.cdUntil[code] = t + cdv * 1000;
   }
@@ -3831,7 +3831,7 @@ function castSlot(i){
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
-  slotCd[i]=slotCdMax[i]=(s.kind==='dash'?Math.max(s.cd,TUNING.dashMinCd):s.cd)*trainCd;
+  slotCd[i]=slotCdMax[i]=s.kind==='face'?0:(s.kind==='dash'?Math.max(s.cd,TUNING.dashMinCd):s.cd)*trainCd;
   attackT=s.kind==='dash'?0:Math.max(attackT,0.32);
   netSend({t:'cast',slot:i,fx:a.x,fy:0,fz:a.z});
 }
