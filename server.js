@@ -487,7 +487,7 @@ function doMelee(room, p, fx, fz, ay) {
     const wdx = fx * hl, wdz = fz * hl;
     const wv = { id: projSeq++, o: p.id, x: p.x + wdx * 1.7, y: p.y + (ay === undefined ? 1.1 : 1.45) + ay2 * 1.7, z: p.z + wdz * 1.7, dx: wdx, dy: ay2, dz: wdz, sp: WAVE.speed, life: WAVE.life, dmg: WAVE.dmg, stun: 0, c: '#cfeeff', hr: WAVE.hr, boom: 0, size: 0, grav: 0, wv: 1, skip: hitIds };
     room.projs.push(wv);
-    broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1 });
+    broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1, o: p.id });
   }
   if (room.debug && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
   /* tebasan menghancurkan bola yang melintas di depan */
@@ -3885,7 +3885,9 @@ function waveGeo(){
   sh.moveTo(tipA[0],tipA[1]);sh.absarc(0,0,1.6,-1.15,1.15,false);sh.absarc(-1.4611,0,2.5611,0.6,-0.6,true);
   return new THREE.ShapeGeometry(sh,24).rotateX(-Math.PI/2);
 }
+const waveSide=new Map();   /* sisi miring tebasan terakhir tiap penyerang: kiri, kanan, kiri, ... */
 function addWave(m){
+  const side=!waveSide.get(m.o);waveSide.set(m.o,side);
   const g=new THREE.Group(),s=new THREE.Group();
   const col=new THREE.Color(m.c||'#cfeeff');
   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
@@ -3893,7 +3895,7 @@ function addWave(m){
   const hi=new THREE.Mesh(waveGeo(),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));hi.scale.set(0.42,1,0.68);hi.position.x=0.3;
   s.add(core,hi);g.add(s);g.rotation.order='YZX';
   const l=Math.hypot(m.dx,m.dz)||1,el=Math.asin(clamp(m.dy||0,-0.95,0.95));
-  g.rotation.y=Math.atan2(-m.dz/l,m.dx/l);g.rotation.z=el;s.rotation.x=0.5;
+  g.rotation.y=Math.atan2(-m.dz/l,m.dx/l);g.rotation.z=el;s.rotation.x=side?0.5:-0.5;   /* true = miring kiri, false = miring kanan */
   g.position.set(m.x,m.y,m.z);scene.add(g);
   projs.push({wave:true,pool:null,sm:false,big:false,sz:0.5,id:m.id,g,x:m.x,y:m.y,z:m.z,dx:m.dx,dy:m.dy||0,dz:m.dz,sp:m.sp,life:m.life,maxLife:m.life,c:m.c,tr:9,mats:[mat,hi.material]});
 }
