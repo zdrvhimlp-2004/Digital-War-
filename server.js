@@ -2369,7 +2369,7 @@ body.playing.cine :is(.hud,button.btn,button.btn.hud,#lcol.hud,#chatFeed.hud,#bo
 #uiShow{display:none;position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:30;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid rgba(160,210,255,.5);background:rgba(10,18,40,.82);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;cursor:pointer}
 #uiShow span{display:flex;width:18px;height:18px}#uiShow svg{width:18px;height:18px}
 body.playing.uihide.uiask #uiShow{display:flex}
-body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar){display:none!important}
+body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar,.hud,.pill:not(#toast),#mini,#hpBox,#oxyBox,#roomTag,#net,#clock,#board,#feed,#chatFeed,#duelBox,#capBox){display:none!important}
 #duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
 body.playing.duel #duelBox{display:block}
 #duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
