@@ -2020,6 +2020,8 @@ body.playing .hudf{display:flex}
 .mi{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:5px}
 .mi svg{width:100%;height:100%}
 .clki{width:14px;height:14px;vertical-align:-2px}
+span.clki{display:inline-block}
+span.clki svg{width:14px;height:14px;vertical-align:-2px}
 @media (orientation:portrait){
 body #slots{top:42%}
 }
