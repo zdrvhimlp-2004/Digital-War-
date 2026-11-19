@@ -634,7 +634,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * 0.55, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * 0.275, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
@@ -662,7 +662,7 @@ function doCast(room, p, slot, ax, ay, az) {
     }
     case 'ride': {
       p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
-      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * 0.55, c: tech.color });
+      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * 0.275, c: tech.color });
       break;
     }
     case 'dash': {
