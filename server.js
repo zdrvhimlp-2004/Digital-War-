@@ -26,7 +26,7 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 /* ====================================================================
  *  KONFIGURASI GAME
  * ==================================================================== */
-const MAXHP = 100;
+const MAXHP = 300;
 const TICK_MS = 33;             // simulasi server ~30 Hz
 const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
@@ -1178,7 +1178,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
     else {
       /* 3. serangan */
       const cast = (code, d2) => { const k = { '637': 24, '8472': 38 }[code] || 24; const a = botAim(bot, A, ai, k); botCast(room, bot, code, a.ax, a.ay, a.az); };
-      if (bot.hp < 42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
+      if (bot.hp < MAXHP * 0.42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
       else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
       else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
       else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
@@ -2542,7 +2542,7 @@ const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
 const damp=(k,dt)=>1-Math.exp(-k*dt);
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const ROOM=(location.pathname.split('/')[2]||'').toUpperCase();
-const MAXHP=100;
+const MAXHP=300;
 /* ---------- ikon SVG buatan sendiri ---------- */
 const ICO={
  book:'<path d="M2.5 5.5c3.2-1.6 6.3-1.4 9.5 1v13c-3.200-2.400-6.300-2.600-9.500-1z"/><path d="M21.500 5.500c-3.200-1.600-6.300-1.400-9.500 1v13c3.200-2.400 6.300-2.600 9.500-1z"/>',
@@ -4189,7 +4189,7 @@ function renderBoard(){
   $('roomTag').textContent=(roomInfo.name||'Room')+' '+rows.length+'/'+(roomInfo.max||'?');
 }
 let roomInfo={name:'',max:0};
-function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>35?'':'linear-gradient(#ff8080,#d63a3a)';}
+function setHp(v){me.hp=clamp(v,0,MAXHP);$('hpFill').style.width=(me.hp/MAXHP*100)+'%';$('hpFill').style.background=me.hp>MAXHP*0.35?'':'linear-gradient(#ff8080,#d63a3a)';}
 function applyDoor(i,open,silent){const d=doors[i];if(!d)return;if(d.open===open)return;d.open=open;d.target=open?1.65:0;if(!silent)sfxAt(open?'doorOpen':'doorClose',d.wx,d.wz);}
 function onMsg(m){
   switch(m.t){
