@@ -262,7 +262,7 @@ function techDesc(t) {
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'wall': return 'Tembok solid di depanmu, darah ' + t.hp + ', lebar ' + t.width + ', bertahan ' + t.dur + ' dtk, bisa retak dan hancur';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
-    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan';
+    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
     case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
@@ -376,7 +376,7 @@ function damageMob(room, m, dmg, attacker) {
 function hurt(room, v, dmg, attacker, kx, kz, opt) {
   kx *= KNOCK_MULT; kz *= KNOCK_MULT;
   if (attacker && attacker.ws && v !== attacker && !friendly(attacker.id, v)) attacker.focus = { v, until: now() + 7000 };   /* elang mengincar musuh yang kamu serang */
-  if (v.ws && attacker && attacker.ws && attacker !== v && !friendly(v.id, attacker)) v.focus = { v: attacker, until: now() + 7000 };   /* ...dan musuh yang menyerangmu */
+  if (v.ws && attacker && attacker.ws && attacker !== v && !friendly(v.id, attacker)) v.defFocus = { v: attacker, until: now() + 7000 };   /* cadangan: bila kamu tidak sedang menyerang siapa pun, elang membela dari yang menyerangmu */
   if (v.isMob) damageMob(room, v.m, dmg, attacker);
   else if (v.isSol) { if (kx || kz) { v.kx = (v.kx || 0) + kx * 0.6; v.kz = (v.kz || 0) + kz * 0.6; } damageSoldier(room, v, dmg, attacker); }
   else damagePlayer(room, v, dmg, attacker, kx, kz, opt);
@@ -1001,14 +1001,15 @@ function stepRoom(room, dt, t) {
     if (!owner || t > m.until) { room.mobs.splice(i, 1); broadcast(room, { t: 'mobx', id: m.id }); continue; }
     /* sasaran = musuh yang terakhir kamu serang atau yang terakhir menyerangmu (7 dtk); tanpa sasaran elang mengitari jauh dari kamu supaya tidak mengganggu */
     let tg = null, tp = null;
-    const fo = owner.focus;
-    if (fo && t < fo.until) {
+    /* utamakan musuh yang KAMU serang (bukan yang paling dekat dan bukan yang paling baru menyerangmu); yang menyerangmu hanya cadangan saat kamu tidak punya sasaran */
+    for (const fo of [owner.focus, owner.defFocus]) {
+      if (!fo || t >= fo.until) continue;
       const fv = fo.v;
-      let alive = false;
-      if (fv.isMob) { alive = room.mobs.includes(fv.m); tp = alive ? { x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z } : null; }
-      else if (fv.isSol) { alive = !fv.dead && room.sols.includes(fv); tp = alive ? { x: fv.x, y: fv.y || 0, z: fv.z } : null; }
-      else { alive = !fv.dead && room.players.get(fv.id) === fv && (!room.duel || duelFighting(room, fv)); tp = alive ? { x: fv.x, y: fv.y, z: fv.z } : null; }
-      if (alive && Math.hypot(tp.x - m.x, tp.z - m.z) < 90 && tp.x < 1000 === owner.x < 1000) tg = fv; else tp = null;
+      let alive = false, q = null;
+      if (fv.isMob) { alive = room.mobs.includes(fv.m); q = alive ? { x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z } : null; }
+      else if (fv.isSol) { alive = !fv.dead && room.sols.includes(fv); q = alive ? { x: fv.x, y: fv.y || 0, z: fv.z } : null; }
+      else { alive = !fv.dead && room.players.get(fv.id) === fv && (!room.duel || duelFighting(room, fv)); q = alive ? { x: fv.x, y: fv.y, z: fv.z } : null; }
+      if (alive && Math.hypot(q.x - m.x, q.z - m.z) < 90 && q.x < 1000 === owner.x < 1000) { tg = fv; tp = q; break; }
     }
     let tx, ty, tz;
     if (tg) { tx = tp.x; tz = tp.z; ty = tp.y + 2.6; }
@@ -2362,7 +2363,7 @@ body.cine #setBox{display:none!important}
 </div></div>
 <div id="duelBox"></div><div id="duelBig"></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
-<div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
+<div id="duelHelp"><div class="card"><h3>Cara main Arena 1 vs 1</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain bertarung di ring. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li><li><b>Tips &amp; trik.</b> Jangan gunakan Elang atau Singa di laga yang ada kawanmu di sekitar, karena mereka bisa ikut menyerang kawan. Elang mengejar musuh yang kamu serang, bukan yang paling dekat atau yang paling baru menyerangmu, jadi serang dulu lawan yang kamu mau elang kejar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
