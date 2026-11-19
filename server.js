@@ -2583,8 +2583,11 @@ body.playing #slots{display:flex}
 @keyframes rd{0%{filter:brightness(2)}100%{filter:none}}
 #book{position:fixed;inset:0;background:rgba(0,0,10,.68);display:none;align-items:center;justify-content:center;z-index:25;touch-action:manipulation}
 #book.show{display:flex}
-#bk{position:relative;width:min(96vw,780px);height:min(88vh,560px);background:linear-gradient(#6b4528,#46301a);border-radius:14px;padding:12px 12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.75),inset 0 0 0 2px #8a5e38}
-#bkPages{display:flex;height:100%;border-radius:4px;overflow:hidden;box-shadow:0 3px 0 #d3c08c,0 6px 0 #bda877,0 9px 0 #a8935f,0 14px 18px rgba(0,0,0,.55)}
+#bk{display:flex;flex-direction:column;gap:8px;position:relative;width:min(96vw,780px);height:min(88vh,560px);background:linear-gradient(#6b4528,#46301a);border-radius:14px;padding:12px 12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.75),inset 0 0 0 2px #8a5e38}
+#bkTabs{display:flex;gap:6px;overflow-x:auto;flex:none;padding:2px 36px 2px 2px;scrollbar-width:none}#bkTabs::-webkit-scrollbar{display:none}
+#bkTabs button{flex:none;border:2px solid #8a5e38;background:#5a3b21;color:#f3e2b8;border-radius:999px;padding:5px 13px;font:600 12.5px Poppins,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+#bkTabs button.on{background:#f3e2b8;color:#4a2c12;border-color:#f3e2b8}
+#bkPages{display:flex;flex:1;min-height:0;border-radius:4px;overflow:hidden;box-shadow:0 3px 0 #d3c08c,0 6px 0 #bda877,0 9px 0 #a8935f,0 14px 18px rgba(0,0,0,.55)}
 .pg{flex:1;min-width:0;padding:14px 16px 28px;color:#3a2a14;font-family:Georgia,"Times New Roman",serif;overflow:hidden;position:relative}
 .pg.left{background:linear-gradient(to right,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
 .pg.right{background:linear-gradient(to left,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
@@ -2895,6 +2898,7 @@ body.cine #setBox{display:none!important}
 
 <div id="book"><div id="bk">
   <button id="bkX" aria-label="Tutup" data-ico="close"></button>
+  <div id="bkTabs"></div>
   <div id="bkPages"><div class="pg left" id="pgL"></div><div class="spine"></div><div class="pg right" id="pgR"></div></div>
   <button class="bkb" id="bkPrev" data-ico="chevl"></button><button class="bkb" id="bkNext" data-ico="chevr"></button>
 </div></div>
@@ -4058,9 +4062,18 @@ function setGuard(on){
   guarding=on;$('btnGuard').classList.toggle('on',on);netSend({t:'guard',on});if(on)sfx.shield();
 }
 /* buku */
-function bookPer(){return innerHeight<500?3:(innerWidth<520?4:5);}
+const BOOK_CATS=[['all','Semua',null],['atk','Serangan',['bolt','orb','beam','homing']],['boom','Ledakan',['nova','slam','trap']],['sum','Pemanggil',['summon','lion','ride']],['def','Pertahanan',['heal','regen','shield','wall']],['move','Gerak',['haste','dash','jump','blink','face']]];
+let bookCat='all';
+function bookList(){const c=BOOK_CATS.find(x=>x[0]===bookCat);return !c||!c[2]?bookData:bookData.filter(t=>c[2].includes(t.kind));}
+function renderBookTabs(){
+  const bx=$('bkTabs');bx.innerHTML='';
+  BOOK_CATS.forEach(c=>{const n=c[2]?bookData.filter(t=>c[2].includes(t.kind)).length:bookData.length;if(c[2]&&!n)return;
+    const b=document.createElement('button');b.type='button';b.textContent=c[1]+' ('+n+')';if(c[0]===bookCat)b.className='on';
+    b.addEventListener('click',()=>{bookCat=c[0];bookPage=0;renderBook();sfx.plop();});bx.appendChild(b);});
+}
+function bookPer(){return innerHeight<400?2:(innerHeight<500?3:(innerWidth<520?4:5));}
 function renderBook(){
-  const per=bookPer(),spreads=Math.max(1,Math.ceil(bookData.length/(per*2)));
+  const per=bookPer(),lst=bookList(),spreads=Math.max(1,Math.ceil(lst.length/(per*2)));renderBookTabs();
   bookPage=clamp(bookPage,0,spreads-1);
   const fill=(el,items,no,title)=>{
     el.innerHTML='';const h=document.createElement('h3');h.innerHTML=title;el.appendChild(h);
@@ -4073,15 +4086,15 @@ function renderBook(){
     const n=document.createElement('div');n.className='pn';n.textContent=no;el.appendChild(n);
   };
   const base=bookPage*per*2;
-  fill($('pgL'),bookData.slice(base,base+per),bookPage*2+1,svg('book',null,'bki')+'Buku Teknik Digital');
-  fill($('pgR'),bookData.slice(base+per,base+per*2),bookPage*2+2,'Kode dan kekuatan');
+  fill($('pgL'),lst.slice(base,base+per),bookPage*2+1,svg('book',null,'bki')+'Buku Teknik Digital');
+  fill($('pgR'),lst.slice(base+per,base+per*2),bookPage*2+2,'Kode dan kekuatan');
   $('bkPrev').style.visibility=bookPage>0?'visible':'hidden';$('bkNext').style.visibility=bookPage<spreads-1?'visible':'hidden';
 }
 function openBook(){
   if(!started||bookOpen||modalOpen||!bookEnabled)return;
   fetch('/api/book').then(r=>r.json()).then(j=>{
     if(!j.enabled){toast('Buku tidak tersedia',2);return;}
-    bookData=j.techniques;bookPage=0;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;setGuard(false);
+    bookData=j.techniques;bookPage=0;bookCat='all';bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;setGuard(false);
     $('book').classList.add('show');renderBook();sfx.plop();
   }).catch(()=>toast('Gagal memuat buku',2));
 }
