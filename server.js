@@ -3799,7 +3799,7 @@ function addMob(m){
   const tex=eagleTex();
   const mesh=new THREE.Mesh(eagleGeo,new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide}));mesh.rotation.order='YXZ';scene.add(mesh);
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
-  const mine=m.o===me.id;const lab=makeLabel();const mo={friend:mine,name:mine?'Elangmu':'Elang',hp:m.hp||40,max:m.hp||40,lab};
+  const mine=m.o===me.id||isMate(m.o);const lab=makeLabel();const mo={friend:mine,name:mine?'Elangmu':'Elang',hp:m.hp||40,max:m.hp||40,lab};
   mobs.set(m.id,{lab,friend:mine,name:mo.name,max:mo.max,hp:m.hp||40,flash:0,id:m.id,o:m.o,mesh,tex,sh,x:m.x,y:m.y,z:m.z,tx:m.x,ty:m.y,tz:m.z,fx:1,fz:0,atkT:0});
   drawMobLabel(mobs.get(m.id));burst(m.x,m.y,m.z,m.c||'#ffd9a0',10,4);sfxAt('eagle',m.x,m.z);
 }
@@ -4917,6 +4917,9 @@ function updArena(dt){
     arenaWallMat.opacity=wallA;arenaWallParts.forEach(m=>m.visible=wallA>0.012);
   }
   if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
+/* teman satu tim (arena tim): bar HP hijau */
+function isMate(id){if(!duel||!id||id===me.id)return false;const mt=duelMine();if(!mt)return false;const l=mt===1?duel.ta:duel.tb;return !!(l&&l.some(x=>x.id===id));}
+function refreshMates(){others.forEach(o=>{const f=isMate(o.id);if(o.friend!==f){o.friend=f;drawLabel(o);}});mobs.forEach(m=>{const f=m.o===me.id||isMate(m.o);if(m.friend!==f){m.friend=f;drawMobLabel(m);}});}
 function duelMine(){if(!duel)return 0;const f=l=>(l||[]).some(x=>x.id===me.id&&!x.o);if(f(duel.ta))return 1;if(f(duel.tb))return 2;return 0;}
 function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
 let duelWarnT=0;
@@ -4940,7 +4943,7 @@ function renderDuelBox(){
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function onDuel(m){
-  duel=m;duelAt=performance.now();
+  duel=m;duelAt=performance.now();refreshMates();
   const prev=duelPrevSt;duelPrevSt=m.st;
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
