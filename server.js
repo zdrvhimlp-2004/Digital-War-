@@ -33,7 +33,7 @@ const TUNING = {
   jump: 19.5,                 // daya lompat biasa
   meleeDmg: 50, meleeRange: 3.3, meleeCd: 380,   // pedang (penutup kombo 1.6x)
   waveDmg: 25,                // tebasan angin
-  ballSpeed: 5,               // kecepatan semua bola (bolt & orb)
+  ballSpeed: 10,              // kecepatan semua bola (bolt & orb), 2x dari 5
   eagleSpeedMul: 0.275,       // pengali kecepatan elang (panggilan & tunggangan)
   dashMinCd: 3,               // cooldown minimum dash (dtk)
   sleepRegen: 18              // HP per detik saat tidur
@@ -141,7 +141,7 @@ function terrainH(x, z) {
   if (da < fa + 12) { const t = da <= fa ? 0 : (da - fa) / 12; ma = t * t * (3 - 2 * t); }
   return hills * m + e * e * (3 - 2 * e) * 38 * ma - ld;
 }
-const BALL_SPEED = TUNING.ballSpeed;   /* semua bola (bolt & orb) melaju 5; jarak jangkau tetap (life disesuaikan) */
+const BALL_SPEED = TUNING.ballSpeed;   /* semua bola (bolt & orb) melaju 10; jarak jangkau tetap (life disesuaikan) */
 const BOLT_GRAVITY = 0.08;
 
 /* ====================================================================

@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Kecepatan semua bola 2 kali lipat** (5 jadi 10, satu konstanta `ballSpeed` di `TUNING`): bola lempar, Bola Biru, dan bola pengejar. Jarak jangkau bola lempar dan Bola Biru tetap, jadi bola sampai dua kali lebih cepat; bola pengejar jangkauannya ikut dua kali lebih jauh.
 - **Tembok Kode solid**: tidak lagi transparan, dan semua bola (termasuk Bola Biru dan bola cepat) tertahan. Pengecekan kini sepanjang lintasan bola, jadi tidak ada yang menembus.
 - **Kunci Lawan (menghadap lawan) tanpa cooldown**: bisa dipakai berulang tanpa jeda, juga untuk data teknik lama yang tersimpan.
 - **Analog kiri default-nya kecepatan penuh**: digeser sedikit pun karakter (dan elang tunggangan) tetap lari penuh, hanya arahnya yang berubah. Bisa dimatikan di Pengaturan ("Analog kiri selalu kecepatan penuh") untuk kecepatan sesuai jarak geser.
