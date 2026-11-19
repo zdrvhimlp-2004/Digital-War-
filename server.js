@@ -2402,6 +2402,8 @@ body.playing #slots{display:flex}
 body.playing #lcol.hud{display:flex!important}
 #lcol button{position:relative;width:36px;height:34px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
 #lcol button svg{width:20px;height:20px}
+#lcol.collapsed button:not(#lcolTog){display:none}
+#lcolTog{background:rgba(10,16,32,.8)!important}
 #lcol button.active{background:rgba(30,111,255,.85)}
 #lcol .vo.off{display:none}
 .badge{position:absolute;top:-4px;right:-4px;background:#ff4d4d;color:#fff;font-size:10px;font-weight:700;border-radius:8px;padding:1px 5px;display:none;font-style:normal}
@@ -2582,6 +2584,7 @@ body.cine #setBox{display:none!important}
 <div id="night"></div>
 <div id="fade"></div>
 <div id="lcol" class="hud">
+  <button id="lcolTog" title="Sembunyikan / tampilkan tombol" aria-label="Sembunyikan atau tampilkan tombol" style="font-size:13px">▲</button>
   <button id="camBtn" data-ico="eye" title="Kamera FPS (C)" aria-label="Kamera FPS"></button>
   <button id="uiBtn" data-ico="hideui" title="Sembunyikan tombol (H)" aria-label="Sembunyikan tombol"></button>
   <button id="tipBtn" title="Tips &amp; trik" aria-label="Tips dan trik" style="font-size:17px">💡</button>
@@ -5081,6 +5084,10 @@ function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').
 let setOpen=false;
 /* popup buku tips & trik */
 let tipOpen=false;
+/* tombol kiri: collapse / expand (diingat di browser) */
+function setLcol(c){$('lcol').classList.toggle('collapsed',c);$('lcolTog').textContent=c?'▼':'▲';try{localStorage.setItem('dw_lcol',c?'1':'0');}catch(e){}}
+$('lcolTog').addEventListener('click',()=>setLcol(!$('lcol').classList.contains('collapsed')));$('lcolTog').addEventListener('pointerdown',e=>e.stopPropagation());
+try{if(localStorage.getItem('dw_lcol')==='1')setLcol(true);}catch(e){}
 function openTips(){if(!started||modalOpen||chatOpen||setOpen||tipOpen)return;tipOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);$('tipBox').classList.add('show');try{localStorage.setItem('dw_tips_seen','1');}catch(e){}}
 function closeTips(){if(!tipOpen)return;tipOpen=false;bookOpen=false;$('tipBox').classList.remove('show');}
 $('tipBtn').addEventListener('click',openTips);$('tipBtn').addEventListener('pointerdown',e=>e.stopPropagation());
