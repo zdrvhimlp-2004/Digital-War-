@@ -2488,6 +2488,7 @@ body.playing.dbg #dbgBox{display:flex}
 .srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid rgba(120,190,255,.15);cursor:pointer}
 .srow span{display:block;flex:1}.srow b{display:block;font-size:14px}.srow small{display:block;margin-top:2px;font-size:11.5px;line-height:1.4;color:#9db4d6}
 .srow input{display:none}
+.sens{padding:11px 0;border-top:1px solid rgba(120,190,255,.15)}.sens b{display:flex;justify-content:space-between;font-size:14px}.sens small{display:block;margin:2px 0 8px;font-size:11.5px;line-height:1.4;color:#9db4d6}.sens input{width:100%;accent-color:#4de1ff}
 .srow .sw{flex:0 0 auto;width:46px;height:26px;border-radius:999px;background:#26344f;position:relative;transition:background .15s}
 .srow .sw:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
 .srow input:checked+.sw{background:#1e6fff}.srow input:checked+.sw:after{transform:translateX(20px)}
@@ -2529,6 +2530,7 @@ body.cine #setBox{display:none!important}
 <div id="feed" class="hud"></div>
 <div id="toast" class="pill"></div>
 <div id="setBox"><div class="card"><div class="sh"><h3>Pengaturan</h3><button id="setX" type="button" aria-label="Tutup" data-ico="close"></button></div>
+<div class="sens"><b><span>Sensitivitas kamera</span><span id="sensVal">1.0x</span></b><small>Seberapa cepat kamera menoleh saat layar digeser (atau tombol Q/R). Geser ke kanan untuk lebih cepat.</small><input type="range" id="sensIn" min="0.5" max="3" step="0.1" value="1"></div>
 <label class="srow"><span><b>Auto aim pedang</b><small>Serangan pedang otomatis menghadap musuh terdekat di depanmu. Mati: menebas ke arah hadap karaktermu.</small></span><input type="checkbox" data-set="autoAim"><i class="sw"></i></label>
 <label class="srow"><span><b>Layar bergetar</b><small>Getaran kamera saat kena atau mengenai musuh.</small></span><input type="checkbox" data-set="shake"><i class="sw"></i></label>
 <label class="srow"><span><b>Efek badan saat kena</b><small>Selubung cahaya di badan korban selama 0.5 detik.</small></span><input type="checkbox" data-set="hitFx"><i class="sw"></i></label>
@@ -3656,7 +3658,7 @@ window.addEventListener('pointermove',e=>{
     let dx=e.clientX-joy.cx,dy=e.clientY-joy.cy;const Rr=55,m=Math.hypot(dx,dy);if(m>Rr){dx=dx/m*Rr;dy=dy/m*Rr;}
     joy.x=dx/Rr;joy.y=-dy/Rr;$('joyKnob').style.left=(joy.cx+dx)+'px';$('joyKnob').style.top=(joy.cy+dy)+'px';
   }else if(e.pointerId===look.id){
-    cam.yawT-=(e.clientX-look.lx)*0.0065;if(fps)fpsPitch=clamp(fpsPitch-(e.clientY-look.ly)*0.004,-1.3,1.3);else cam.pitchT=clamp(cam.pitchT+(e.clientY-look.ly)*0.004,0.22,1.1);look.lx=e.clientX;look.ly=e.clientY;
+    const sn=(typeof SET!=='undefined'&&SET.sens>0)?SET.sens:1;cam.yawT-=(e.clientX-look.lx)*0.0065*sn;if(fps)fpsPitch=clamp(fpsPitch-(e.clientY-look.ly)*0.004*sn,-1.3,1.3);else cam.pitchT=clamp(cam.pitchT+(e.clientY-look.ly)*0.004*sn,0.22,1.1);look.lx=e.clientX;look.ly=e.clientY;
   }
 });
 function endPtr(e){
@@ -4596,7 +4598,7 @@ function update(dt){
   if(live){
     if(keys.has('KeyA')||keys.has('ArrowLeft'))ix-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))ix+=1;
     if(keys.has('KeyW')||keys.has('ArrowUp'))iy+=1;if(keys.has('KeyS')||keys.has('ArrowDown'))iy-=1;
-    if(keys.has('KeyQ'))cam.yawT+=1.9*dt;if(keys.has('KeyR'))cam.yawT-=1.9*dt;
+    {const sn=SET.sens>0?SET.sens:1;if(keys.has('KeyQ'))cam.yawT+=1.9*dt*sn;if(keys.has('KeyR'))cam.yawT-=1.9*dt*sn;}
     run=keys.has('ShiftLeft')||keys.has('ShiftRight');
     if(keys.has('KeyV')||keys.has('ControlLeft')||keys.has('KeyZ'))diveHeld=true;
     if(joy.id!==null){ix+=joy.x;iy+=joy.y;}
@@ -4969,13 +4971,14 @@ let duelCntN=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({autoAim:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
-function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('setBox').classList.add('show');}
+function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}
 function closeSet(){if(!setOpen)return;setOpen=false;bookOpen=false;$('setBox').classList.remove('show');}
 let setOpen=false;
 document.querySelectorAll('#setBox input[data-set]').forEach(i=>i.addEventListener('change',()=>{SET[i.dataset.set]=i.checked;saveSet();applySet();}));
+$('sensIn').addEventListener('input',()=>{SET.sens=parseFloat($('sensIn').value)||1;$('sensVal').textContent=SET.sens.toFixed(1)+'x';saveSet();});
 $('setBtn').addEventListener('click',openSet);$('setBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('setX').addEventListener('click',closeSet);$('setBox').addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===$('setBox'))closeSet();});
 applySet();
