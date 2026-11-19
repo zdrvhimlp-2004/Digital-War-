@@ -1198,7 +1198,7 @@ function duelTick(room, t) {
     if (slot && p.y > ARENA.height + 2) { teleportTo(p, p.x, p.z, p.fx, p.fz); continue; }
     if (slot && (d.st === 'fight' || d.st === 'count')) {
       if (d.st === 'count') { const sd = duelSide(slot); if (Math.hypot(p.x - sd.x, p.z - sd.z) > 1.4) teleportTo(p, sd.x, sd.z, sd.fx, sd.fz); }
-      else if (dist > ARENA.ringR - 0.8) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
+      else if (dist > ARENA.ringR + 0.5) { const k = (ARENA.ringR - 2.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, -dx / dist, -dz / dist); }
     } else if (!slot && p.x < 1000 && dist < ARENA.ringR + 1.3) {
       const k = (ARENA.ringR + 3.2) / dist; teleportTo(p, ARENA.x + dx * k, ARENA.z + dz * k, dx / dist, dz / dist);
     }
