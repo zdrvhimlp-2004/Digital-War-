@@ -3414,7 +3414,7 @@ let wantFs=false;
   window.reFs=()=>{if(wantFs&&!isFs())doReq();};
   const again=()=>{if(wantFs&&!isFs())doReq();};
   window.addEventListener('pointerup',again,true);window.addEventListener('click',again,true);
-  const onFsChange=()=>{if(!isFs()&&wantFs&&window._micAsk)setTimeout(()=>window.reFs(),50);};
+  const onFsChange=()=>{if(!isFs()&&!(window._micAsk||Date.now()<(window._micUntil||0)))wantFs=false;};
   document.addEventListener('fullscreenchange',onFsChange);document.addEventListener('webkitfullscreenchange',onFsChange);
 })();
 
@@ -3790,7 +3790,7 @@ async function toggleMic(){
   sfx.mic(!micOn);
   if(micOn){micOn=false;if(localStream)localStream.getAudioTracks().forEach(t=>{t.enabled=false;});peers.forEach(p=>{if(p.snd)p.snd.replaceTrack(null).catch(()=>{});});setMicUI();toast('Mikrofon mati',1.2);return;}
   try{
-    if(!localStream){window._micAsk=true;try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}finally{window._micAsk=false;if(window.reFs)setTimeout(window.reFs,0);setTimeout(resize,300);}}
+    if(!localStream){window._micAsk=true;try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}finally{window._micAsk=false;window._micUntil=Date.now()+1500;if(window.reFs)setTimeout(window.reFs,0);setTimeout(resize,300);}}
     const tk=localStream.getAudioTracks()[0];tk.enabled=true;micOn=true;
     peers.forEach(p=>{if(p.snd)p.snd.replaceTrack(tk).catch(()=>{});});setMicUI();toast('Mikrofon nyala, kamu bisa bicara',1.6);
   }catch(e){toast('Mikrofon tidak bisa dipakai (izinkan mikrofon, butuh HTTPS)',3);}
