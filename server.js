@@ -1132,7 +1132,7 @@ function onJoin(ws, m) {
 
   const s = room.duel ? standSpawn() : randomSpawn();
   const p = {
-    id: room.nextPid++, uid, name, ch, ws, room,
+    id: room.nextPid++, uid, tag: crypto.createHash('sha1').update(uid).digest('hex').slice(0, 4).toUpperCase(), name, ch, ws, room,
     x: s.x, y: 0, z: s.z, fx: 0, fz: 1, m: 0, a: 0, sw: 0,
     hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
     invuln: now() + SPAWN_PROTECT_MS, shield: 0, atkAt: 0,
@@ -1142,12 +1142,12 @@ function onJoin(ws, m) {
   room.players.set(p.id, p);
   ws.player = p;
   send(ws, {
-    t: 'welcome', id: p.id, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
+    t: 'welcome', id: p.id, tag: p.tag, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : 'world' }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
     forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), chat: room.chatLog.slice(-20),
     spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
-    players: [...room.players.values()].map(q => ({ id: q.id, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
+    players: [...room.players.values()].map(q => ({ id: q.id, tag: q.tag, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
   });
-  broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } }, p.id);
+  broadcast(room, { t: 'pj', p: { id: p.id, tag: p.tag, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } }, p.id);
   broadcast(room, { t: 'sc', s: scoreList(room) });
   if (room.duel) { room.duel.queue.push(p.id); duelBroadcast(room); }
 }
@@ -1235,7 +1235,7 @@ function onMessage(ws, text) {
       const text = String(m.text == null ? '' : m.text).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX);
       if (!text) break;
       p.chatAt = t;
-      const msg = { t: 'chat', id: p.id, name: p.name, text };
+      const msg = { t: 'chat', id: p.id, tag: p.tag, name: p.name, text };
       room.chatLog.push({ name: p.name, text, id: p.id });
       if (room.chatLog.length > 60) room.chatLog.shift();
       broadcast(room, msg);
@@ -1410,7 +1410,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name + ' #' + p.tag) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -3720,7 +3720,7 @@ function updAim(){
 /* ---------- chat ---------- */
 let chatOpen=false,chatUnread=0;
 function addChatLine(m,live){
-  const d=document.createElement('div');if(m.id===me.id)d.className='me';const b=document.createElement('b');b.textContent=m.name+': ';const sp=document.createElement('span');sp.textContent=m.text;d.appendChild(b);d.appendChild(sp);
+  const d=document.createElement('div');if(m.id===me.id)d.className='me';const b=document.createElement('b');b.textContent=m.name+(m.tag?' #'+m.tag:'')+': ';const sp=document.createElement('span');sp.textContent=m.text;d.appendChild(b);d.appendChild(sp);
   const lst=$('chatList');lst.appendChild(d);while(lst.children.length>80)lst.removeChild(lst.firstChild);lst.scrollTop=lst.scrollHeight;
   if(live){
     const f=document.createElement('div');f.innerHTML=d.innerHTML;$('chatFeed').appendChild(f);while($('chatFeed').children.length>5)$('chatFeed').removeChild($('chatFeed').firstChild);setTimeout(()=>{if(f.parentNode)f.parentNode.removeChild(f);},9000);
@@ -3807,8 +3807,9 @@ function makeLabel(){
 function drawLabel(o){
   const c=o.lab.cv.getContext('2d');c.clearRect(0,0,192,44);
   c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';
-  let fs=22;while(c.measureText(o.name).width>180&&fs>12){fs--;c.font='bold '+fs+'px sans-serif';}
-  c.lineWidth=5;c.strokeStyle='rgba(20,20,40,.85)';c.strokeText(o.name,96,13);c.fillStyle='#fff';c.fillText(o.name,96,13);
+  const nmT=o.tag?o.name+' #'+o.tag:o.name;
+  let fs=22;while(c.measureText(nmT).width>180&&fs>12){fs--;c.font='bold '+fs+'px sans-serif';}
+  c.lineWidth=5;c.strokeStyle='rgba(20,20,40,.85)';c.strokeText(nmT,96,13);c.fillStyle='#fff';c.fillText(nmT,96,13);
   c.fillStyle='#2b2233';c.fillRect(26,28,140,11);c.fillStyle='#5a1f26';c.fillRect(28,30,136,7);
   c.fillStyle=o.shieldT>0?'#6cd4ff':(o.friend?'#3fe06c':'#ff3b3b');c.fillRect(28,30,Math.round(136*clamp(o.hp/MAXHP,0,1)),7);
   o.lab.tex.needsUpdate=true;
@@ -3822,7 +3823,7 @@ function addOther(info){
   const m=new THREE.MeshBasicMaterial({map:tex,alphaTest:0.5,side:THREE.DoubleSide});
   const mesh=new THREE.Mesh(spriteGeo,m);mesh.rotation.order='YXZ';scene.add(mesh);
   const sh=new THREE.Mesh(aShGeo,aShMat);scene.add(sh);
-  const o={id:info.id,name:info.name,ch:info.ch,hp:info.hp==null?MAXHP:info.hp,k:info.k||0,d:info.d||0,dead:!!info.dead,
+  const o={id:info.id,name:info.name,tag:info.tag||'',ch:info.ch,hp:info.hp==null?MAXHP:info.hp,k:info.k||0,d:info.d||0,dead:!!info.dead,
     x:info.x||0,y:info.y||0,z:info.z||0,tx:info.x||0,ty:info.y||0,tz:info.z||0,fx:0,fz:1,m:0,a:0,sw:0,
     mesh,tex,mat:m,sh,lab:makeLabel(),shield:makeShield(),shieldT:0,ride:false,sleep:!!info.sl,mount:null,guard:false,gsp:null,stunT:0,regenT:0,hasteT:0,viewK:0,wt:Math.random()*4,atkT:0,flash:0};
   drawLabel(o);others.set(o.id,o);return o;
@@ -3960,10 +3961,10 @@ function updProjs(dt){
 /* ---------- network ---------- */
 function addBoardRow(){}
 function renderBoard(){
-  const rows=[{id:me.id,name:me.name,k:me.k,d:me.d,me:true}].concat([...others.values()].map(o=>({id:o.id,name:o.name,k:o.k,d:o.d})));
+  const rows=[{id:me.id,name:me.name,tag:me.tag,k:me.k,d:me.d,me:true}].concat([...others.values()].map(o=>({id:o.id,name:o.name,tag:o.tag,k:o.k,d:o.d})));
   rows.sort((a,b)=>b.k-a.k||a.d-b.d);
   const bd=$('board');bd.innerHTML='<h4>PAPAN SKOR</h4>';
-  rows.forEach((r,i)=>{const d=document.createElement('div');if(r.me)d.className='me';const b=document.createElement('b');b.textContent=(i+1)+'. '+r.name;const s=document.createElement('span');s.innerHTML=kdHtml(r.k,r.d);d.appendChild(b);d.appendChild(s);bd.appendChild(d);});
+  rows.forEach((r,i)=>{const d=document.createElement('div');if(r.me)d.className='me';const b=document.createElement('b');b.textContent=(i+1)+'. '+r.name+(r.tag?' #'+r.tag:'');const s=document.createElement('span');s.innerHTML=kdHtml(r.k,r.d);d.appendChild(b);d.appendChild(s);bd.appendChild(d);});
   $('kd').innerHTML=kdHtml(me.k,me.d);
   $('roomTag').textContent=(roomInfo.name||'Room')+' '+rows.length+'/'+(roomInfo.max||'?');
 }
@@ -3973,7 +3974,7 @@ function applyDoor(i,open,silent){const d=doors[i];if(!d)return;if(d.open===open
 function onMsg(m){
   switch(m.t){
     case 'welcome':{
-      me.id=m.id;roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();
+      me.id=m.id;me.tag=m.tag||'';roomInfo=m.room;hourBase=m.hour;hourAt=performance.now();
       setHp(m.hp==null?MAXHP:m.hp);me.k=0;me.d=0;
       {const f=findFree(m.spawn.x,m.spawn.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;cam.ty=0;
       chestOpen=!!m.chest;if(chest){chest.open=chestOpen;chest.target=chest.ang=chestOpen?1.25:0;}ammo=0;sleeping=false;$('night').style.opacity=0;fade=null;$('fade').style.opacity=0;
