@@ -353,7 +353,7 @@ function makeRuntime(r) {
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false, r.dmin); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
@@ -1282,14 +1282,14 @@ setInterval(() => {
  *  ARENA DUEL 1 vs 1 (yang menang tetap, yang kalah antri lagi)
  * ==================================================================== */
 const DUEL_COUNT_MS = 3500, DUEL_OVER_MS = 2800;
-/* batas waktu pertandingan: setelah DUEL_TIME_MS -> SUDDEN DEATH (sekali kena langsung K.O.) selama DUEL_SD_MS;
+/* batas waktu pertandingan (menit, diatur per room di admin, maks 20): setelah itu -> SUDDEN DEATH (sekali kena langsung K.O.) selama DUEL_SD_MS;
    bila masih belum ada yang gugur -> darah semua petarung terkuras cepat sampai tersisa satu */
-const DUEL_TIME_MS = 120000, DUEL_SD_MS = 60000, DUEL_DRAIN_PER_S = 40;
+const DUEL_DEFAULT_MIN = 5, DUEL_MAX_MIN = 20, DUEL_SD_MS = 60000, DUEL_DRAIN_PER_S = 40;
 function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew(size, ff) { return { size: size || 1, ff: ff !== false, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, fightAt: 0, ph: 0, sd: false, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelNew(size, ff, dmin) { return { size: size || 1, ff: ff !== false, dmin: clampN(Math.round(Number(dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), limit: 0, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, fightAt: 0, ph: 0, sd: false, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
 function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
 function duelRebuild(room) {
@@ -1307,8 +1307,8 @@ function duelState(room) {
 /* sisa waktu (ms) sampai fase berikutnya; 0 pada fase terakhir */
 function duelPhaseLeft(d) {
   const el = now() - d.fightAt;
-  if (d.ph === 0) return Math.max(0, DUEL_TIME_MS - el);
-  if (d.ph === 1) return Math.max(0, DUEL_TIME_MS + DUEL_SD_MS - el);
+  if (d.ph === 0) return Math.max(0, d.limit - el);
+  if (d.ph === 1) return Math.max(0, d.limit + DUEL_SD_MS - el);
   return 0;
 }
 /* petarung gugur karena darah terkuras (tanpa penyerang) */
@@ -1579,7 +1579,7 @@ function duelTick(room, t, dt) {
       }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; d.sd = false; changed = true;
     } else {
-      const el = t - d.fightAt, ph = el >= DUEL_TIME_MS + DUEL_SD_MS ? 2 : (el >= DUEL_TIME_MS ? 1 : 0);
+      const el = t - d.fightAt, ph = el >= d.limit + DUEL_SD_MS ? 2 : (el >= d.limit ? 1 : 0);
       if (ph !== d.ph) { d.ph = ph; changed = true; }
       d.sd = ph >= 1;
       if (ph === 2) duelDrain(room, d, mA, mB, dt || 0.033);
@@ -1588,7 +1588,7 @@ function duelTick(room, t, dt) {
     if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
     if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.limit = d.dmin * 60000; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
   }
   if (d.st === 'wait') {
     /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
@@ -1968,7 +1968,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -2013,7 +2013,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false, dmin: clampN(Math.round(Number(b.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN) };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -2028,7 +2028,9 @@ async function handleAdmin(req, res, pathname) {
       if (b.pick !== undefined) r.pick = !!b.pick;
       if (b.debug !== undefined) r.debug = !!b.debug;
       if (b.max !== undefined) { const mx = Math.round(Number(b.max)); if (!isFinite(mx) || mx < 2 || mx > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT }); r.max = mx; }
-      const rt = rooms.get(r.code); if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; rt.debug = r.debug === true; }
+      if (b.dmin !== undefined) { const dm = Math.round(Number(b.dmin)); if (!isFinite(dm) || dm < 1 || dm > DUEL_MAX_MIN) return json(res, 400, { error: 'Batas waktu harus 1-' + DUEL_MAX_MIN + ' menit' }); r.dmin = dm; }
+      const rt = rooms.get(r.code); if (rt && rt.duel) rt.duel.dmin = clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN);
+      if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; rt.debug = r.debug === true; }
       saveDBNow();
       return json(res, 200, { room: roomView(r) });
     }
@@ -2067,7 +2069,7 @@ async function handleAdmin(req, res, pathname) {
       const max = Math.round(Number(r.max));
       if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
       seenR.add(r.code);
-      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false });
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN) });
     }
     for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
     DB.rooms = rs; DB.techniques = techs;
@@ -2310,6 +2312,11 @@ button:disabled{opacity:.5}
       <label>Maksimal pemain</label>
       <div class="chips" id="presets"></div>
       <input id="rmax" type="number" min="2" max="100" value="10" style="margin-top:8px">
+      <div id="rdminBox" class="hidden">
+        <label>Batas waktu pertandingan (menit, maks 20). Setelah habis: sudden death 1 menit, lalu darah terkuras</label>
+        <div class="chips" id="dpresets"></div>
+        <input id="rdmin" type="number" min="1" max="20" value="5" style="margin-top:8px">
+      </div>
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
       <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
       <label class="chk"><input type="checkbox" id="rff" checked> Friendly fire (khusus Arena Tim): teman satu tim bisa saling melukai</label>
@@ -2407,15 +2414,20 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 
 /* rooms */
 [5,10,15,20,30].forEach(n=>{const c=document.createElement('div');c.className='chip'+(n===10?' on':'');c.textContent=n+' pemain';c.addEventListener('click',()=>{$('rmax').value=n;mark();});$('presets').appendChild(c);});
+[5,10,15,20].forEach(n=>{const c=document.createElement('div');c.className='chip'+(n===5?' on':'');c.textContent=n+' menit';c.addEventListener('click',()=>{$('rdmin').value=n;markD();});$('dpresets').appendChild(c);});
+function markD(){document.querySelectorAll('#dpresets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rdmin').value,10)));}
+$('rdmin').addEventListener('input',markD);
+function modeUI(){$('rdminBox').classList.toggle('hidden',$('rmode').value.slice(0,4)!=='duel');}
+$('rmode').addEventListener('change',modeUI);
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
-function rOpen(){msg($('rmsg'),'');$('rmodal').classList.remove('hidden');setTimeout(()=>$('rname').focus(),50);}
+function rOpen(){msg($('rmsg'),'');modeUI();$('rmodal').classList.remove('hidden');setTimeout(()=>$('rname').focus(),50);}
 function rClose(){$('rmodal').classList.add('hidden');}
 $('rnew').addEventListener('click',rOpen);$('rcancel').addEventListener('click',rClose);
 $('rmodal').addEventListener('click',e=>{if(e.target===$('rmodal'))rClose();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')rClose();});
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked}});$('rname').value='';rClose();loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked,dmin:parseInt($('rdmin').value,10)||5}});$('rname').value='';rClose();loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 const openRooms=new Set();
@@ -2435,7 +2447,7 @@ async function loadRooms(){
     card.appendChild(sum);
     const d=document.createElement('div');d.className='rbody';card.appendChild(d);
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';tx.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();tx.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+(r.mode==='duel'?' · batas '+(r.dmin||5)+' mnt':'')+' · dibuat '+new Date(r.created).toLocaleString();tx.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -2447,11 +2459,13 @@ async function loadRooms(){
     const vl=document.createElement('label');vl.className='chk';vl.style.gridColumn='1 / -1';vl.style.margin='0';const vc=document.createElement('input');vc.type='checkbox';vc.checked=r.voice!==false;vc.dataset.edit=1;vl.appendChild(vc);vl.appendChild(document.createTextNode('Voice chat aktif'));
     const pl2=document.createElement('label');pl2.className='chk';pl2.style.gridColumn='1 / -1';pl2.style.margin='0';const pc=document.createElement('input');pc.type='checkbox';pc.checked=r.pick===true;pc.dataset.edit=1;pl2.appendChild(pc);pl2.appendChild(document.createTextNode('Mode pilih teknik (tanpa ketik kode)'));
     const dgl=document.createElement('label');dgl.className='chk';dgl.style.gridColumn='1 / -1';dgl.style.margin='0';const dgc=document.createElement('input');dgc.type='checkbox';dgc.checked=r.debug===true;dgc.dataset.edit=1;dgl.appendChild(dgc);dgl.appendChild(document.createTextNode('Mode uji hit (alasan meleset tampil di layar)'));
+    let dm=null,dwEl=null;
+    if(r.mode==='duel'){const dw=document.createElement('label');dw.style.gridColumn='1 / -1';dw.style.margin='0';dw.style.display='flex';dw.style.alignItems='center';dw.style.gap='8px';dw.style.fontSize='13px';dw.appendChild(document.createTextNode('Batas waktu (menit, 1-20)'));dm=document.createElement('input');dm.type='number';dm.min=1;dm.max=20;dm.value=r.dmin||5;dm.dataset.edit=1;dm.style.maxWidth='90px';dw.appendChild(dm);dwEl=dw;}
     const sv=document.createElement('button');sv.textContent='Ubah';
-    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked}});sv.textContent='Tersimpan';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
+    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked,...(dm?{dmin:parseInt(dm.value,10)}:{})}});sv.textContent='Tersimpan';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
     const dl=document.createElement('button');dl.className='bad';dl.textContent='Hapus';
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
-    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
+    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);if(dwEl)row.appendChild(dwEl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
     if(r.players.length){const p=document.createElement('div');p.className='pl';p.appendChild(document.createTextNode('Online: '));r.players.forEach(n=>{const b=document.createElement('b');b.textContent=n;p.appendChild(b);});d.appendChild(p);}
     box.appendChild(card);
   });
