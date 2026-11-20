@@ -483,6 +483,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
     }
   }
   if (t < victim.shield) dmg *= 0.3;
+  if (room.duel && room.duel.sd && duelFighting(room, victim)) dmg = Math.max(dmg, victim.hp);   /* SUDDEN DEATH: sekali kena langsung K.O. */
   dmg = Math.max(1, Math.round(dmg));
   victim.hp = Math.max(0, victim.hp - dmg);
   broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0), hr: opt.hr ? r2(opt.hr) : 0 });
@@ -1281,11 +1282,14 @@ setInterval(() => {
  *  ARENA DUEL 1 vs 1 (yang menang tetap, yang kalah antri lagi)
  * ==================================================================== */
 const DUEL_COUNT_MS = 3500, DUEL_OVER_MS = 2800;
+/* batas waktu pertandingan: setelah DUEL_TIME_MS -> SUDDEN DEATH (sekali kena langsung K.O.) selama DUEL_SD_MS;
+   bila masih belum ada yang gugur -> darah semua petarung terkuras cepat sampai tersisa satu */
+const DUEL_TIME_MS = 120000, DUEL_SD_MS = 60000, DUEL_DRAIN_PER_S = 40;
 function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew(size, ff) { return { size: size || 1, ff: ff !== false, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelNew(size, ff) { return { size: size || 1, ff: ff !== false, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, fightAt: 0, ph: 0, sd: false, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
 function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
 function duelRebuild(room) {
@@ -1298,7 +1302,38 @@ function duelState(room) {
   const P = id => { const q = room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0, o: d.out[id] ? 1 : 0, bot: q.bot ? 1 : 0 } : null; };
   const ta = d.teamA.map(P).filter(Boolean), tb = d.teamB.map(P).filter(Boolean);
   const top = Object.keys(d.total).map(id => ({ name: d.names[id] || '?', n: d.total[id], best: d.best[id] || 0 })).sort((x, y) => y.n - x.n || y.best - x.best).slice(0, 3);
-  return { t: 'duel', size: d.size, top, st: d.st, ta, tb, a: ta[0] || null, b: tb[0] || null, q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), last: d.last };
+  return { t: 'duel', size: d.size, top, st: d.st, ta, tb, a: ta[0] || null, b: tb[0] || null, q: d.queue.map(id => { const q = room.players.get(id); return q ? { id, name: q.name } : null; }).filter(Boolean), ms: Math.max(0, d.until - now()), ph: d.ph || 0, tl: d.st === 'fight' ? duelPhaseLeft(d) : 0, last: d.last };
+}
+/* sisa waktu (ms) sampai fase berikutnya; 0 pada fase terakhir */
+function duelPhaseLeft(d) {
+  const el = now() - d.fightAt;
+  if (d.ph === 0) return Math.max(0, DUEL_TIME_MS - el);
+  if (d.ph === 1) return Math.max(0, DUEL_TIME_MS + DUEL_SD_MS - el);
+  return 0;
+}
+/* petarung gugur karena darah terkuras (tanpa penyerang) */
+function duelKill(room, p) {
+  p.hp = 0; p.dead = true; p.respawnAt = now() + RESPAWN_MS; p.d++;
+  if (p.ammo) setAmmo(p, 0);
+  if (p.guarding) { p.guarding = false; broadcast(room, { t: 'guard', id: p.id, on: false }); }
+  broadcast(room, { t: 'hp', id: p.id, hp: 0 });
+  broadcast(room, { t: 'die', id: p.id, name: p.name, by: 0, byName: '', ms: RESPAWN_MS });
+  broadcast(room, { t: 'sc', s: scoreList(room) });
+}
+/* fase akhir: semua petarung kehilangan darah cepat; yang darahnya paling banyak ditahan di 1 HP supaya tersisa satu */
+function duelDrain(room, d, mA, mB, dt) {
+  const fs = [...mA, ...mB].filter(p => !p.dead && !d.out[p.id]);
+  if (fs.length < 2) return;
+  let keep = fs[0]; for (const p of fs) if (p.hp > keep.hp) keep = p;
+  for (const p of fs) {
+    p.drainAcc = (p.drainAcc || 0) + DUEL_DRAIN_PER_S * dt;
+    const w = Math.floor(p.drainAcc); if (w < 1) continue;
+    p.drainAcc -= w;
+    const nh = p.hp - w;
+    if (p === keep) { p.hp = Math.max(1, nh); broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); }
+    else if (nh <= 0) duelKill(room, p);
+    else { p.hp = nh; broadcast(room, { t: 'hp', id: p.id, hp: p.hp }); }
+  }
 }
 function duelBroadcast(room) { broadcast(room, duelState(room)); }
 function teleportTo(p, x, z, fx, fz) {
@@ -1542,13 +1577,18 @@ function duelTick(room, t, dt) {
         delete d.team[p.id]; delete d.out[p.id];
         if (!d.queue.includes(p.id)) d.queue.push(p.id);
       }
-      d.st = 'over'; d.until = t + DUEL_OVER_MS; changed = true;
+      d.st = 'over'; d.until = t + DUEL_OVER_MS; d.sd = false; changed = true;
+    } else {
+      const el = t - d.fightAt, ph = el >= DUEL_TIME_MS + DUEL_SD_MS ? 2 : (el >= DUEL_TIME_MS ? 1 : 0);
+      if (ph !== d.ph) { d.ph = ph; changed = true; }
+      d.sd = ph >= 1;
+      if (ph === 2) duelDrain(room, d, mA, mB, dt || 0.033);
     }
   } else if (d.st === 'over') {
     if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
     if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; for (const p of [...mA, ...mB]) p.invuln = 0; changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
   }
   if (d.st === 'wait') {
     /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
@@ -2777,6 +2817,12 @@ body.playing.uihide.uiask #uiShow{display:flex}
 body.playing.uihide :is(button.btn,button.btn.hud,#lcol,#lcol.hud,#slots,#bookBtn,#fsBtn,#sbBtn,#hint,#hint.hud,#btnDive,#btnAct,#btnSnipe,#chatPanel,#aimbar,.hud,.pill:not(#toast),#mini,#hpBox,#oxyBox,#roomTag,#net,#clock,#board,#feed,#chatFeed,#duelBox,#capBox){display:none!important}
 #duelBox{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;max-width:min(92vw,480px);text-align:center;pointer-events:none;font-family:Poppins,system-ui,sans-serif}
 body.playing.duel #duelBox{display:block}
+#duelTimer{display:none;position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 38px);left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;font:700 13px Poppins,system-ui,sans-serif;color:#fff;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:5px 14px;white-space:nowrap}
+body.playing.duel #duelTimer.show{display:block}
+body:not(.noduelbar) #duelTimer{top:calc(max(10px,env(safe-area-inset-top)) + 100px)}
+#duelTimer.sd{background:rgba(120,10,20,.88);border-color:#ff5d5d;color:#ffd9d9}
+#duelTimer.dr{background:rgba(120,10,20,.92);border-color:#ff5d5d;color:#fff;animation:tmp .6s infinite alternate}
+@keyframes tmp{from{opacity:.65}to{opacity:1}}
 body.noduelbar #duelBox{display:none!important}
 #trainBox{display:none;position:fixed;left:calc(max(10px,env(safe-area-inset-left)) + 120px);top:calc(max(10px,env(safe-area-inset-top)) + 52px);z-index:6;width:min(200px,40vw);background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:14px;padding:8px 10px;color:#fff;font:600 12px Poppins,system-ui,sans-serif}
 body.playing.train #trainBox{display:block}
@@ -2805,7 +2851,7 @@ body:not(.train) #trainBox{display:none!important}
 @keyframes netBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #duelBig b{display:block;font-size:min(22vw,120px);line-height:1}
 #duelBig small{display:block;font-size:min(5vw,22px);font-weight:600;margin-top:6px;color:#cfe3ff}
-body.cine #duelBox,body.cine #duelBig{display:none!important}
+body.cine #duelBox,body.cine #duelBig,body.cine #duelTimer{display:none!important}
 #dbgBox{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:96px;align-items:center;z-index:6;pointer-events:none;flex-direction:column;gap:4px;font-family:Poppins,system-ui,sans-serif;max-width:min(70vw,420px)}
 body.playing.dbg #dbgBox{display:flex}
 #dbgBox div{background:rgba(8,14,34,.82);border-left:4px solid #ff6a6a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;color:#ffe3e3;animation:dbgf 4s forwards}
@@ -2915,7 +2961,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
-<div id="duelBox"></div><div id="duelBig"></div>
+<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -5505,6 +5551,12 @@ function onDuel(m){
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
   if(m.st==='fight'&&prev!=='fight'){fightAt=performance.now();if(duelMine())netTrackStart();else netTrk=null;}
   if(m.st!=='fight'&&prev==='fight')netTrackFinish();
+  if(m.st==='fight'&&(m.ph||0)!==duelPh){
+    const np=m.ph||0;
+    if(np===1){sfx.horn&&sfx.horn();duelBig('SUDDEN DEATH','Sekali kena langsung K.O.!',3000);}
+    else if(np===2){sfx.horn&&sfx.horn();duelBig('DARAH TERKURAS','Darah semua petarung habis cepat',3000);}
+  }
+  duelPh=m.st==='fight'?(m.ph||0):0;
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
 /* ---------- catatan jaringan saat bertarung di ring ---------- */
@@ -5560,8 +5612,15 @@ function updDuel(){
     if(n>0&&n!==duelCntN){duelCntN=n;sfx.click&&sfx.click();}
     if(SET.bigText){$('duelBig').innerHTML='<b>'+n+'</b><small>Bersiap...</small>';$('duelBig').classList.add('show');duelBigT=now+400;}else $('duelBig').classList.remove('show');
   }else duelCntN=0;
+  const tm=$('duelTimer');
+  if(duel&&duel.st==='fight'){
+    const ph=duel.ph||0,rem=Math.max(0,(duel.tl||0)-(now-duelAt)),sec=Math.ceil(rem/1000),mm=Math.floor(sec/60),ss=String(sec%60).padStart(2,'0');
+    const txt=ph===0?'Sisa waktu '+mm+':'+ss:(ph===1?'SUDDEN DEATH '+mm+':'+ss:'DARAH TERKURAS');
+    if(tm.textContent!==txt)tm.textContent=txt;
+    tm.className='hud show'+(ph===1?' sd':(ph===2?' dr':''));
+  }else if(tm.className!=='hud')tm.className='hud';
 }
-let duelCntN=0;
+let duelCntN=0,duelPh=0;
 
 
 /* ---------- pengaturan ---------- */
