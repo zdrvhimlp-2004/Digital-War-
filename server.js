@@ -32,7 +32,7 @@ const SNAP_EVERY = 2;           // kirim posisi tiap 2 tick (~15 Hz)
 const RESPAWN_MS = 3500;
 const SPAWN_PROTECT_MS = 2000;
 const CLASH_MS = 350;
-const MELEE = { dmg: 40, range: 3.3, cd: 380, knock: 28 };
+const MELEE = { dmg: 80, range: 3.3, cd: 380, knock: 28 };
 const DOOR_COUNT = 8;           // 5 rumah tengah + 3 rumah jauh (sama dengan client)
 const MAX_TECH_SLOTS = 5;
 const ROOM_MAX_LIMIT = 100;
@@ -432,7 +432,7 @@ function deflectProj(room, pr, by) {
   broadcast(room, { t: 'px', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), boom: 0, c: pr.c, fizz: 1, sb: 1 });
   broadcast(room, { t: 'pr', id: np.id, x: r2(np.x), y: r2(np.y), z: r2(np.z), dx: r2(dx), dy: r2(dy), dz: r2(dz), sp: np.sp, life: np.life, c: np.c, sz: pr.size || 0.55 });
 }
-const WAVE = { speed: 17, life: 0.3, dmg: 20, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
+const WAVE = { speed: 17, life: 0.3, dmg: 40, hr: 1.25 };   /* tebasan angin: jarak tempuh sekitar 5 unit */
 const MELEE_CONE = 0.64;   /* kerucut FPS: cos 50 derajat */
 function vName(v) { return v.name || (v.isSol ? (v.bandit ? 'Penyamun' : 'Prajurit') : (v.isMob ? 'Elang' : '?')); }
 /* apakah tebasan p (arah fx,fz, ay = arah vertikal bila FPS) mengenai v? */
