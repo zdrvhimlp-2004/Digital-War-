@@ -370,7 +370,7 @@ function randomSpawn() {
 }
 
 let projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000, wallSeq = 1;
-const GUARD_WINDOW = 3000, GUARD_MAX = 27, GUARD_BREAK_MS = 2500;
+const GUARD_WINDOW = 9000, GUARD_MAX = 27, GUARD_BREAK_MS = 2500;
 const MAX_TRAPS = 6;
 const EAGLE_ORBIT = 10, EAGLE_HEIGHT = 7;   /* elang menunggu mengitari pemilik pada jarak ini (unit), tinggi di atas tanah */
 
@@ -471,7 +471,8 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
     if (opt.area) dmg *= 0.5;
     else if (opt.sx !== undefined && (victim.fx * opt.sx + victim.fz * opt.sz) > 0) {
       victim.gh = victim.gh.filter(x => t - x < GUARD_WINDOW);
-      victim.gh.push(t);
+      const gw = opt.gw || (dmg >= 55 ? 3 : 1);   /* serangan berat menghabiskan perisai lebih cepat */
+      for (let i = 0; i < gw; i++) victim.gh.push(t);
       if (victim.gh.length < GUARD_MAX) {
         broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg: 0, hp: victim.hp, kx: 0, kz: 0, blk: 1, left: GUARD_MAX - victim.gh.length, gmax: GUARD_MAX });
         return;
@@ -568,7 +569,7 @@ function doMelee(room, p, fx, fz, ay) {
     }
     landed++; hitIds.add(v.id);
     if (room.debug || p.dbg) send(p.ws, { t: 'dbg', ok: 1, msg: 'Kena ' + vName(v) + ' (jarak ' + d.toFixed(1) + ')' });
-    hurt(room, v, MELEE.dmg * dm, p, nx * MELEE.knock * dm, nz * MELEE.knock * dm, { sx: -nx, sz: -nz });
+    hurt(room, v, MELEE.dmg * dm, p, nx * MELEE.knock * dm, nz * MELEE.knock * dm, { sx: -nx, sz: -nz, gw: fin ? 2 : 1 });
     hf(v);
   }
   /* tebasan angin: gelombang pendek yang meluncur sedikit lebih jauh dari jangkauan pedang */
@@ -4909,7 +4910,7 @@ function onHit(m){
   const v=entPos(m.id);if(!v)return;
   if(m.mnt){floatText(v.x,v.y+2.3,v.z,'-'+m.dmg,'#ffb84d');burst(v.x,v.y+0.6,v.z,'#ffe0b0',8,3);sfxAt('hit',v.x,v.z);if(m.id===me.id){hurtFlash=0.15;shake=Math.max(shake,0.15);toast('Elangmu diserang! Sisa '+m.mhp,1.2);}return;}
   if(m.inv){floatText(v.x,v.y+2.1,v.z,'KEBAL','#c9d6ff');sfxAt('block',v.x,v.z);return;}
-  if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardMax=m.gmax||guardMax;guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
+  if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardMax=m.gmax||guardMax;guardPips=m.left;guardPipT=9;shake=Math.max(shake,0.12);}return;}
   floatText(v.x,v.y+2.1,v.z,'-'+m.dmg,m.id===me.id?'#ff6a6a':'#ffd84d');
   showHitbox(m.id===me.id?pos:others.get(m.id),0.9,m.hr||0);
   burst(v.x,v.y+1,v.z,'#fff6a0',6,3);
