@@ -616,10 +616,9 @@ function wallRemove(room, w, broke) {
   room.walls.splice(i, 1);
   broadcast(room, { t: 'wallx', id: w.id, broke: broke ? 1 : 0 });
 }
-/* kena dinding musuh? kembalikan dinding bila titik (x,y,z) berada di dalamnya */
+/* kena dinding? (semua bola tertahan, termasuk milik pembuatnya) kembalikan dinding bila titik (x,y,z) berada di dalamnya */
 function wallAt(room, ownerId, x, y, z) {
   for (const w of room.walls) {
-    if (w.o === ownerId || sameTeam(room, w.o, ownerId)) continue;
     if (y < w.y - 0.5 || y > w.y + WALL_H + 0.3) continue;
     const rx = x - w.x, rz = z - w.z, along = rx * w.tx + rz * w.tz, dist = rx * w.nx + rz * w.nz;
     if (Math.abs(along) <= w.len / 2 + 0.3 && Math.abs(dist) <= WALL_THICK) return w;
@@ -644,9 +643,9 @@ function wallCrosses(room, x0, z0, x1, z1, y) {
   return null;
 }
 /* gerakkan unit server (darat) dengan tembok sebagai penghalang, meluncur di sepanjang tembok bila bisa */
-function wallMove(room, o, nx, nz) {
+function wallMove(room, o, nx, nz, yy) {
   if (!room.walls.length) { o.x = nx; o.z = nz; return; }
-  const y = terrainH(o.x, o.z);
+  const y = yy === undefined ? terrainH(o.x, o.z) : yy;
   if (!wallCrosses(room, o.x, o.z, nx, nz, y)) { o.x = nx; o.z = nz; }
   else if (!wallCrosses(room, o.x, o.z, nx, o.z, y)) o.x = nx;
   else if (!wallCrosses(room, o.x, o.z, o.x, nz, y)) o.z = nz;
@@ -1453,7 +1452,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
   let x = bot.x + vx * dt, z = bot.z + vz * dt;
   const rd = Math.hypot(x - ARENA.x, z - ARENA.z), lim = ARENA.ringR - 1.2;
   if (rd > lim) { x = ARENA.x + (x - ARENA.x) / rd * lim; z = ARENA.z + (z - ARENA.z) / rd * lim; }
-  if (Math.hypot(x - A.x, z - A.z) > 1.3 || Math.hypot(x - A.x, z - A.z) > dist) { bot.x = x; bot.z = z; }
+  if (Math.hypot(x - A.x, z - A.z) > 1.3 || Math.hypot(x - A.x, z - A.z) > dist) wallMove(room, bot, x, z, bot.y);
   const kd = Math.exp(-9 * dt); bot.kx *= kd; bot.kz *= kd;
   const g = terrainH(bot.x, bot.z);
   if (bot.y > g + 0.001 || bot.vy > 0) { bot.vy -= 30 * dt; bot.y += bot.vy * dt; if (bot.y <= g) { bot.y = g; bot.vy = 0; } }
