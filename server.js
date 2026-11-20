@@ -1406,7 +1406,7 @@ function botAim(bot, A, ai, spd) {
 function duelBotStep(room, bot, enemies, dt, t) {
   if (bot.dead) return;
   let A = null, bd = 1e9;
-  for (const e of enemies) { if (e.dead) continue; const dd = Math.hypot(e.x - bot.x, e.z - bot.z); if (dd < bd) { bd = dd; A = e; } }
+  for (const e of enemies) { if (e.dead || room.duel.out[e.id] || !room.duel.team[e.id]) continue; /* yang sudah keluar dari ronde tidak dikejar */ const dd = Math.hypot(e.x - bot.x, e.z - bot.z); if (dd < bd) { bd = dd; A = e; } }
   if (!A) return;
   const ai = bot.ai;
   if (ai.tgt !== A.id) { ai.tgt = A.id; ai.lastAt = 0; ai.avx = ai.avz = 0; }
