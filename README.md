@@ -97,6 +97,7 @@ Teknik bawaan (semua bisa diubah di admin):
 | 6193 | Meteor Drop | loncat sangat tinggi (sekitar 21 unit), kamera menghadap bawah, lalu 3 bola cepat dijatuhkan lurus ke bawah (22 damage per bola, meledak di tanah) |
 | 4827 | Pedang Berputar | berputar 2 detik dengan dua pedang mengorbit, menebas semua musuh dalam radius 3,6 tiap 0,25 detik (14 damage per tebasan) sambil tetap bisa bergerak |
 | 5316 | Cungkil | mencungkil musuh di depan (jarak 4,2) sampai terlontar sangat tinggi, 18 damage; musuh yang menahan atau kebal tidak terlontar |
+| 2159 | Tembok Pelindung | membuat tembok melingkar 360° (radius 4) selama 5 detik lalu hancur sendiri. Tiap bagian punya 100 HP dan bisa dihancurkan pedang (2 tebasan), bola, dan teknik area. Bola milik pembuat menembus tembok sendiri |
 
 ### Mekanik lain
 
