@@ -353,7 +353,7 @@ function makeRuntime(r) {
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
-function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false, r.dmin); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
+function newRuntime(r) { const rt = makeRuntime(r); if (r.mode === 'duel') rt.duel = duelNew(clampN(Math.round(Number(r.team)) || 1, 1, 3), r.ff !== false, r.dmin, r.sdsec, r.drain); else if (r.mode === 'train') rt.train = true; else initBandits(rt); return rt; }
 function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) % 24; }
 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
@@ -1284,12 +1284,15 @@ setInterval(() => {
 const DUEL_COUNT_MS = 3500, DUEL_OVER_MS = 2800;
 /* batas waktu pertandingan (menit, diatur per room di admin, maks 20): setelah itu -> SUDDEN DEATH (sekali kena langsung K.O.) selama DUEL_SD_MS;
    bila masih belum ada yang gugur -> darah semua petarung terkuras cepat sampai tersisa satu */
-const DUEL_DEFAULT_MIN = 5, DUEL_MAX_MIN = 20, DUEL_SD_MS = 60000, DUEL_DRAIN_PER_S = 40;
+const DUEL_DEFAULT_MIN = 5, DUEL_MAX_MIN = 20, DUEL_SD_DEFAULT = 60;   /* sudden death: detik (10-300) */
+const DUEL_DRAIN = { slow: 20, mid: 40, fast: 80 };   /* kecepatan darah terkuras (HP per detik) */
+const normSd = v => clampN(Math.round(Number(v)) || DUEL_SD_DEFAULT, 10, 300);
+const normDrain = v => (DUEL_DRAIN[v] ? v : 'mid');
 function standSpawn() {
   const a = Math.random() * Math.PI * 2, r = ARENA.ringR + 3.5 + Math.random() * 5;
   return { x: r2(ARENA.x + Math.cos(a) * r), z: r2(ARENA.z + Math.sin(a) * r) };
 }
-function duelNew(size, ff, dmin) { return { size: size || 1, ff: ff !== false, dmin: clampN(Math.round(Number(dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), limit: 0, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, fightAt: 0, ph: 0, sd: false, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
+function duelNew(size, ff, dmin, sdsec, drain) { return { size: size || 1, ff: ff !== false, dmin: clampN(Math.round(Number(dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), sdsec: normSd(sdsec), drain: normDrain(drain), limit: 0, sdMs: 0, drainRate: 40, teamA: [], teamB: [], team: {}, out: {}, queue: [], st: 'wait', until: 0, fightAt: 0, ph: 0, sd: false, streak: {}, total: {}, best: {}, names: {}, last: null, aloneAt: 0 }; }
 function duelFighting(room, p) { const d = room.duel; return !!d && d.st === 'fight' && !!d.team[p.id] && !d.out[p.id]; }
 function duelMembers(room, side) { const d = room.duel; return d[side].map(id => room.players.get(id)).filter(Boolean); }
 function duelRebuild(room) {
@@ -1308,7 +1311,7 @@ function duelState(room) {
 function duelPhaseLeft(d) {
   const el = now() - d.fightAt;
   if (d.ph === 0) return Math.max(0, d.limit - el);
-  if (d.ph === 1) return Math.max(0, d.limit + DUEL_SD_MS - el);
+  if (d.ph === 1) return Math.max(0, d.limit + d.sdMs - el);
   return 0;
 }
 /* petarung gugur karena darah terkuras (tanpa penyerang) */
@@ -1326,7 +1329,7 @@ function duelDrain(room, d, mA, mB, dt) {
   if (fs.length < 2) return;
   let keep = fs[0]; for (const p of fs) if (p.hp > keep.hp) keep = p;
   for (const p of fs) {
-    p.drainAcc = (p.drainAcc || 0) + DUEL_DRAIN_PER_S * dt;
+    p.drainAcc = (p.drainAcc || 0) + d.drainRate * dt;
     const w = Math.floor(p.drainAcc); if (w < 1) continue;
     p.drainAcc -= w;
     const nh = p.hp - w;
@@ -1579,7 +1582,7 @@ function duelTick(room, t, dt) {
       }
       d.st = 'over'; d.until = t + DUEL_OVER_MS; d.sd = false; changed = true;
     } else {
-      const el = t - d.fightAt, ph = el >= d.limit + DUEL_SD_MS ? 2 : (el >= d.limit ? 1 : 0);
+      const el = t - d.fightAt, ph = el >= d.limit + d.sdMs ? 2 : (el >= d.limit ? 1 : 0);
       if (ph !== d.ph) { d.ph = ph; changed = true; }
       d.sd = ph >= 1;
       if (ph === 2) duelDrain(room, d, mA, mB, dt || 0.033);
@@ -1588,7 +1591,7 @@ function duelTick(room, t, dt) {
     if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
     if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.limit = d.dmin * 60000; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.limit = d.dmin * 60000; d.sdMs = d.sdsec * 1000; d.drainRate = DUEL_DRAIN[d.drain] || 40; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
   }
   if (d.st === 'wait') {
     /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
@@ -1968,7 +1971,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: r.mode === 'duel' ? clampN(Math.round(Number(r.team)) || 1, 1, 3) : 1, ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), sdsec: normSd(r.sdsec), drain: normDrain(r.drain), debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
@@ -2013,7 +2016,7 @@ async function handleAdmin(req, res, pathname) {
     const max = Math.round(Number(b.max));
     if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT });
     if (DB.rooms.length >= 200) return json(res, 400, { error: 'Terlalu banyak room, hapus yang lama dulu' });
-    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false, dmin: clampN(Math.round(Number(b.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN) };
+    const r = { code: newRoomCode(), name, max, created: now(), voice: b.voice !== false, pick: b.pick === true, debug: b.debug === true, mode: b.mode === 'duel' ? 'duel' : (b.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(b.team)) || 1, 1, 3), ff: b.ff !== false, dmin: clampN(Math.round(Number(b.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), sdsec: normSd(b.sdsec), drain: normDrain(b.drain) };
     DB.rooms.push(r); rooms.set(r.code, newRuntime(r)); saveDBNow();
     return json(res, 200, { room: roomView(r) });
   }
@@ -2029,7 +2032,9 @@ async function handleAdmin(req, res, pathname) {
       if (b.debug !== undefined) r.debug = !!b.debug;
       if (b.max !== undefined) { const mx = Math.round(Number(b.max)); if (!isFinite(mx) || mx < 2 || mx > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain harus angka 2-' + ROOM_MAX_LIMIT }); r.max = mx; }
       if (b.dmin !== undefined) { const dm = Math.round(Number(b.dmin)); if (!isFinite(dm) || dm < 1 || dm > DUEL_MAX_MIN) return json(res, 400, { error: 'Batas waktu harus 1-' + DUEL_MAX_MIN + ' menit' }); r.dmin = dm; }
-      const rt = rooms.get(r.code); if (rt && rt.duel) rt.duel.dmin = clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN);
+      if (b.sdsec !== undefined) { const sv = Math.round(Number(b.sdsec)); if (!isFinite(sv) || sv < 10 || sv > 300) return json(res, 400, { error: 'Lama sudden death harus 10-300 detik' }); r.sdsec = sv; }
+      if (b.drain !== undefined) { if (!DUEL_DRAIN[b.drain]) return json(res, 400, { error: 'Kecepatan darah terkuras tidak dikenal' }); r.drain = b.drain; }
+      const rt = rooms.get(r.code); if (rt && rt.duel) { rt.duel.dmin = clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN); rt.duel.sdsec = normSd(r.sdsec); rt.duel.drain = normDrain(r.drain); }
       if (rt) { rt.name = r.name; rt.max = r.max; rt.voice = r.voice !== false; rt.pick = r.pick === true; rt.debug = r.debug === true; }
       saveDBNow();
       return json(res, 200, { room: roomView(r) });
@@ -2069,7 +2074,7 @@ async function handleAdmin(req, res, pathname) {
       const max = Math.round(Number(r.max));
       if (!isFinite(max) || max < 2 || max > ROOM_MAX_LIMIT) return json(res, 400, { error: 'Maksimal pemain di cadangan tidak valid' });
       seenR.add(r.code);
-      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN) });
+      rs.push({ code: r.code, name: cleanName(r.name, 30) || 'Room', max, created: Number(r.created) || now(), voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true, mode: r.mode === 'duel' ? 'duel' : (r.mode === 'train' ? 'train' : 'world'), team: clampN(Math.round(Number(r.team)) || 1, 1, 3), ff: r.ff !== false, dmin: clampN(Math.round(Number(r.dmin)) || DUEL_DEFAULT_MIN, 1, DUEL_MAX_MIN), sdsec: normSd(r.sdsec), drain: normDrain(r.drain) });
     }
     for (const rt of [...rooms.values()]) { closeRoom(rt); rooms.delete(rt.code); }
     DB.rooms = rs; DB.techniques = techs;
@@ -2316,6 +2321,10 @@ button:disabled{opacity:.5}
         <label>Batas waktu pertandingan (menit, maks 20). Setelah habis: sudden death 1 menit, lalu darah terkuras</label>
         <div class="chips" id="dpresets"></div>
         <input id="rdmin" type="number" min="1" max="20" value="5" style="margin-top:8px">
+        <div class="row" style="margin-top:8px">
+          <div><label>Lama sudden death</label><select id="rsd"><option value="30">30 detik</option><option value="60" selected>1 menit</option><option value="120">2 menit</option><option value="180">3 menit</option></select></div>
+          <div><label>Darah terkuras</label><select id="rdr"><option value="slow">Pelan (20 HP/dtk)</option><option value="mid" selected>Sedang (40 HP/dtk)</option><option value="fast">Cepat (80 HP/dtk)</option></select></div>
+        </div>
       </div>
       <label class="chk"><input type="checkbox" id="rvoice" checked> Voice chat: pemain bisa bicara (mikrofon) dan mendengar suara</label>
       <label class="chk"><input type="checkbox" id="rpick"> Mode pilih teknik: pemain memilih teknik dari daftar, tanpa mengetik kode angka</label>
@@ -2427,7 +2436,7 @@ $('rnew').addEventListener('click',rOpen);$('rcancel').addEventListener('click',
 $('rmodal').addEventListener('click',e=>{if(e.target===$('rmodal'))rClose();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')rClose();});
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked,dmin:parseInt($('rdmin').value,10)||5}});$('rname').value='';rClose();loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked,dmin:parseInt($('rdmin').value,10)||5,sdsec:parseInt($('rsd').value,10),drain:$('rdr').value}});$('rname').value='';rClose();loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
 const openRooms=new Set();
@@ -2447,7 +2456,7 @@ async function loadRooms(){
     card.appendChild(sum);
     const d=document.createElement('div');d.className='rbody';card.appendChild(d);
     const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';tx.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+(r.mode==='duel'?' · batas '+(r.dmin||5)+' mnt':'')+' · dibuat '+new Date(r.created).toLocaleString();tx.appendChild(m);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+(r.mode==='duel'?' · batas '+(r.dmin||5)+' mnt + SD '+(r.sdsec||60)+' dtk':'')+' · dibuat '+new Date(r.created).toLocaleString();tx.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -2459,13 +2468,17 @@ async function loadRooms(){
     const vl=document.createElement('label');vl.className='chk';vl.style.gridColumn='1 / -1';vl.style.margin='0';const vc=document.createElement('input');vc.type='checkbox';vc.checked=r.voice!==false;vc.dataset.edit=1;vl.appendChild(vc);vl.appendChild(document.createTextNode('Voice chat aktif'));
     const pl2=document.createElement('label');pl2.className='chk';pl2.style.gridColumn='1 / -1';pl2.style.margin='0';const pc=document.createElement('input');pc.type='checkbox';pc.checked=r.pick===true;pc.dataset.edit=1;pl2.appendChild(pc);pl2.appendChild(document.createTextNode('Mode pilih teknik (tanpa ketik kode)'));
     const dgl=document.createElement('label');dgl.className='chk';dgl.style.gridColumn='1 / -1';dgl.style.margin='0';const dgc=document.createElement('input');dgc.type='checkbox';dgc.checked=r.debug===true;dgc.dataset.edit=1;dgl.appendChild(dgc);dgl.appendChild(document.createTextNode('Mode uji hit (alasan meleset tampil di layar)'));
-    let dm=null,dwEl=null;
-    if(r.mode==='duel'){const dw=document.createElement('label');dw.style.gridColumn='1 / -1';dw.style.margin='0';dw.style.display='flex';dw.style.alignItems='center';dw.style.gap='8px';dw.style.fontSize='13px';dw.appendChild(document.createTextNode('Batas waktu (menit, 1-20)'));dm=document.createElement('input');dm.type='number';dm.min=1;dm.max=20;dm.value=r.dmin||5;dm.dataset.edit=1;dm.style.maxWidth='90px';dw.appendChild(dm);dwEl=dw;}
+    let dm=null,dwEl=null,sdSel=null,drSel=null,sdW=null,drW=null;
+    if(r.mode==='duel'){const dw=document.createElement('label');dw.style.gridColumn='1 / -1';dw.style.margin='0';dw.style.display='flex';dw.style.alignItems='center';dw.style.gap='8px';dw.style.fontSize='13px';dw.appendChild(document.createTextNode('Batas waktu (menit, 1-20)'));dm=document.createElement('input');dm.type='number';dm.min=1;dm.max=20;dm.value=r.dmin||5;dm.dataset.edit=1;dm.style.maxWidth='90px';dw.appendChild(dm);dwEl=dw;
+      const mk=(label,opts,val)=>{const w=document.createElement('label');w.style.cssText='grid-column:1 / -1;display:flex;align-items:center;gap:8px;font-size:13px;margin:0';w.appendChild(document.createTextNode(label));const se=document.createElement('select');se.dataset.edit=1;se.style.maxWidth='190px';opts.forEach(o=>{const e=document.createElement('option');e.value=o[0];e.textContent=o[1];if(String(o[0])===String(val))e.selected=true;se.appendChild(e);});w.appendChild(se);return [w,se];};
+      const sdOpts=[[30,'30 detik'],[60,'1 menit'],[120,'2 menit'],[180,'3 menit']];const sdv=r.sdsec||60;if(!sdOpts.some(o=>o[0]===sdv)){sdOpts.push([sdv,sdv+' detik']);sdOpts.sort((a,b)=>a[0]-b[0]);}
+      const a1=mk('Lama sudden death',sdOpts,sdv);sdW=a1[0];sdSel=a1[1];
+      const a2=mk('Darah terkuras',[['slow','Pelan (20 HP/dtk)'],['mid','Sedang (40 HP/dtk)'],['fast','Cepat (80 HP/dtk)']],r.drain||'mid');drW=a2[0];drSel=a2[1];}
     const sv=document.createElement('button');sv.textContent='Ubah';
-    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked,...(dm?{dmin:parseInt(dm.value,10)}:{})}});sv.textContent='Tersimpan';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
+    sv.addEventListener('click',async()=>{try{await api('/rooms/'+r.code,{method:'PATCH',body:{name:nm.value,max:parseInt(mx.value,10),voice:vc.checked,pick:pc.checked,debug:dgc.checked,...(dm?{dmin:parseInt(dm.value,10),sdsec:parseInt(sdSel.value,10),drain:drSel.value}:{})}});sv.textContent='Tersimpan';setTimeout(loadRooms,800);}catch(e){alert(e.message);}});
     const dl=document.createElement('button');dl.className='bad';dl.textContent='Hapus';
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
-    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);if(dwEl)row.appendChild(dwEl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
+    row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);if(dwEl){row.appendChild(dwEl);row.appendChild(sdW);row.appendChild(drW);}row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
     if(r.players.length){const p=document.createElement('div');p.className='pl';p.appendChild(document.createTextNode('Online: '));r.players.forEach(n=>{const b=document.createElement('b');b.textContent=n;p.appendChild(b);});d.appendChild(p);}
     box.appendChild(card);
   });
