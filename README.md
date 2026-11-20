@@ -94,7 +94,7 @@ Teknik bawaan (semua bisa diubah di admin):
 | 246 | Firewall | perisai sementara |
 | 1357 | Overclock | lari lebih cepat |
 | 753 | Lag Dash | lesat ke arah gerakmu tanpa bidik (tekan kiri lalu dash, maka melesat ke kiri; tanpa input, ke arah hadap karakter) |
-| 6193 | Meteor Drop | loncat tinggi, kamera menghadap bawah, lalu 3 bola cepat dijatuhkan lurus ke bawah (22 damage per bola, meledak di tanah) |
+| 6193 | Meteor Drop | loncat sangat tinggi (sekitar 21 unit), kamera menghadap bawah, lalu 3 bola cepat dijatuhkan lurus ke bawah (22 damage per bola, meledak di tanah) |
 
 ### Mekanik lain
 

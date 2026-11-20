@@ -576,7 +576,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 3, size = tech.size || 1.5, boom = tech.boom == null ? 3 : tech.boom;
       broadcast(room, { t: 'fx', k: 'meteor', id: p.id, c: tech.color });
       for (let i = 0; i < n; i++) {
-        room.later.push({ at: t + 700 + i * 170, fn: () => {
+        room.later.push({ at: t + 1000 + i * 170, fn: () => {
           if (!room.players.has(p.id) || p.dead) return;
           const pr = { id: projSeq++, o: p.id, x: p.x, y: p.y + 0.9, z: p.z, dx: 0, dy: -1, dz: 0, sp: tech.speed, life: 2, dmg: tech.damage, stun: 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: 0 };
           room.projs.push(pr);
@@ -4088,7 +4088,7 @@ function onFx(m){
   else if(m.k==='rideend'){if(m.id===me.id){rideT=0;}else{const o=others.get(m.id);if(o)o.ride=false;}}
   else if(m.k==='snipe'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,'#ffffff',0.07);burst(p.x+m.fx,p.y+1,p.z+m.fz,'#fff6a0',6,3);sfxAt('snipe',p.x,p.z);}
   else if(m.k==='beam'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,col);burst(p.x+m.fx,p.y+1,p.z+m.fz,col,8,4);sfxAt('beam',p.x,p.z);}
-  else if(m.k==='meteor'){if(m.id===me.id){vy=24;grounded=false;jumping=false;sq.y=1.3;sfx.jump();const pp=cam.pitchT,fp=fpsPitch;if(fps)fpsPitch=-1.25;else cam.pitchT=1.1;setTimeout(()=>{if(fps)fpsPitch=fp;else cam.pitchT=pp;},1500);}burst(p.x,p.y+0.3,p.z,col,14,4);}
+  else if(m.k==='meteor'){if(m.id===me.id){vy=36;grounded=false;jumping=false;sq.y=1.3;sfx.jump();const pp=cam.pitchT,fp=fpsPitch;if(fps)fpsPitch=-1.25;else cam.pitchT=1.1;setTimeout(()=>{if(fps)fpsPitch=fp;else cam.pitchT=pp;},2300);}burst(p.x,p.y+0.3,p.z,col,14,4);}
   else if(m.k==='leap'){if(m.id===me.id){vy=15.5;grounded=false;jumping=false;kb.x+=m.fx*9;kb.z+=m.fz*9;sq.y=1.3;sfx.jump();}burst(p.x,p.y+0.3,p.z,col,12,4);}
   else if(m.k==='regen'){if(m.id===me.id)myRegenT=m.dur;else{const o=others.get(m.id);if(o)o.regenT=m.dur;}sfxAt('regen',p.x,p.z);}
   else if(m.k==='haste'){if(m.id===me.id){hasteT=m.dur;hastePw=m.pw;}else{const o=others.get(m.id);if(o)o.hasteT=m.dur;}burst(p.x,p.y+0.8,p.z,col,10,3);sfxAt('haste',p.x,p.z);}
