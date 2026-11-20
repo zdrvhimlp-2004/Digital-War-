@@ -99,9 +99,9 @@ const DEFAULT_TECHS = [
   { code: '6193', name: 'Meteor Drop',   kind: 'meteor', emoji: '☄️', color: '#ff8a3c', damage: 22, cd: 6, speed: 34, count: 3, size: 1.5, boom: 3 },
   { code: '4827', name: 'Pedang Berputar', kind: 'spin', emoji: '🌀', color: '#bfe9ff', damage: 14, cd: 8, dur: 2, radius: 3.6 },
   { code: '5316', name: 'Cungkil', kind: 'launch', emoji: '⤴️', color: '#ffd24d', damage: 18, cd: 7, range: 4.2, lift: 34 },
-  { code: '2159', name: 'Tembok Pelindung', kind: 'wall', emoji: '🧱', color: '#9fb4d0', cd: 12, dur: 5, radius: 4, hp: 100 }
+  { code: '2159', name: 'Tembok Pelindung', kind: 'ring', emoji: '🧱', color: '#9fb4d0', cd: 12, dur: 5, radius: 4, hp: 100 }
 ];
-const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'meteor', 'spin', 'launch', 'wall'];
+const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'meteor', 'spin', 'launch', 'ring'];
 
 /* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
 function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
@@ -250,7 +250,7 @@ function sanitizeTech(t) {
   } else if (kind === 'meteor') {
     out.damage = num(t.damage, 0, 100, 22); out.speed = num(t.speed, 15, 80, 34); out.count = Math.round(num(t.count, 1, 6, 3));
     out.size = num(t.size, 0.5, 4, 1.5); out.boom = num(t.boom, 0, 10, 3);
-  } else if (kind === 'wall') {
+  } else if (kind === 'ring') {
     out.dur = num(t.dur, 1, 20, 5); out.radius = num(t.radius, 2.5, 10, 4); out.hp = num(t.hp, 10, 500, 100);
   } else if (kind === 'launch') {
     out.damage = num(t.damage, 0, 100, 18); out.range = num(t.range, 2, 8, 4.2); out.lift = num(t.lift, 10, 60, 34);
@@ -273,7 +273,7 @@ function techDesc(t) {
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
     case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan';
-    case 'wall': return 'Tembok melingkar 360° selama ' + t.dur + ' dtk lalu hancur, bisa dihancurkan (' + t.hp + ' HP per bagian)';
+    case 'ring': return 'Tembok melingkar 360° selama ' + t.dur + ' dtk lalu hancur, bisa dihancurkan (' + t.hp + ' HP per bagian)';
     case 'launch': return 'Cungkil musuh di depan sampai terpental sangat tinggi, ' + t.damage + ' dmg';
     case 'spin': return 'Berputar dengan pedang ' + t.dur + ' dtk, menebas semua musuh sekitar, ' + t.damage + ' dmg per tebasan';
     case 'meteor': return 'Loncat tinggi, menghadap bawah, jatuhkan ' + t.count + ' bola cepat ke bawah, ' + t.damage + ' dmg/bola';
@@ -305,7 +305,7 @@ function newRoomCode() {
 function makeRuntime(r) {
   return {
     code: r.code, name: r.name, max: r.max, created: r.created,
-    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, walls: [], chatLog: [], voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true,
+    players: new Map(), doors: new Array(DOOR_COUNT).fill(false), projs: [], mobs: [], traps: [], orbs: [], sols: [], forts: makeForts(), campNext: {}, later: [], chest: { open: false, reopenAt: 0 }, rings: [], chatLog: [], voice: r.voice !== false, pick: r.pick === true, debug: r.debug === true,
     nextPid: 1, hour0: 9, t0: now(), tickN: 0
   };
 }
@@ -324,7 +324,7 @@ function randomSpawn() {
   return { x: r2(sp.x + (Math.random() - 0.5) * 10), z: r2(sp.z + (Math.random() - 0.5) * 10) };
 }
 
-let wallSeq = 1, projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000;
+let ringSeq = 1, projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000;
 const GUARD_WINDOW = 3000, GUARD_MAX = 9, GUARD_BREAK_MS = 2500;
 const MAX_TRAPS = 6;
 
@@ -510,7 +510,7 @@ function doMelee(room, p, fx, fz, ay) {
     room.projs.push(wv);
     broadcast(room, { t: 'pr', id: wv.id, x: r2(wv.x), y: r2(wv.y), z: r2(wv.z), dx: r2(wdx), dy: r2(ay2), dz: r2(wdz), sp: wv.sp, life: wv.life, c: wv.c, sz: 0.55, wv: 1 });
   }
-  wallHitArea(room, p.x, p.z, MELEE.range, MELEE.dmg, fx, fz);
+  ringHitArea(room, p.x, p.z, MELEE.range, MELEE.dmg, fx, fz);
   if (room.debug && !landed) send(p.ws, { t: 'dbg', ok: 0, msg: nearMiss ? 'Meleset: ' + nearMiss.why : 'Meleset: tidak ada target dalam 10 unit' });
   /* tebasan menghancurkan bola yang melintas di depan */
   for (let i = room.projs.length - 1; i >= 0; i--) {
@@ -532,7 +532,7 @@ function doMelee(room, p, fx, fz, ay) {
 }
 
 function areaHit(room, p, radius, dmg, kb, stun) {
-  wallHitArea(room, p.x, p.z, radius, dmg);
+  ringHitArea(room, p.x, p.z, radius, dmg);
   for (const v of victims(room)) {
     if (v === p || friendly(p.id, v)) continue;
     const dx = v.x - p.x, dz = v.z - p.z, d = Math.hypot(dx, dz);
@@ -543,48 +543,48 @@ function areaHit(room, p, radius, dmg, kb, stun) {
 }
 
 /* ---------- tembok 360 derajat ---------- */
-const WALL_SEG_R = 1.0;
-function wallDamage(room, w, i, dmg) {
+const RING_SEG_R = 1.0;
+function ringDamage(room, w, i, dmg) {
   const sg = w.segs[i];
   if (!sg || sg.hp <= 0) return;
   sg.hp = Math.max(0, sg.hp - dmg);
-  if (sg.hp <= 0) broadcast(room, { t: 'wallx', id: w.id, i, x: r2(sg.x), z: r2(sg.z) });
-  else broadcast(room, { t: 'wallhit', id: w.id, i, hp: Math.round(sg.hp) });
+  if (sg.hp <= 0) broadcast(room, { t: 'ringx', id: w.id, i, x: r2(sg.x), z: r2(sg.z) });
+  else broadcast(room, { t: 'ringhit', id: w.id, i, hp: Math.round(sg.hp) });
 }
 /* serangan di titik (x,y,z) bertabrakan dengan bagian tembok? ikut memberi damage. ignoreOwner: peluru pemilik menembus tembok sendiri */
-function wallHitAt(room, x, y, z, rad, dmg, ownerId) {
-  for (const w of room.walls) {
+function ringHitAt(room, x, y, z, rad, dmg, ownerId) {
+  for (const w of room.rings) {
     if (ownerId !== undefined && w.o === ownerId) continue;
     for (let i = 0; i < w.segs.length; i++) {
       const sg = w.segs[i];
       if (sg.hp <= 0) continue;
-      if (Math.hypot(sg.x - x, sg.z - z) > WALL_SEG_R + rad) continue;
+      if (Math.hypot(sg.x - x, sg.z - z) > RING_SEG_R + rad) continue;
       if (y < sg.y - 0.5 || y > sg.y + 3.4) continue;
-      wallDamage(room, w, i, dmg);
+      ringDamage(room, w, i, dmg);
       return true;
     }
   }
   return false;
 }
 /* serangan area / pedang: semua bagian tembok dalam radius (dan dalam arah serang bila fx diberikan) */
-function wallHitArea(room, cx, cz, radius, dmg, fx, fz) {
-  for (const w of room.walls) {
+function ringHitArea(room, cx, cz, radius, dmg, fx, fz) {
+  for (const w of room.rings) {
     for (let i = 0; i < w.segs.length; i++) {
       const sg = w.segs[i];
       if (sg.hp <= 0) continue;
       const dx = sg.x - cx, dz = sg.z - cz, d = Math.hypot(dx, dz);
-      if (d > radius + WALL_SEG_R) continue;
+      if (d > radius + RING_SEG_R) continue;
       if (fx !== undefined && d > 0.8 && (dx * fx + dz * fz) / d < 0.6) continue;
-      wallDamage(room, w, i, dmg);
+      ringDamage(room, w, i, dmg);
     }
   }
 }
-function stepWalls(room, t) {
-  for (let i = room.walls.length - 1; i >= 0; i--) {
-    const w = room.walls[i];
+function stepRings(room, t) {
+  for (let i = room.rings.length - 1; i >= 0; i--) {
+    const w = room.rings[i];
     if (t >= w.until || w.segs.every(sg => sg.hp <= 0)) {
-      if (t >= w.until) broadcast(room, { t: 'wallx', id: w.id, i: -1 });
-      room.walls.splice(i, 1);
+      if (t >= w.until) broadcast(room, { t: 'ringx', id: w.id, i: -1 });
+      room.rings.splice(i, 1);
     }
   }
 }
@@ -636,16 +636,16 @@ function doCast(room, p, slot, ax, ay, az) {
       areaHit(room, p, tech.radius, tech.damage, 14, tech.stun || 0);
       break;
     }
-    case 'wall': {
+    case 'ring': {
       const R = tech.radius || 4, n = Math.max(8, Math.ceil(2 * Math.PI * R / 1.4)), hp = tech.hp || 100, dur = tech.dur || 5;
-      const w = { id: wallSeq++, o: p.id, until: t + dur * 1000, segs: [] };
+      const w = { id: ringSeq++, o: p.id, until: t + dur * 1000, segs: [] };
       const gy = terrainH(p.x, p.z);
       for (let k = 0; k < n; k++) {
         const a = k / n * Math.PI * 2;
         w.segs.push({ x: p.x + Math.cos(a) * R, z: p.z + Math.sin(a) * R, y: terrainH(p.x + Math.cos(a) * R, p.z + Math.sin(a) * R), hp });
       }
-      room.walls.push(w);
-      broadcast(room, { t: 'wall', id: w.id, o: p.id, x: r2(p.x), z: r2(p.z), r: R, n, hp, dur, c: tech.color });
+      room.rings.push(w);
+      broadcast(room, { t: 'ring', id: w.id, o: p.id, x: r2(p.x), z: r2(p.z), r: R, n, hp, dur, c: tech.color });
       break;
     }
     case 'launch': {
@@ -987,7 +987,7 @@ function stepRoom(room, dt, t) {
     const ground = pr.y - br <= gy;
     /* dinding dan langit-langit transparan arena: serangan meledak di dinding */
     let wall = false;
-    if (!hit && !ground && wallHitAt(room, pr.x, pr.y, pr.z, br, pr.dmg || 10, pr.o)) wall = true;
+    if (!hit && !ground && ringHitAt(room, pr.x, pr.y, pr.z, br, pr.dmg || 10, pr.o)) wall = true;
     if (room.duel && !hit && !ground && !wall) {
       const wd = Math.hypot(pr.x - ARENA.x, pr.z - ARENA.z);
       if (wd > ARENA.ringR - br * 0.5) { wall = true; const k = (ARENA.ringR - br * 0.5) / wd; pr.x = ARENA.x + (pr.x - ARENA.x) * k; pr.z = ARENA.z + (pr.z - ARENA.z) * k; }
@@ -1076,7 +1076,7 @@ function stepRoom(room, dt, t) {
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
   if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
-  stepWalls(room, t);
+  stepRings(room, t);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -1901,14 +1901,14 @@ button:disabled{opacity:.5}
 const $=id=>document.getElementById(id);
 let token=null;try{token=localStorage.getItem('dw_admin')}catch(e){}
 let techs=[],pollT=null;
-const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',meteor:'Loncat & bola ke bawah (meteor)',spin:'Berputar dengan pedang (spin)',launch:'Cungkil musuh ke atas (launch)',wall:'Tembok 360° (wall)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
+const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',meteor:'Loncat & bola ke bawah (meteor)',spin:'Berputar dengan pedang (spin)',launch:'Cungkil musuh ke atas (launch)',ring:'Tembok 360° (ring)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
 const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
   orb:[['damage','Damage per sentuhan'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
   beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
   slam:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius']],
-  wall:[['dur','Durasi (dtk)'],['cd','Cooldown (dtk)'],['radius','Radius tembok'],['hp','HP tiap bagian']],
+  ring:[['dur','Durasi (dtk)'],['cd','Cooldown (dtk)'],['radius','Radius tembok'],['hp','HP tiap bagian']],
   launch:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Jangkauan'],['lift','Daya cungkil (tinggi)']],
   spin:[['damage','Damage per tebasan (tiap 0,25 dtk)'],['cd','Cooldown (dtk)'],['dur','Durasi (dtk)'],['radius','Radius']],
   meteor:[['damage','Damage per bola'],['cd','Cooldown (dtk)'],['count','Jumlah bola'],['speed','Kecepatan jatuh'],['size','Ukuran bola'],['boom','Radius ledakan']],
@@ -2489,7 +2489,7 @@ const ICO={
  bolt:'<path d="M2.500 8h7M1.500 12h8M2.500 16h7"/><circle cx="16.500" cy="12" r="4.500" fill="currentColor" fill-opacity=".25"/>',
  nova:'<circle cx="12" cy="12" r="3.200" fill="currentColor" fill-opacity=".25"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.800 2.800M16.200 16.200L19 19M19 5l-2.800 2.800M7.800 16.200L5 19"/>',
  beam:'<path d="M2.500 12h19M6.500 7.500L4 12l2.500 4.500M19.500 8.500v7"/>',
- wall:'<path d="M3 20V8h18v12M3 14h18M9 8v6M15 14v6M12 8V4"/>',
+ ring:'<path d="M3 20V8h18v12M3 14h18M9 8v6M15 14v6M12 8V4"/>',
  launch:'<path d="M12 20V5M6.500 10.500L12 5l5.500 5.500M7 20h10"/>',
  spin:'<circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity=".25"/><path d="M12 2.500v6M12 15.500v6M2.500 12h6M15.500 12h6"/>',
  meteor:'<circle cx="12" cy="6" r="3" fill="currentColor" fill-opacity=".3"/><path d="M12 11v4M8 13v4M16 13v4M12 21v-3"/>',
@@ -4110,7 +4110,7 @@ function onMsg(m){
       {const f=findFree(m.spawn.x,m.spawn.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;cam.ty=0;
       chestOpen=!!m.chest;if(chest){chest.open=chestOpen;chest.target=chest.ang=chestOpen?1.25:0;}ammo=0;sleeping=false;$('night').style.opacity=0;fade=null;$('fade').style.opacity=0;
       cam.yaw=cam.yawT=0;
-      walls.forEach((w,id)=>removeWall(id,-1));others.forEach((o,id)=>removeOther(id));mobs.forEach((_,id)=>removeMob(id,true));traps.forEach((_,id)=>removeTrap(id));
+      cwalls.forEach((w,id)=>removeRing(id,-1));others.forEach((o,id)=>removeOther(id));mobs.forEach((_,id)=>removeMob(id,true));traps.forEach((_,id)=>removeTrap(id));
       bookEnabled=!!m.book;$('bookBtn').classList.toggle('off',!bookEnabled);
       m.players.forEach(p=>{if(p.id!==me.id)addOther(p);});
       m.doors.forEach((o,i)=>applyDoor(i,!!o,true));
@@ -4181,43 +4181,43 @@ function onMsg(m){
     case 'cap':onCap(m);break;
     case 'orb':addOrb(m);break;
     case 'orbx':removeOrb(m.id);break;
-    case 'wall':startWall(m);break;
-    case 'wallhit':hitWall(m.id,m.i,m.hp);break;
-    case 'wallx':removeWall(m.id,m.i,m.x,m.z);break;
+    case 'ring':startRing(m);break;
+    case 'ringhit':hitRing(m.id,m.i,m.hp);break;
+    case 'ringx':removeRing(m.id,m.i,m.x,m.z);break;
     case 'chat':addChatLine(m,true);if(m.id!==me.id)sfx.pop();break;
     case 'rtc':onRtc(m.from,m.d);break;
     case 'closed':{ws.onclose=null;showDc('Room ditutup','Admin menutup room ini.');break;}
   }
 }
-const walls=new Map();
-const wallGeo=new THREE.BoxGeometry(1.7,3,0.7),wallEdgeGeo=new THREE.EdgesGeometry(wallGeo),wallEdgeMat=new THREE.LineBasicMaterial({color:0x1b2740});
-function startWall(m){
+const cwalls=new Map();
+const cwallGeo=new THREE.BoxGeometry(1.7,3,0.7),cwallEdgeGeo=new THREE.EdgesGeometry(cwallGeo),cwallEdgeMat=new THREE.LineBasicMaterial({color:0x1b2740});
+function startRing(m){
   const arr=[];const col=new THREE.Color(m.c||'#9fb4d0');
   for(let k=0;k<m.n;k++){
     const a=k/m.n*Math.PI*2,x=m.x+Math.cos(a)*m.r,z=m.z+Math.sin(a)*m.r,gy=terrainH(x,z);
     const mat2=new THREE.MeshBasicMaterial({color:col.clone()});
-    const mesh=new THREE.Mesh(wallGeo,mat2);mesh.add(new THREE.LineSegments(wallEdgeGeo,wallEdgeMat));mesh.position.set(x,gy+1.5,z);mesh.rotation.y=-a+Math.PI/2;mesh.scale.y=0.01;scene.add(mesh);
+    const mesh=new THREE.Mesh(cwallGeo,mat2);mesh.add(new THREE.LineSegments(cwallEdgeGeo,cwallEdgeMat));mesh.position.set(x,gy+1.5,z);mesh.rotation.y=-a+Math.PI/2;mesh.scale.y=0.01;scene.add(mesh);
     const circ={x,z,r:1.0};circles.push(circ);
     arr.push({mesh,mat:mat2,circ,hp:m.hp,max:m.hp,x,z,gy,flash:0,base:col.clone().multiplyScalar(k%2?0.8:1),alive:true});
   }
-  const w={id:m.id,segs:arr,t:0,dur:m.dur,col:m.c||'#9fb4d0'};walls.set(m.id,w);
+  const w={id:m.id,segs:arr,t:0,dur:m.dur,col:m.c||'#9fb4d0'};cwalls.set(m.id,w);
   burst(m.x,terrainH(m.x,m.z)+0.5,m.z,m.c||'#9fb4d0',18,6);sfxAt('boom',m.x,m.z);
 }
-function wallSegKill(sg,col,big){
+function ringSegKill(sg,col,big){
   if(!sg.alive)return;sg.alive=false;
   const ci=circles.indexOf(sg.circ);if(ci>=0)circles.splice(ci,1);
   scene.remove(sg.mesh);sg.mat.dispose();
   burst(sg.x,sg.gy+1.5,sg.z,col||'#9fb4d0',big?8:16,5);
 }
-function removeWall(id,i,sx,sz){
-  const w=walls.get(id);if(!w)return;
-  if(i<0){w.segs.forEach(sg=>wallSegKill(sg,w.col,true));walls.delete(id);sfxAt('boom',w.segs[0]?w.segs[0].x:0,w.segs[0]?w.segs[0].z:0);return;}
-  const sg=w.segs[i];if(!sg)return;wallSegKill(sg,w.col,false);sfxAt('hit',sg.x,sg.z);
-  if(w.segs.every(q=>!q.alive))walls.delete(id);
+function removeRing(id,i,sx,sz){
+  const w=cwalls.get(id);if(!w)return;
+  if(i<0){w.segs.forEach(sg=>ringSegKill(sg,w.col,true));cwalls.delete(id);sfxAt('boom',w.segs[0]?w.segs[0].x:0,w.segs[0]?w.segs[0].z:0);return;}
+  const sg=w.segs[i];if(!sg)return;ringSegKill(sg,w.col,false);sfxAt('hit',sg.x,sg.z);
+  if(w.segs.every(q=>!q.alive))cwalls.delete(id);
 }
-function hitWall(id,i,hp){const w=walls.get(id);if(!w)return;const sg=w.segs[i];if(!sg||!sg.alive)return;sg.hp=hp;sg.flash=0.15;burst(sg.x,sg.gy+1.5,sg.z,w.col,6,3);sfxAt('hit',sg.x,sg.z);}
-function updWalls(dt){
-  for(const [id,w] of walls){
+function hitRing(id,i,hp){const w=cwalls.get(id);if(!w)return;const sg=w.segs[i];if(!sg||!sg.alive)return;sg.hp=hp;sg.flash=0.15;burst(sg.x,sg.gy+1.5,sg.z,w.col,6,3);sfxAt('hit',sg.x,sg.z);}
+function updRings(dt){
+  for(const [id,w] of cwalls){
     w.t+=dt;const rise=Math.min(1,w.t/0.25),left=w.dur-w.t;
     for(const sg of w.segs){
       if(!sg.alive)continue;
@@ -4655,7 +4655,7 @@ function update(dt){
     humT-=dt;if(humT<=0){humT=0.75;let nd=1e9;orbs.forEach(o=>{nd=Math.min(nd,Math.hypot(o.x-pos.x,o.y-pos.y,o.z-pos.z));});if(nd<SFX_RANGE){SV=distVol(nd,SFX_RANGE);sfx.orbHum();SV=1;}}
   }
   if(peers.size){peers.forEach((pe,id)=>{const o=others.get(id);let v=0;if(o&&!o.dead&&((o.x>1000)===inCave)){v=distVol(Math.hypot(o.x-pos.x,(o.y-pos.y)*0.5,o.z-pos.z),VOICE_RANGE);}pe.el.volume=clamp(v,0,1);});}
-  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updSpins(dt);updWalls(dt);updForts(dt);updCamps(dt);updAim();
+  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updSpins(dt);updRings(dt);updForts(dt);updCamps(dt);updAim();
   if(capState){const kk=clamp(1-(capState.end-performance.now())/capState.ms,0,1);$('capFill').style.width=(kk*100)+'%';}
   if(chest){chest.vel+=(-70*(chest.ang-chest.target)-9*chest.vel)*dt;chest.ang+=chest.vel*dt;chest.pivot.rotation.x=-chest.ang;chest.glow.material.opacity=chestOpen?0.15:0.5+0.15*Math.sin(tAll*3);}
   if(inCave){updBats(dt,rgt);for(const c of crystals){c.mat.emissiveIntensity=0.75+0.35*Math.sin(tAll*1.6+c.ph);c.glow.material.opacity=0.5+0.2*Math.sin(tAll*1.6+c.ph);}}
