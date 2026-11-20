@@ -2703,6 +2703,16 @@ body.pickmode #pickTabs{display:flex;align-items:center;gap:10px}body.pickmode #
 #pickTabs .pt{font-weight:700;font-size:14px;color:#fff}
 .pk.pf{flex-direction:column;justify-content:center;text-align:center;gap:4px;padding:14px 8px;min-height:88px}.pk.pf svg{width:34px;height:34px;flex:0 0 34px}.pk.pf b{font-size:14px}.pk.pf small{font-size:11px}
 body.pickmode #mrow{grid-template-columns:1fr}
+/* popup pilih teknik: hampir seluruh layar (95% x 95%), kartu kecil dan rapat */
+body.pickmode #mcard{width:95vw;height:95vh;height:95dvh;max-width:none;display:flex;flex-direction:column;padding:12px}
+body.pickmode #mcard h3{font-size:15px}body.pickmode #mcard p{margin:0 0 6px}
+body.pickmode #pickBox{flex:1 1 auto;min-height:0;max-height:none;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:min-content;align-content:start;gap:6px}
+body.pickmode #pickTabs{flex:none}body.pickmode #mrow,body.pickmode #mrow2{flex:none;margin-top:8px}
+body.pickmode .pk{padding:6px 8px;gap:7px;border-radius:10px}
+body.pickmode .pk svg{width:22px;height:22px;flex:0 0 22px}
+body.pickmode .pk b{font-size:12.5px;line-height:1.2}
+body.pickmode .pk small{font-size:10px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.pickmode .pk.pf{padding:8px 6px;min-height:0;gap:2px}body.pickmode .pk.pf svg{width:26px;height:26px;flex:0 0 26px}body.pickmode .pk.pf b{font-size:13px}body.pickmode .pk.pf small{font-size:10.5px;-webkit-line-clamp:1}
 #modal{position:fixed;inset:0;background:rgba(0,0,10,.6);display:none;align-items:center;justify-content:center;z-index:20;touch-action:manipulation}
 #modal.show{display:flex}
 #mcard{box-sizing:border-box;width:min(calc(100vw - 2*var(--gx)),320px);background:#141b34;border:2px solid #4de1ff55;border-radius:22px;padding:16px;box-shadow:0 12px 50px rgba(0,0,0,.6),0 0 40px #4de1ff33;text-align:center}
