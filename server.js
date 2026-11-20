@@ -2686,14 +2686,16 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#0b1020">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Digital War">
 <!--TUNING--><title>Digital War</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--gx:10px;--s:clamp(46px,8vh,60px)}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;color:#fff;font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
-canvas#c{display:block;width:100%;height:100%;touch-action:none;outline:none}
+html,body{margin:0;position:fixed;left:0;top:0;width:100%;height:100%;height:var(--vh,100dvh);overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:#0b1020;color:#fff;font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+canvas#c{display:block;position:fixed;left:0;top:0;width:100%;height:100%;touch-action:none;outline:none}
 .hud{display:none!important}
 body.playing .hud{display:block!important}
 body.playing button.btn.hud{display:flex!important}
@@ -4236,8 +4238,9 @@ document.querySelectorAll('.slot').forEach(el=>{
   el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();el.classList.add('down');longDone=false;
     clearTimeout(timer);timer=setTimeout(()=>{if(slots[i]){longDone=true;openModal(i);}},550);});
   const up=()=>{clearTimeout(timer);el.classList.remove('down');};
+  try{el.addEventListener('pointerdown',e=>{try{el.setPointerCapture(e.pointerId);}catch(_){}});}catch(_){}
   el.addEventListener('pointerup',e=>{const was=el.classList.contains('down');up();if(was&&!longDone&&!modalOpen)castSlot(i);});
-  el.addEventListener('pointerleave',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('pointercancel',up);
   el.addEventListener('contextmenu',e=>{e.preventDefault();if(started&&!modalOpen)openModal(i);});
 });
 
@@ -4310,22 +4313,37 @@ bindBtn($('btnGuard'),()=>setGuard(true),()=>setGuard(false));
 bindBtn($('btnSnipe'),()=>fireSniper());
 
 /* ---------- fullscreen ---------- */
+let wantFs=false;
 (function(){
   const el=document.documentElement,btn=$('fsBtn');
   const req=el.requestFullscreen||el.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
-  if(!req){btn.classList.add('off');return;}
   const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
-  const sync=()=>{btn.innerHTML=svg(isFs()?'fsx':'fs');setTimeout(resize,150);};
+  const ios=/iPhone|iPod/.test(navigator.userAgent)||(/iPad|Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1&&!req);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode:standalone)').matches||matchMedia('(display-mode:fullscreen)').matches;
+  if(!req){
+    if(standalone){btn.classList.add('off');return;}
+    btn.addEventListener('pointerdown',e=>e.stopPropagation());
+    btn.addEventListener('click',()=>{toast(ios?'iPhone: ketuk Bagikan lalu "Tambah ke Layar Utama" untuk layar penuh':'Layar penuh tidak didukung browser ini',4);window.scrollTo(0,1);});
+    return;
+  }
+  const doReq=()=>{try{const r=req.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(_){}
+    try{if(screen.orientation&&screen.orientation.lock&&innerWidth<innerHeight)screen.orientation.lock('landscape').catch(()=>{});}catch(_){}};
+  const sync=()=>{btn.innerHTML=svg(isFs()?'fsx':'fs');setTimeout(resize,150);setTimeout(resize,500);};
   document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync);
   btn.addEventListener('pointerdown',e=>e.stopPropagation());
   btn.addEventListener('click',()=>{
     try{
-      if(isFs()){exit.call(document);}
-      else{const r=req.call(el);if(r&&r.catch)r.catch(()=>{});
-        try{if(screen.orientation&&screen.orientation.lock&&innerWidth<innerHeight)screen.orientation.lock('landscape').catch(()=>{});}catch(_){}}
+      if(isFs()){wantFs=false;exit.call(document);}
+      else{wantFs=true;doReq();}
     }catch(_){}
     canvas.focus();
   });
+  /* keluar fullscreen tanpa sengaja (mis. dialog izin mikrofon di Android): masuk lagi di sentuhan berikutnya */
+  window.reFs=()=>{if(wantFs&&!isFs())doReq();};
+  const again=()=>{if(wantFs&&!isFs())doReq();};
+  window.addEventListener('pointerup',again,true);window.addEventListener('click',again,true);
+  const onFsChange=()=>{if(!isFs()&&!(window._micAsk||Date.now()<(window._micUntil||0)))wantFs=false;};
+  document.addEventListener('fullscreenchange',onFsChange);document.addEventListener('webkitfullscreenchange',onFsChange);
 })();
 
 /* ---------- tameng, buku, elang, ranjau, sinar ---------- */
@@ -4776,7 +4794,7 @@ async function toggleMic(){
   sfx.mic(!micOn);
   if(micOn){micOn=false;if(localStream)localStream.getAudioTracks().forEach(t=>{t.enabled=false;});peers.forEach(p=>{if(p.snd)p.snd.replaceTrack(null).catch(()=>{});});setMicUI();toast('Mikrofon mati',1.2);return;}
   try{
-    if(!localStream)localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    if(!localStream){window._micAsk=true;try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}finally{window._micAsk=false;window._micUntil=Date.now()+1500;if(window.reFs)setTimeout(window.reFs,0);setTimeout(resize,300);}}
     const tk=localStream.getAudioTracks()[0];tk.enabled=true;micOn=true;
     peers.forEach(p=>{if(p.snd)p.snd.replaceTrack(tk).catch(()=>{});});setMicUI();toast('Mikrofon nyala, kamu bisa bicara',1.6);
   }catch(e){toast('Mikrofon tidak bisa dipakai (izinkan mikrofon, butuh HTTPS)',3);}
@@ -5256,10 +5274,21 @@ if(LS.get('dw_lore')==='1'&&LS.get('dw_name')){showForm();}else typeLore();
 
 /* ---------- resize ---------- */
 function resize(){
-  const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  const vv=window.visualViewport,w=Math.round((vv&&vv.width)||innerWidth),h=Math.round((vv&&vv.height)||innerHeight);
+  document.documentElement.style.setProperty('--vh',h+'px');
+  renderer.setSize(w,h,false);camera.aspect=w/h;
   cam.baseFov=w/h<1.3?Math.min(78,50+(1.3-w/h)*34):50;camera.updateProjectionMatrix();
 }
-window.addEventListener('resize',resize);resize();
+window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>{resize();setTimeout(resize,250);setTimeout(resize,700);});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
+/* iOS: cegah scroll/zoom/pantul halaman */
+(function(){
+  const ok=t=>t&&t.closest&&t.closest('#start,#pickBox,#chatList,#book,#setBox,#modal,#chatPanel,input,textarea');
+  document.addEventListener('touchmove',e=>{if(!ok(e.target)||e.touches.length>1)e.preventDefault();window.scrollTo(0,0);},{passive:false});
+  ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+  window.addEventListener('scroll',()=>window.scrollTo(0,0));
+})();
+resize();
 
 /* ---------- day / night ---------- */
 const mkK=(h,top,mid,bot,fog,hi,hc,hg,si,sc,nf)=>({h,top:new THREE.Color(top),mid:new THREE.Color(mid),bot:new THREE.Color(bot),fog:new THREE.Color(fog),hi,hc:new THREE.Color(hc),hg:new THREE.Color(hg),si,sc:new THREE.Color(sc),nf});

@@ -33,6 +33,7 @@ Ringkasan fitur dan perbaikan, dari yang terbaru.
 - **Perbaikan bug tepi arena**: pemain yang berjalan sampai tepi ring tiba-tiba ditarik server ke tengah dan dihadapkan ke tengah (terasa seperti ada dinding tak terlihat). Penyebabnya batas klien (24,3) lebih jauh dari batas tarik server (24,2). Batas server sekarang diberi toleransi (24,2 jadi 25,5), jadi pemain bisa berjalan mulus sampai menempel di tepi.
 - **Semua dorongan (knockback) dikali 2**: tebasan, gelombang angin, bola, ledakan, nova, slam, sinar, sniper, elang, bentrok pedang, dan serangan penyamun/prajurit. Pengalinya satu konstanta `KNOCK_MULT` di `server.js`.
 - **Tebasan angin miring bergantian**: kiri, kanan, kiri, dan seterusnya untuk tiap penyerang.
+- **Perbaikan iPhone dan Android**: tata letak mengikuti ukuran layar sebenarnya (visualViewport), halaman tidak bisa digeser/dizoom/ditarik di iOS, tombol slot lebih responsif, dan tombol layar penuh di iPhone menampilkan petunjuk "Tambah ke Layar Utama" (Safari iPhone tidak mendukung API layar penuh). Di Android, layar penuh otomatis masuk lagi setelah dialog izin mikrofon.
 - **Busur tebasan 2D dihapus** (efeknya kini hanya gelombang angin). **Bola/panah yang terkena tebasan atau gelombang dipukul balik ke penembaknya.**
 - **Tebasan angin**: gelombang bulan sabit pendek yang menyertai tebasan pedang, jangkauan bertambah sedikit (sekitar 8 unit), 20 damage.
 - **Arena diperbesar 2 kali lipat luasnya** (radius 18 jadi 25, tinggi langit-langit 20) dan digeser sedikit ke selatan agar tidak menempel desa.
