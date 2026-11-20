@@ -370,7 +370,7 @@ function randomSpawn() {
 }
 
 let projSeq = 1, mobSeq = 1, trapSeq = 1, orbSeq = 1, solSeq = 100000, wallSeq = 1;
-const GUARD_WINDOW = 3000, GUARD_MAX = 9, GUARD_BREAK_MS = 2500;
+const GUARD_WINDOW = 3000, GUARD_MAX = 27, GUARD_BREAK_MS = 2500;
 const MAX_TRAPS = 6;
 const EAGLE_ORBIT = 10, EAGLE_HEIGHT = 7;   /* elang menunggu mengitari pemilik pada jarak ini (unit), tinggi di atas tanah */
 
@@ -473,7 +473,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
       victim.gh = victim.gh.filter(x => t - x < GUARD_WINDOW);
       victim.gh.push(t);
       if (victim.gh.length < GUARD_MAX) {
-        broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg: 0, hp: victim.hp, kx: 0, kz: 0, blk: 1, left: GUARD_MAX - victim.gh.length });
+        broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg: 0, hp: victim.hp, kx: 0, kz: 0, blk: 1, left: GUARD_MAX - victim.gh.length, gmax: GUARD_MAX });
         return;
       }
       victim.guarding = false; victim.gh = []; victim.gbUntil = t + GUARD_BREAK_MS;
@@ -3848,7 +3848,7 @@ let modalSlot=-1,typed='',modalOpen=false,pendingLearn=false;
 let boardRows=[];
 let atkSide=false,strokeT=0,ambT=3,hbT=0,humT=0,inCave=false,inArena=false,fade=null,sleeping=false,sleepHouse=null,sleepPos=null,ammo=0,snipeCd=0,chestOpen=false,zT=0,fountT=0;
 const zTex=(function(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.font='bold 48px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText('Z',32,34);return new THREE.CanvasTexture(c);})();
-let guarding=false,guardPips=9,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,myRegenT=0,bookOpen=false,bookEnabled=false,bookData=[],bookPage=0,guardLbl='',rideT=0,ridePw=13,myMount=null;
+let guarding=false,guardMax=27,guardPips=27,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,myRegenT=0,bookOpen=false,bookEnabled=false,bookData=[],bookPage=0,guardLbl='',rideT=0,ridePw=13,myMount=null;
 
 /* ---------- UI helpers ---------- */
 let toastT=0;   /* waktu habis (jam nyata, ms), bukan jam game, supaya tetap pas walau frame rate rendah */
@@ -4909,7 +4909,7 @@ function onHit(m){
   const v=entPos(m.id);if(!v)return;
   if(m.mnt){floatText(v.x,v.y+2.3,v.z,'-'+m.dmg,'#ffb84d');burst(v.x,v.y+0.6,v.z,'#ffe0b0',8,3);sfxAt('hit',v.x,v.z);if(m.id===me.id){hurtFlash=0.15;shake=Math.max(shake,0.15);toast('Elangmu diserang! Sisa '+m.mhp,1.2);}return;}
   if(m.inv){floatText(v.x,v.y+2.1,v.z,'KEBAL','#c9d6ff');sfxAt('block',v.x,v.z);return;}
-  if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
+  if(m.blk){floatText(v.x,v.y+2.1,v.z,'TAHAN!','#9fe3ff');burst(v.x,v.y+1,v.z,'#bfe9ff',8,4);sfxAt('block',v.x,v.z);if(m.id===me.id){guardMax=m.gmax||guardMax;guardPips=m.left;guardPipT=3;shake=Math.max(shake,0.12);}return;}
   floatText(v.x,v.y+2.1,v.z,'-'+m.dmg,m.id===me.id?'#ff6a6a':'#ffd84d');
   showHitbox(m.id===me.id?pos:others.get(m.id),0.9,m.hr||0);
   burst(v.x,v.y+1,v.z,'#fff6a0',6,3);
@@ -5225,7 +5225,7 @@ function update(dt){
   if(hasteT>0&&Math.random()<dt*9)emit(pos.x,pos.y+0.8,pos.z,-faceX*2,0.3,-faceZ*2,0.4,0.6,'#fff27a',0,0.8,0.5);
   if(hasteT>0)hasteT-=dt;
   if(myRegenT>0){myRegenT-=dt;if(Math.random()<dt*9)emit(pos.x+(Math.random()-0.5)*1.2,pos.y+0.3,pos.z+(Math.random()-0.5)*1.2,0,1.4,0,0.9,0.4,'#7dffae',0,0.9,0.2);}
-  if(guardPipT>0){guardPipT-=dt;if(guardPipT<=0)guardPips=9;}
+  if(guardPipT>0){guardPipT-=dt;if(guardPipT<=0)guardPips=guardMax;}
   if(guarding&&(!live||gbT>0||swim||riding))setGuard(false);
   kb.x*=Math.exp(-9*dt);kb.z*=Math.exp(-9*dt);
   if(attackT>0)attackT-=dt;
@@ -5330,7 +5330,7 @@ function update(dt){
   if(act)$('ptxt').textContent=act.text;
   {const sn=$('btnSnipe');sn.classList.toggle('on',ammo>0&&started);sn.classList.toggle('broken',snipeCd>0);const sl='Sniper '+ammo;if(sn.dataset.l!==sl){sn.dataset.l=sl;sn.querySelector('small').textContent=sl;}}
   $('btnDive').classList.toggle('on',(swim||riding)&&started);
-  {const gl=gbT>0?'Pecah':(guardPips<9?guardPips+'/9':'Tahan');if(gl!==guardLbl){guardLbl=gl;$('btnGuard').querySelector('small').textContent=gl;}$('btnGuard').classList.toggle('broken',gbT>0);}
+  {const gl=gbT>0?'Pecah':(guardPips<guardMax?guardPips+'/'+guardMax:'Tahan');if(gl!==guardLbl){guardLbl=gl;$('btnGuard').querySelector('small').textContent=gl;}$('btnGuard').classList.toggle('broken',gbT>0);}
   if(toastT>0&&performance.now()>=toastT){toastT=0;$('toast').classList.remove('show');}
   if(dead)$('ko').querySelector('h2').textContent='KO!  '+Math.max(0,Math.ceil(deadT));
 
