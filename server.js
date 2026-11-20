@@ -2189,6 +2189,17 @@ button:disabled{opacity:.5}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .chip{background:#0f2a54;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer}
 .chip.on{background:var(--ac);color:#04121c;border-color:var(--ac)}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px}.rhead h2{margin:0;font-size:18px}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(2,6,14,.72);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.mbox{width:min(100%,460px);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.mbox h2{margin:0 0 4px;font-size:18px}
+.mact{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.room .rsum{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.room .rsum .tx{flex:1;min-width:0}
+.room .rsum .meta{margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room .rsum svg{flex:0 0 auto;width:18px;height:18px;transition:transform .2s;color:var(--mut)}
+.room.open .rsum svg{transform:rotate(180deg)}
+.room .rbody{display:none;margin-top:10px}.room.open .rbody{display:block}
 .room{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#08101f}
 .room h3{margin:0;font-size:16px}
 .room .meta{font-size:12px;color:var(--mut);margin:2px 0 8px}
@@ -2211,10 +2222,10 @@ button:disabled{opacity:.5}
 .chk input{width:20px;height:20px;flex:0 0 20px;accent-color:#1e6fff;padding:0}
 #rcreate,#pgo{display:block;margin-left:auto}
 #techAdd,#techSave,#techReset{flex:1 1 auto}
-@media (max-width:520px){
 .room .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .room .row>*{min-width:0;width:100%}
 .room .row>input{grid-column:1 / -1}
+@media (max-width:520px){
 .wrap{padding:14px 18px}
 }
 }
@@ -2241,7 +2252,10 @@ button:disabled{opacity:.5}
   </div>
 
   <div id="tab-rooms">
-    <div class="card">
+    <div class="rhead"><h2>Room</h2><button class="pri" id="rnew">+ Buat room</button></div>
+    <div id="roomList"></div>
+  </div>
+  <div id="rmodal" class="modal hidden"><div class="mbox">
       <h2>Buat room baru</h2>
       <label>Nama room</label><input id="rname" maxlength="30" placeholder="Misal: Duel Sabtu Malam">
       <label>Mode room</label>
@@ -2254,10 +2268,8 @@ button:disabled{opacity:.5}
       <label class="chk"><input type="checkbox" id="rff" checked> Friendly fire (khusus Arena Tim): teman satu tim bisa saling melukai</label>
       <label class="chk"><input type="checkbox" id="rdebug"> Mode uji hit: tampilkan alasan serangan meleset di layar penyerang (untuk mencari bug)</label>
       <div id="rmsg"></div>
-      <button class="pri" id="rcreate" style="margin-top:12px">Buat room</button>
-    </div>
-    <div id="roomList"></div>
-  </div>
+      <div class="mact"><button id="rcancel">Batal</button><button class="pri" id="rcreate">Buat room</button></div>
+  </div></div>
 
   <div id="tab-tech" class="hidden">
     <div class="card">
@@ -2350,21 +2362,33 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 [5,10,15,20,30].forEach(n=>{const c=document.createElement('div');c.className='chip'+(n===10?' on':'');c.textContent=n+' pemain';c.addEventListener('click',()=>{$('rmax').value=n;mark();});$('presets').appendChild(c);});
 function mark(){document.querySelectorAll('#presets .chip').forEach(c=>c.classList.toggle('on',parseInt(c.textContent,10)===parseInt($('rmax').value,10)));}
 $('rmax').addEventListener('input',mark);
+function rOpen(){msg($('rmsg'),'');$('rmodal').classList.remove('hidden');setTimeout(()=>$('rname').focus(),50);}
+function rClose(){$('rmodal').classList.add('hidden');}
+$('rnew').addEventListener('click',rOpen);$('rcancel').addEventListener('click',rClose);
+$('rmodal').addEventListener('click',e=>{if(e.target===$('rmodal'))rClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')rClose();});
 $('rcreate').addEventListener('click',async()=>{
-  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked}});$('rname').value='';msg($('rmsg'),'Room dibuat!','ok');loadRooms();}
+  try{await api('/rooms',{method:'POST',body:{name:$('rname').value,max:parseInt($('rmax').value,10),voice:$('rvoice').checked,pick:$('rpick').checked,debug:$('rdebug').checked,mode:$('rmode').value==='world'?'world':($('rmode').value==='train'?'train':'duel'),team:parseInt($('rmode').value.slice(4),10)||1,ff:$('rff').checked}});$('rname').value='';rClose();loadRooms();}
   catch(e){msg($('rmsg'),e.message);}
 });
+const openRooms=new Set();
+const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 function roomLink(code){return location.origin+'/r/'+code;}
 async function loadRooms(){
   let j;try{j=await api('/rooms');}catch(e){return;}
   const box=$('roomList');
   if(document.activeElement&&box.contains(document.activeElement)&&document.activeElement.tagName==='INPUT'&&document.activeElement.dataset.edit)return;
   box.innerHTML='';
-  if(!j.rooms.length){const p=document.createElement('p');p.className='hint';p.textContent='Belum ada room. Buat satu di atas.';box.appendChild(p);return;}
+  if(!j.rooms.length){const p=document.createElement('p');p.className='hint';p.textContent='Belum ada room. Tekan "+ Buat room".';box.appendChild(p);return;}
   j.rooms.forEach(r=>{
-    const d=document.createElement('div');d.className='room';
-    const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';d.appendChild(h);
-    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();d.appendChild(m);
+    const card=document.createElement('div');card.className='room'+(openRooms.has(r.code)?' open':'');
+    const sum=document.createElement('div');sum.className='rsum';const tx=document.createElement('div');tx.className='tx';sum.appendChild(tx);
+    const chv=document.createElement('span');chv.innerHTML=CHEV;sum.appendChild(chv);
+    sum.addEventListener('click',()=>{const o=card.classList.toggle('open');if(o)openRooms.add(r.code);else openRooms.delete(r.code);});
+    card.appendChild(sum);
+    const d=document.createElement('div');d.className='rbody';card.appendChild(d);
+    const h=document.createElement('h3');h.textContent=r.name+'  ('+r.count+'/'+r.max+')';tx.appendChild(h);
+    const m=document.createElement('div');m.className='meta';m.textContent='Kode '+r.code+(r.mode==='duel'?' · ARENA '+(r.team||1)+'v'+(r.team||1)+((r.team||1)>1?' (tim, FF '+(r.ff===false?'mati':'nyala')+')':' DUEL'):(r.mode==='train'?' · MODE LATIHAN':' · dunia biasa'))+(r.voice!==false?' · voice aktif':' · voice mati')+(r.pick?' · pilih teknik':' · ketik kode')+(r.debug?' · UJI HIT':'')+' · dibuat '+new Date(r.created).toLocaleString();tx.appendChild(m);
     const l=document.createElement('div');l.className='link';
     const i=document.createElement('input');i.readOnly=true;i.value=roomLink(r.code);i.addEventListener('focus',()=>i.select());
     const cp=document.createElement('button');cp.className='ok';cp.textContent='Salin';
@@ -2382,7 +2406,7 @@ async function loadRooms(){
     dl.addEventListener('click',async()=>{if(!confirm('Hapus room "'+r.name+'"? Semua pemain akan dikeluarkan.'))return;try{await api('/rooms/'+r.code,{method:'DELETE'});loadRooms();}catch(e){alert(e.message);}});
     row.appendChild(nm);row.appendChild(mx);row.appendChild(vl);row.appendChild(pl2);row.appendChild(dgl);row.appendChild(sv);row.appendChild(dl);d.appendChild(row);
     if(r.players.length){const p=document.createElement('div');p.className='pl';p.appendChild(document.createTextNode('Online: '));r.players.forEach(n=>{const b=document.createElement('b');b.textContent=n;p.appendChild(b);});d.appendChild(p);}
-    box.appendChild(d);
+    box.appendChild(card);
   });
 }
 
