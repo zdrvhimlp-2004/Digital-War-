@@ -1417,7 +1417,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
     }
     const wantG = t < ai.guardUntil && t >= bot.gbUntil;
     if (wantG !== !!bot.guarding) setGuard(room, bot, wantG);
-    if (bot.guarding) sp *= 0.5;
+    if (bot.guarding) { /* perisai tidak memperlambat gerak */ }
     else {
       /* 3. serangan */
       const cast = (code, d2) => { const a = botAim(bot, A, ai, BALL_SPEED); botCast(room, bot, code, a.ax, a.ay, a.az); };
@@ -5135,7 +5135,6 @@ function update(dt){
   if(joy.id!==null&&mag>0.02)speed=(mag>=0.9||SET.joyFull)?SPEED_RUN:SPEED_WALK*mag/0.9;
   else speed=run?SPEED_RUN:SPEED_WALK;
   if(swim)speed*=0.55;
-  if(guarding)speed*=0.5;
   if(hasteT>0)speed*=hastePw;
   speed*=trainSpd;
   if(riding)speed=(joy.id!==null&&mag>0.02&&!SET.joyFull?ridePw*Math.min(1,mag/0.9):ridePw);
