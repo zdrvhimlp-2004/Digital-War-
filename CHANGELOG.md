@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Perbaikan iPhone dan Android**: tata letak mengikuti ukuran layar sebenarnya (visualViewport), halaman tidak bisa digeser/dizoom/ditarik di iOS, tombol slot lebih responsif, dan tombol layar penuh di iPhone menampilkan petunjuk "Tambah ke Layar Utama" (Safari iPhone tidak mendukung API layar penuh). Di Android, layar penuh otomatis masuk lagi setelah dialog izin mikrofon.
 - **Busur tebasan 2D dihapus** (efeknya kini hanya gelombang angin). **Bola/panah yang terkena tebasan atau gelombang dipukul balik ke penembaknya.**
 - **Tebasan angin**: gelombang bulan sabit pendek yang menyertai tebasan pedang, jangkauan bertambah sedikit (sekitar 8 unit), 20 damage.
 - **Arena diperbesar 2 kali lipat luasnya** (radius 18 jadi 25, tinggi langit-langit 20) dan digeser sedikit ke selatan agar tidak menempel desa.
