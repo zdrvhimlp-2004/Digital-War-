@@ -73,7 +73,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 6;
+const TECH_VERSION = 7;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -96,9 +96,10 @@ const DEFAULT_TECHS = [
   { code: '246', name: 'Firewall',       kind: 'shield', emoji: '🛡️', color: '#6cd4ff', dur: 4,     cd: 5 },
   { code: '1357', name: 'Overclock',     kind: 'haste',  emoji: '⏩', color: '#fff27a', power: 1.6, dur: 5, cd: 5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   emoji: '⚡', color: '#ffffff', speed: 60,  cd: 1.5 },
-  { code: '6193', name: 'Meteor Drop',   kind: 'meteor', emoji: '☄️', color: '#ff8a3c', damage: 22, cd: 6, speed: 34, count: 3, size: 1.5, boom: 3 }
+  { code: '6193', name: 'Meteor Drop',   kind: 'meteor', emoji: '☄️', color: '#ff8a3c', damage: 22, cd: 6, speed: 34, count: 3, size: 1.5, boom: 3 },
+  { code: '4827', name: 'Pedang Berputar', kind: 'spin', emoji: '🌀', color: '#bfe9ff', damage: 14, cd: 8, dur: 2, radius: 3.6 }
 ];
-const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'meteor'];
+const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'meteor', 'spin'];
 
 /* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
 function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
@@ -164,6 +165,7 @@ function loadDB() {
         if (!j.techniques.some(x => x.code === '858')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '858')));
       }
       if (!j.techniques.some(x => x.code === '6193')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '6193')));
+      if (!j.techniques.some(x => x.code === '4827')) j.techniques.push(Object.assign({}, DEFAULT_TECHS.find(x => x.code === '4827')));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -244,6 +246,8 @@ function sanitizeTech(t) {
   } else if (kind === 'meteor') {
     out.damage = num(t.damage, 0, 100, 22); out.speed = num(t.speed, 15, 80, 34); out.count = Math.round(num(t.count, 1, 6, 3));
     out.size = num(t.size, 0.5, 4, 1.5); out.boom = num(t.boom, 0, 10, 3);
+  } else if (kind === 'spin') {
+    out.damage = num(t.damage, 0, 60, 14); out.dur = num(t.dur, 0.5, 6, 2); out.radius = num(t.radius, 2, 8, 3.6);
   } else if (kind === 'haste') {
     out.power = num(t.power, 1.1, 2.5, 1.6); out.dur = num(t.dur, 1, 15, 5);
   }
@@ -261,6 +265,7 @@ function techDesc(t) {
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
     case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan';
+    case 'spin': return 'Berputar dengan pedang ' + t.dur + ' dtk, menebas semua musuh sekitar, ' + t.damage + ' dmg per tebasan';
     case 'meteor': return 'Loncat tinggi, menghadap bawah, jatuhkan ' + t.count + ' bola cepat ke bawah, ' + t.damage + ' dmg/bola';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
@@ -570,6 +575,17 @@ function doCast(room, p, slot, ax, ay, az) {
     case 'nova': {
       broadcast(room, { t: 'fx', k: 'nova', id: p.id, r: tech.radius, c: tech.color });
       areaHit(room, p, tech.radius, tech.damage, 14, tech.stun || 0);
+      break;
+    }
+    case 'spin': {
+      const dur = tech.dur || 2, rad = tech.radius || 3.6;
+      broadcast(room, { t: 'fx', k: 'spin', id: p.id, dur, r: rad, c: tech.color });
+      for (let i = 1; i <= Math.floor(dur / 0.25); i++) {
+        room.later.push({ at: t + i * 250, fn: () => {
+          if (!room.players.has(p.id) || p.dead) return;
+          areaHit(room, p, rad, tech.damage, 12, 0);
+        } });
+      }
       break;
     }
     case 'meteor': {
@@ -1797,13 +1813,14 @@ button:disabled{opacity:.5}
 const $=id=>document.getElementById(id);
 let token=null;try{token=localStorage.getItem('dw_admin')}catch(e){}
 let techs=[],pollT=null;
-const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',meteor:'Loncat & bola ke bawah (meteor)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
+const KINDS={bolt:'Bola lempar (bolt)',orb:'Bola biru raksasa (orb)',nova:'Ledakan area (nova)',beam:'Sinar tembus (beam)',slam:'Lompat & hantam (slam)',meteor:'Loncat & bola ke bawah (meteor)',spin:'Berputar dengan pedang (spin)',trap:'Ranjau (trap)',summon:'Panggil elang (summon)',ride:'Tunggang elang (ride)',heal:'Penyembuh (heal)',regen:'Pulih bertahap (regen)',shield:'Perisai (shield)',haste:'Percepat lari (haste)',dash:'Lesat (dash)'};
 const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
   orb:[['damage','Damage per sentuhan'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
   beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
   slam:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius']],
+  spin:[['damage','Damage per tebasan (tiap 0,25 dtk)'],['cd','Cooldown (dtk)'],['dur','Durasi (dtk)'],['radius','Radius']],
   meteor:[['damage','Damage per bola'],['cd','Cooldown (dtk)'],['count','Jumlah bola'],['speed','Kecepatan jatuh'],['size','Ukuran bola'],['boom','Radius ledakan']],
   trap:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius pemicu'],['stun','Beku (dtk)']],
   summon:[['damage','Damage per serangan'],['cd','Cooldown (dtk)'],['count','Jumlah elang (maks 4)'],['dur','Durasi (dtk)'],['speed','Kecepatan terbang']],
@@ -2382,6 +2399,7 @@ const ICO={
  bolt:'<path d="M2.500 8h7M1.500 12h8M2.500 16h7"/><circle cx="16.500" cy="12" r="4.500" fill="currentColor" fill-opacity=".25"/>',
  nova:'<circle cx="12" cy="12" r="3.200" fill="currentColor" fill-opacity=".25"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.800 2.800M16.200 16.200L19 19M19 5l-2.800 2.800M7.800 16.200L5 19"/>',
  beam:'<path d="M2.500 12h19M6.500 7.500L4 12l2.500 4.500M19.500 8.500v7"/>',
+ spin:'<circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity=".25"/><path d="M12 2.500v6M12 15.500v6M2.500 12h6M15.500 12h6"/>',
  meteor:'<circle cx="12" cy="6" r="3" fill="currentColor" fill-opacity=".3"/><path d="M12 11v4M8 13v4M16 13v4M12 21v-3"/>',
  slam:'<path d="M13.500 3.500l7 7-4 4-7-7z"/><path d="M11.500 12.500L3.500 20.500"/>',
  trap:'<circle cx="12" cy="12" r="5" fill="currentColor" fill-opacity=".25"/><path d="M12 2.500v3M12 18.500v3M2.500 12h3M18.500 12h3M5.300 5.300l2 2M16.700 16.700l2 2M18.700 5.300l-2 2M7.300 16.700l-2 2"/>',
@@ -4076,6 +4094,30 @@ function onMsg(m){
     case 'closed':{ws.onclose=null;showDc('Room ditutup','Admin menutup room ini.');break;}
   }
 }
+const spins=[];
+function mkSpinSword(col){
+  const g=new THREE.Group();
+  const bm=new THREE.MeshBasicMaterial({color:0xe8f6ff}),gm=new THREE.MeshBasicMaterial({color:new THREE.Color(col)}),hm=new THREE.MeshBasicMaterial({color:0x5a3a22});
+  const bl=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.07,1.5),bm);bl.position.z=0.95;
+  const gd=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.1,0.12),gm);gd.position.z=0.18;
+  const hd=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.4),hm);
+  g.add(bl,gd,hd);return g;
+}
+function startSpin(id,dur,r,col){
+  for(let i=spins.length-1;i>=0;i--)if(spins[i].id===id){scene.remove(spins[i].g);spins.splice(i,1);}
+  const g=new THREE.Group();
+  for(let k=0;k<2;k++){const a=k*Math.PI,sw=mkSpinSword(col);sw.position.set(Math.cos(a)*1.1,0,Math.sin(a)*1.1);sw.rotation.y=-a+Math.PI/2*0;sw.rotation.y=Math.atan2(Math.cos(a),-Math.sin(a));g.add(sw);}
+  scene.add(g);spins.push({id,g,t:0,dur,r,col});
+}
+function updSpins(dt){
+  for(let i=spins.length-1;i>=0;i--){
+    const q=spins[i],p=entPos(q.id);q.t+=dt;
+    if(!p||q.t>=q.dur){scene.remove(q.g);spins.splice(i,1);continue;}
+    q.g.position.set(p.x,p.y+1.0,p.z);q.g.rotation.y+=dt*15;
+    const a=q.g.rotation.y;
+    if(Math.random()<0.9)emit(p.x+Math.cos(a)*q.r*0.8,p.y+1.0,p.z-Math.sin(a)*q.r*0.8,0,0.3,0,0.35,0.5,q.col,0,0.5,0.2);
+  }
+}
 function entPos(id){if(id===me.id)return {x:pos.x,y:pos.y,z:pos.z};const o=others.get(id);return o?{x:o.x,y:o.y,z:o.z}:null;}
 function onFx(m){
   const p=entPos(m.id);if(!p)return;const near=Math.hypot(p.x-pos.x,p.z-pos.z)<45;
@@ -4088,6 +4130,7 @@ function onFx(m){
   else if(m.k==='rideend'){if(m.id===me.id){rideT=0;}else{const o=others.get(m.id);if(o)o.ride=false;}}
   else if(m.k==='snipe'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,'#ffffff',0.07);burst(p.x+m.fx,p.y+1,p.z+m.fz,'#fff6a0',6,3);sfxAt('snipe',p.x,p.z);}
   else if(m.k==='beam'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,col);burst(p.x+m.fx,p.y+1,p.z+m.fz,col,8,4);sfxAt('beam',p.x,p.z);}
+  else if(m.k==='spin'){startSpin(m.id,m.dur,m.r,col);burst(p.x,p.y+1,p.z,col,10,4);sfxAt('swing',p.x,p.z);if(m.id===me.id)attackT=Math.max(attackT,0.32);}
   else if(m.k==='meteor'){if(m.id===me.id){vy=36;grounded=false;jumping=false;sq.y=1.3;sfx.jump();const pp=cam.pitchT,fp=fpsPitch;if(fps)fpsPitch=-1.25;else cam.pitchT=1.1;setTimeout(()=>{if(fps)fpsPitch=fp;else cam.pitchT=pp;},2300);}burst(p.x,p.y+0.3,p.z,col,14,4);}
   else if(m.k==='leap'){if(m.id===me.id){vy=15.5;grounded=false;jumping=false;kb.x+=m.fx*9;kb.z+=m.fz*9;sq.y=1.3;sfx.jump();}burst(p.x,p.y+0.3,p.z,col,12,4);}
   else if(m.k==='regen'){if(m.id===me.id)myRegenT=m.dur;else{const o=others.get(m.id);if(o)o.regenT=m.dur;}sfxAt('regen',p.x,p.z);}
@@ -4474,7 +4517,7 @@ function update(dt){
     humT-=dt;if(humT<=0){humT=0.75;let nd=1e9;orbs.forEach(o=>{nd=Math.min(nd,Math.hypot(o.x-pos.x,o.y-pos.y,o.z-pos.z));});if(nd<SFX_RANGE){SV=distVol(nd,SFX_RANGE);sfx.orbHum();SV=1;}}
   }
   if(peers.size){peers.forEach((pe,id)=>{const o=others.get(id);let v=0;if(o&&!o.dead&&((o.x>1000)===inCave)){v=distVol(Math.hypot(o.x-pos.x,(o.y-pos.y)*0.5,o.z-pos.z),VOICE_RANGE);}pe.el.volume=clamp(v,0,1);});}
-  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updForts(dt);updCamps(dt);updAim();
+  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updSpins(dt);updForts(dt);updCamps(dt);updAim();
   if(capState){const kk=clamp(1-(capState.end-performance.now())/capState.ms,0,1);$('capFill').style.width=(kk*100)+'%';}
   if(chest){chest.vel+=(-70*(chest.ang-chest.target)-9*chest.vel)*dt;chest.ang+=chest.vel*dt;chest.pivot.rotation.x=-chest.ang;chest.glow.material.opacity=chestOpen?0.15:0.5+0.15*Math.sin(tAll*3);}
   if(inCave){updBats(dt,rgt);for(const c of crystals){c.mat.emissiveIntensity=0.75+0.35*Math.sin(tAll*1.6+c.ph);c.glow.material.opacity=0.5+0.2*Math.sin(tAll*1.6+c.ph);}}

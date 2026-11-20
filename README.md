@@ -95,6 +95,7 @@ Teknik bawaan (semua bisa diubah di admin):
 | 1357 | Overclock | lari lebih cepat |
 | 753 | Lag Dash | lesat ke arah gerakmu tanpa bidik (tekan kiri lalu dash, maka melesat ke kiri; tanpa input, ke arah hadap karakter) |
 | 6193 | Meteor Drop | loncat sangat tinggi (sekitar 21 unit), kamera menghadap bawah, lalu 3 bola cepat dijatuhkan lurus ke bawah (22 damage per bola, meledak di tanah) |
+| 4827 | Pedang Berputar | berputar 2 detik dengan dua pedang mengorbit, menebas semua musuh dalam radius 3,6 tiap 0,25 detik (14 damage per tebasan) sambil tetap bisa bergerak |
 
 ### Mekanik lain
 
