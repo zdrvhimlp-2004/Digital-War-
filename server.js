@@ -2213,6 +2213,13 @@ button:disabled{opacity:.5}
 .tech .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
 .tech .g label{margin:0 0 3px}
 .tech .hd{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.tech .tsum{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.tech .tsum .dot{flex:0 0 12px;height:12px;border-radius:50%}
+.tech .tsum .tx{flex:1;min-width:0}.tech .tsum b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tech .tsum small{display:block;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tech .tsum svg{flex:0 0 auto;width:18px;height:18px;color:var(--mut);transition:transform .2s}
+.tech.open .tsum svg{transform:rotate(180deg)}
+.tech .tbody{display:none;margin-top:10px}.tech.open .tbody{display:block}
 .tech .hd .nm{flex:1}
 .tech .code{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px}
 .hint{font-size:12px;color:var(--mut);margin:0 0 10px;line-height:1.5}
@@ -2415,29 +2422,39 @@ let defTechs=[];
 async function loadTech(){const j=await api('/techniques');techs=j.techniques;try{defTechs=(await api('/techniques/defaults')).techniques;}catch(e){}renderTech();const st=await api('/settings');$('showBook').checked=!!st.showBook;}
 $('showBook').addEventListener('change',async()=>{try{await api('/settings',{method:'PUT',body:{showBook:$('showBook').checked}});msg($('tmsg'),$('showBook').checked?'Buku tampil di game':'Buku disembunyikan dari game','ok');}catch(e){msg($('tmsg'),e.message);}});
 const XSVG='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const openTech=new WeakSet();
 function renderTech(){
   const box=$('techList');box.innerHTML='';
   techs.forEach((t,idx)=>{
-    const d=document.createElement('div');d.className='tech';
+    const card=document.createElement('div');card.className='tech'+(openTech.has(t)?' open':'');
+    const sum=document.createElement('div');sum.className='tsum';
+    const dot=document.createElement('span');dot.className='dot';dot.style.background=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4db8ff';
+    const tx=document.createElement('div');tx.className='tx';const tb=document.createElement('b');const ts=document.createElement('small');tx.appendChild(tb);tx.appendChild(ts);
+    const chv=document.createElement('span');chv.innerHTML=CHEV;
+    function upSum(){tb.textContent=t.name||'(tanpa nama)';ts.textContent='Kode '+(t.code||'-')+' · '+(KINDS[t.kind]||t.kind)+(t.cd!=null&&!isNaN(t.cd)?' · CD '+t.cd+' dtk':'');}upSum();
+    sum.appendChild(dot);sum.appendChild(tx);sum.appendChild(chv);
+    sum.addEventListener('click',()=>{const o=card.classList.toggle('open');if(o)openTech.add(t);else openTech.delete(t);});
+    card.appendChild(sum);
+    const d=document.createElement('div');d.className='tbody';card.appendChild(d);
     const hd=document.createElement('div');hd.className='hd';
-    const nm=document.createElement('input');nm.className='nm';nm.value=t.name;nm.maxLength=24;nm.placeholder='Nama teknik';nm.addEventListener('input',()=>t.name=nm.value);
+    const nm=document.createElement('input');nm.className='nm';nm.value=t.name;nm.maxLength=24;nm.placeholder='Nama teknik';nm.addEventListener('input',()=>{t.name=nm.value;upSum();});
     const rm=document.createElement('button');rm.className='bad';rm.innerHTML=XSVG;rm.addEventListener('click',()=>{techs.splice(idx,1);renderTech();});
     const df=defTechs.find(x=>x.code===t.code);
-    if(df){const rb=document.createElement('button');rb.textContent='Bawaan';rb.title='Kembalikan teknik ini ke angka bawaan (lalu tekan Simpan)';rb.style.marginRight='6px';rb.addEventListener('click',()=>{techs[idx]=Object.assign({},df);renderTech();msg($('tmsg'),'"'+df.name+'" dikembalikan ke bawaan. Tekan Simpan untuk menyimpan.','ok');});hd.appendChild(nm);hd.appendChild(rb);hd.appendChild(rm);}
+    if(df){const rb=document.createElement('button');rb.textContent='Bawaan';rb.title='Kembalikan teknik ini ke angka bawaan (lalu tekan Simpan)';rb.style.marginRight='6px';rb.addEventListener('click',()=>{techs[idx]=Object.assign({},df);openTech.add(techs[idx]);renderTech();msg($('tmsg'),'"'+df.name+'" dikembalikan ke bawaan. Tekan Simpan untuk menyimpan.','ok');});hd.appendChild(nm);hd.appendChild(rb);hd.appendChild(rm);}
     else{hd.appendChild(nm);hd.appendChild(rm);}
     d.appendChild(hd);
     const g=document.createElement('div');g.className='g';
     function field(label,el){const w=document.createElement('div');const l=document.createElement('label');l.textContent=label;w.appendChild(l);w.appendChild(el);g.appendChild(w);}
-    const code=document.createElement('input');code.className='code';code.value=t.code;code.maxLength=12;code.inputMode='numeric';code.addEventListener('input',()=>{code.value=code.value.replace(/[^1-9]/g,'');t.code=code.value;});field('Kode (1-9)',code);
+    const code=document.createElement('input');code.className='code';code.value=t.code;code.maxLength=12;code.inputMode='numeric';code.addEventListener('input',()=>{code.value=code.value.replace(/[^1-9]/g,'');t.code=code.value;upSum();});field('Kode (1-9)',code);
     const kind=document.createElement('select');Object.keys(KINDS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=KINDS[k];if(k===t.kind)o.selected=true;kind.appendChild(o);});
     kind.addEventListener('change',()=>{t.kind=kind.value;renderTech();});field('Jenis',kind);
-    const col=document.createElement('input');col.type='color';col.value=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4db8ff';col.addEventListener('input',()=>t.color=col.value);field('Warna',col);
+    const col=document.createElement('input');col.type='color';col.value=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#4db8ff';col.addEventListener('input',()=>{t.color=col.value;dot.style.background=col.value;});field('Warna',col);
     const ds=document.createElement('input');ds.value=t.desc||'';ds.maxLength=80;ds.placeholder='(otomatis)';ds.addEventListener('input',()=>t.desc=ds.value);field('Deskripsi di buku',ds);
     (FIELDS[t.kind]||[]).forEach(f=>{const n=document.createElement('input');n.type='number';n.step='any';n.value=t[f[0]]==null?'':t[f[0]];n.addEventListener('input',()=>t[f[0]]=parseFloat(n.value));field(f[1],n);});
-    d.appendChild(g);box.appendChild(d);
+    d.appendChild(g);box.appendChild(card);
   });
 }
-$('techAdd').addEventListener('click',()=>{techs.push({code:'',name:'Teknik baru',kind:'bolt',color:'#4db8ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0});renderTech();});
+$('techAdd').addEventListener('click',()=>{const nt={code:'',name:'Teknik baru',kind:'bolt',color:'#4db8ff',damage:20,cd:2,speed:24,life:1.4,count:1,spread:0};techs.push(nt);openTech.add(nt);renderTech();const cs=$('techList').children;cs[cs.length-1].scrollIntoView({block:'center',behavior:'smooth'});});
 $('techSave').addEventListener('click',async()=>{try{const j=await api('/techniques',{method:'PUT',body:{techniques:techs}});techs=j.techniques;renderTech();msg($('tmsg'),'Buku tersimpan ('+techs.length+' teknik)','ok');}catch(e){msg($('tmsg'),e.message);}});
 $('techReset').addEventListener('click',async()=>{if(!confirm('Kembalikan semua teknik ke default?'))return;try{const j=await api('/techniques/reset',{method:'POST'});techs=j.techniques;renderTech();msg($('tmsg'),'Dikembalikan ke default','ok');}catch(e){msg($('tmsg'),e.message);}});
 
