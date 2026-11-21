@@ -3204,7 +3204,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
 <label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
 <label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
-<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu (gambar dan suara game, tanpa tombol). Bisa diunduh setelah pertandingan, tidak disimpan di server dan hilang saat duel berikutnya mulai.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
+<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu (gambar dan suara game, tanpa tombol). Bisa diunduh setelah pertandingan. Tidak disimpan di server, dan hanya rekaman terakhir yang ada di browser.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
@@ -6083,7 +6083,7 @@ function onDuel(m){
   duel=m;duelAt=performance.now();refreshMates();
   const prev=duelPrevSt;duelPrevSt=m.st;
   renderDuelBox();
-  if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();recDiscard();}
+  if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
   if(m.st==='fight'&&prev!=='fight')recStart();
   if(m.st!=='fight'&&prev==='fight')recStop();
@@ -6099,7 +6099,7 @@ function onDuel(m){
 }
 /* ---------- rekam pertandingan ----------
    Direkam di browser (canvas.captureStream + MediaRecorder), suara dari master Web Audio.
-   Hasilnya hanya Blob di memori: tidak dikirim atau disimpan di server, dan dibuang saat duel berikutnya mulai. */
+   Hasilnya hanya Blob di memori (satu rekaman terakhir): tidak dikirim atau disimpan di server; dibuang saat diunduh, dibuang, diganti, atau halaman ditutup. */
 const REC_MAX_MS=8*60*1000,REC_MIN_MS=2000;
 let rec=null,recReady=null,recDest=null,recRevokeT=0;
 function recTapAudio(){if(AC&&master&&!recDest){try{recDest=AC.createMediaStreamDestination();master.connect(recDest);}catch(e){recDest=null;}}}
@@ -6113,7 +6113,7 @@ function recDiscard(){
   $('recBox').classList.remove('show');
 }
 function recStart(){
-  recDiscard();
+  $('recBox').classList.remove('show');   /* panel disembunyikan selama bertarung; rekaman lama tetap ada sampai diganti, diunduh, atau dibuang */
   if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!canvas.captureStream)return;
   try{
     recTapAudio();
@@ -6140,13 +6140,13 @@ function recFinish(r){
   const ms=performance.now()-r.t0;
   if(!r.chunks.length||ms<REC_MIN_MS){r.chunks=[];return;}
   const blob=new Blob(r.chunks,{type:r.mime});r.chunks=[];
-  recDiscard();
+  recDiscard();   /* rekaman baru menggantikan yang lama: hanya satu yang ada di memori */
   const ext=/mp4/.test(r.mime)?'mp4':'webm',d=new Date(),p2=n=>String(n).padStart(2,'0');
   const safe=r.names.replace(/[^A-Za-z0-9+_-]+/g,'_').slice(0,60);
   recReady={blob,url:URL.createObjectURL(blob),name:'digital-war-'+safe+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.'+ext};
   const sec=Math.round(ms/1000);
   $('recT').textContent='Rekaman pertandingan siap';
-  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' menit, '+(blob.size/1048576).toFixed(1)+' MB. Tidak disimpan di server: hilang saat duel berikutnya mulai atau halaman ditutup.';
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' menit, '+(blob.size/1048576).toFixed(1)+' MB. Tidak disimpan di server: hilang saat diunduh, dibuang, diganti rekaman duel berikutnya, atau halaman ditutup.';
   $('recBox').classList.add('show');
 }
 $('recGo').addEventListener('click',()=>{
