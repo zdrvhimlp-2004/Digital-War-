@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Halaman replay bisa buka file lewat file manager**: tombol "Buka file replay" di layar awal dan tombol "Buka file" di bilah kontrol (saat replay sedang diputar), selain seret file. Perbaikan: halaman replay tidak lagi meminta layar penuh otomatis, karena itu menghabiskan izin interaksi browser sehingga file manager tidak mau terbuka.
 - **Tombol keluar room** (ikon pintu di kolom kiri, dengan konfirmasi) dan **lanjut pertandingan**: petarung yang keluar atau terputus saat duel ditahan kebal di arena 45 detik. Bila membuka link room yang sama dalam 60 detik, game langsung masuk tanpa layar nama dan melanjutkan dari posisi dan darah terakhir. Bila terlambat, ia dianggap keluar (kalah).
 - **Halaman utama**: tambah link "Putar replay" (`/replay`) dan "Preview teknik" (`/teknik`) di bawah kolom kode room.
 - **Replay pertandingan (menggantikan rekaman video yang bikin lag)**: server hanya mencatat data duel (posisi, serangan, teknik, HP) di memori, tanpa video. Setelah ronde selesai muncul tombol **Putar ulang** dan **Unduh** (file kecil `.dwreplay`). Replay diputar di halaman `/replay` memakai kode game yang sama, dengan kamera bebas (seret untuk memutar, roda mouse untuk zoom), tombol jeda, geser waktu, kecepatan 0.5x/1x/2x, dan pilihan ikuti petarung. Hanya replay terakhir yang ada, tidak disimpan di server permanen.

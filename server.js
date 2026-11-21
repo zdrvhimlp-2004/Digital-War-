@@ -3146,7 +3146,7 @@ body.rp #rpLoad.show{display:flex}
 #rpLoad .card{width:min(92vw,420px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:22px 22px 18px;text-align:center}
 #rpLoad h2{margin:0 0 8px;font-size:22px;color:#ffd84d}
 #rpLoad p{margin:6px 0;font-size:13px;color:#9fb3d6;line-height:1.5}
-#rpLoad label{display:block;margin-top:12px;padding:12px;border:2px dashed #35508c;border-radius:14px;font-weight:600;font-size:14px;cursor:pointer}
+#rpLoad label{display:block;margin-top:12px;padding:13px;border:0;border-radius:14px;background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;font-weight:700;font-size:15px;cursor:pointer}
 #rpLoad input{display:none}
 #rpErr{color:#ff8a8a!important;min-height:18px}
 #rpBar{display:none;position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:12;width:min(96vw,720px);align-items:center;gap:8px;background:rgba(8,14,34,.92);border:1px solid rgba(160,190,255,.3);border-radius:16px;padding:8px 10px;font-family:Poppins,system-ui,sans-serif;color:#fff;touch-action:manipulation}
@@ -3292,8 +3292,8 @@ body.cine #setBox{display:none!important}
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
 <div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="leaveBox"><div class="card"><h3>Keluar dari room?</h3><p id="leaveTxt">Kamu bisa kembali lewat link yang sama.</p><div class="rb"><button id="leaveNo" type="button">Batal</button><button id="leaveYes" class="go" type="button">Keluar</button></div></div></div>
-<div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label>Pilih file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
-<div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button></div>
+<div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label id="rpPick">📂 Buka file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
+<div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button><button id="rpOpen" type="button">Buka file</button></div>
 <div id="recBox" title="Replay pertandingan terakhir. Hanya data (bukan video), disimpan sementara di memori, tidak di server. Hilang saat halaman ditutup atau diganti replay berikutnya."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recGo" type="button">Unduh</button><button id="recX" type="button" aria-label="Tutup">×</button></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
@@ -4508,7 +4508,7 @@ let wantFs=false;
   const req=el.requestFullscreen||el.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
   const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
   const ios=/iPhone|iPod/.test(navigator.userAgent)||(/iPad|Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1&&!req);
-  const standalone=window.navigator.standalone||matchMedia('(display-mode:standalone)').matches||matchMedia('(display-mode:fullscreen)').matches;
+  const standalone=RPM||window.navigator.standalone||matchMedia('(display-mode:standalone)').matches||matchMedia('(display-mode:fullscreen)').matches;   /* RPM: halaman replay tidak meminta layar penuh otomatis, karena itu memakan izin interaksi sehingga file manager tidak bisa terbuka */
   if(!req){
     if(standalone){btn.classList.add('off');return;}
     btn.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -6124,7 +6124,8 @@ async function rpLoadBuf(buf){
 }
 if(RPM){
   document.body.classList.add('rp');$('rpLoad').classList.add('show');
-  $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);});
+  $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);e.target.value='';});   /* kosongkan supaya file yang sama bisa dipilih lagi */
+  $('rpOpen').addEventListener('click',()=>$('rpFile').click());   /* buka file manager kapan saja, juga saat replay sedang diputar */
   ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();if(t==='drop'){const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);}}));
   window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dwReplay)rpLoadBuf(e.data.dwReplay);});
   if(window.opener){
