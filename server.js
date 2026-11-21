@@ -2033,6 +2033,12 @@ body.playing .hudf{display:flex}
 .mi{display:inline-block;width:18px;height:18px;vertical-align:-4px;margin-right:5px}
 .mi svg{width:100%;height:100%}
 .clki{width:14px;height:14px;vertical-align:-2px}
+#rotHint{position:fixed;inset:0;z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0b1020;color:#fff;text-align:center;padding:24px;font-size:17px;font-weight:600}
+#rotHint small{display:block;font-size:13px;font-weight:400;opacity:.7;margin-top:6px}
+#rotHint .ph{width:54px;height:96px;border:4px solid #4de1ff;border-radius:12px;position:relative;animation:rotPh 2.4s ease-in-out infinite}
+#rotHint .ph:after{content:"";position:absolute;left:50%;bottom:6px;width:14px;height:3px;margin-left:-7px;border-radius:2px;background:#4de1ff}
+@keyframes rotPh{0%,15%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (orientation:portrait) and (pointer:coarse) and (max-width:900px){#rotHint{display:flex}}
 @media (orientation:portrait){
 body #slots{top:42%}
 }
@@ -2238,6 +2244,7 @@ body.cine #setBox{display:none!important}
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
 </div>
 <div id="chatFeed" class="hud"></div>
+<div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
