@@ -1560,6 +1560,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
     if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML);
+    if (pathname === '/manifest.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Digital War', short_name: 'Digital War', start_url: '/', display: 'fullscreen', orientation: 'landscape', background_color: '#0b1020', theme_color: '#0b1020' })); }
     if (pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
     if (pathname === '/healthz') return json(res, 200, { ok: true });
     html(res, '<!doctype html><meta charset="utf-8"><title>404</title><body style="font-family:sans-serif;background:#0b1020;color:#fff;text-align:center;padding:60px"><h1>404</h1><p>Halaman tidak ada.</p><a style="color:#4de1ff" href="/">Kembali</a>', 404);
@@ -1601,6 +1602,11 @@ const LANDING_HTML = String.raw`<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Digital War">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Digital War</title>
 <style>
@@ -1927,6 +1933,11 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Digital War">
 <title>Digital War</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -3389,6 +3400,9 @@ bindBtn($('btnSnipe'),()=>fireSniper());
   const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
   const sync=()=>{btn.innerHTML=svg(isFs()?'fsx':'fs');setTimeout(resize,150);};
   document.addEventListener('fullscreenchange',sync);document.addEventListener('webkitfullscreenchange',sync);
+  const standalone=(window.navigator.standalone===true)||matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches;
+  if(!standalone){const auto=()=>{removeEventListener('pointerdown',auto,true);removeEventListener('keydown',auto,true);if(!isFs()){try{const r=req.call(el);if(r&&r.catch)r.catch(()=>{});}catch(_){}}};
+    addEventListener('pointerdown',auto,true);addEventListener('keydown',auto,true);}
   btn.addEventListener('pointerdown',e=>e.stopPropagation());
   btn.addEventListener('click',()=>{
     try{
