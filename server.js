@@ -1470,14 +1470,17 @@ function duelSide(which, idx, n) {
   const zo = ((idx || 0) - ((n || 1) - 1) / 2) * 4.5;
   return which === 'a' ? { x: ARENA.x - ARENA.side, z: ARENA.z + zo, fx: 1, fz: 0 } : { x: ARENA.x + ARENA.side, z: ARENA.z + zo, fx: -1, fz: 0 };
 }
-/* bersihkan peluru/bola/ranjau; elang pemilik yang ikut bertanding tetap ada */
+/* bersihkan peluru, bola, ranjau, tembok, elang, singa, dan tunggangan */
 function duelClearCombat(room) {
   const d = room.duel;
   room.projs = [];
   for (const w of [...room.walls]) wallRemove(room, w, false);
   for (const w of room.rings) broadcast(room, { t: 'ringx', id: w.id, i: -1 });
   room.rings = [];
-  room.mobs = room.mobs.filter(m => { if (d.team[m.o]) return true; broadcast(room, { t: 'mobx', id: m.id }); return false; });
+  /* semua elang dan singa hilang, tunggangan elang juga dilepas */
+  for (const m of room.mobs) broadcast(room, { t: 'mobx', id: m.id });
+  room.mobs = [];
+  for (const p of room.players.values()) if (p.rideUntil) { p.rideUntil = 0; broadcast(room, { t: 'fx', k: 'rideend', id: p.id }); }
   for (const o of room.orbs) broadcast(room, { t: 'orbx', id: o.id });
   room.orbs = [];
   for (const tr of room.traps) broadcast(room, { t: 'trapx', id: tr.id, x: r2(tr.x), y: r2(tr.y), z: r2(tr.z) });

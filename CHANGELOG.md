@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Elang, singa, dan tunggangan elang hilang saat ronde diulang** (sebelumnya milik petarung masih tertinggal).
 - **Tembok dihapus saat ronde diulang**: semua Tembok Kode dan Tembok Pelindung hilang saat ronde duel baru dimulai atau duel kembali ke antrian, walau masih sisa waktu 5 menit.
 - **Tembok bertahan 5 menit**: Tembok Kode dan Tembok Pelindung kini hilang setelah 300 detik (sebelumnya 6 dan 5 detik), atau lebih cepat bila hancur oleh damage.
 - **Komputer (bot duel) kini mendeteksi elang dan singa lawan** dan menghadapinya bila dekat (dalam 9 unit). **Singa juga bisa mengejar elang dan singa musuh**, bukan hanya pemain dan prajurit.
