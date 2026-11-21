@@ -1475,6 +1475,8 @@ function duelClearCombat(room) {
   const d = room.duel;
   room.projs = [];
   for (const w of [...room.walls]) wallRemove(room, w, false);
+  for (const w of room.rings) broadcast(room, { t: 'ringx', id: w.id, i: -1 });
+  room.rings = [];
   room.mobs = room.mobs.filter(m => { if (d.team[m.o]) return true; broadcast(room, { t: 'mobx', id: m.id }); return false; });
   for (const o of room.orbs) broadcast(room, { t: 'orbx', id: o.id });
   room.orbs = [];
@@ -1682,7 +1684,7 @@ function lionStep(room, m, owner, dt, t) {
     hurt(room, tg, m.dmg, owner, m.fx * 8, m.fz * 8, { sx: -m.fx, sz: -m.fz });
   }
 }
-function duelToWait(room, d) { duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
+function duelToWait(room, d) { duelClearCombat(room); duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
 function duelTick(room, t, dt) {
   const d = room.duel;
   d.queue = d.queue.filter(id => room.players.has(id) && !d.team[id]);
