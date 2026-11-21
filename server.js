@@ -2883,6 +2883,13 @@ body.playing.chatopen #chatFeed.hud{display:none!important}
 #chatForm button svg{width:18px;height:18px}
 #xhair{position:fixed;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);pointer-events:none;z-index:3;display:none}
 #xhair.show{display:block}
+#fpsView{position:fixed;inset:0;pointer-events:none;z-index:2;display:none;overflow:hidden}
+#fpsView.show{display:block}
+body.playing.cine #fpsView{display:none!important}
+#fpsView .arm{position:absolute;bottom:-4vh;height:min(74vh,520px);aspect-ratio:3/4;will-change:transform;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))}
+#fpsView .arm svg{width:100%;height:100%;display:block;overflow:visible}
+#fpsR{right:max(2vw,env(safe-area-inset-right));transform-origin:70% 100%}
+#fpsL{left:max(2vw,env(safe-area-inset-left));transform-origin:30% 100%}
 #xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 3px #000}
 #xhair:before{left:10px;top:0;width:2px;height:22px}#xhair:after{top:10px;left:0;height:2px;width:22px}
 #aimbar{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);display:none;gap:10px;z-index:6}
@@ -3083,6 +3090,18 @@ body.cine #setBox{display:none!important}
 <div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
+<div id="fpsView" aria-hidden="true">
+<div class="arm" id="fpsL"><svg viewBox="0 0 300 400"><defs><linearGradient id="fsh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fd3ff"/><stop offset="1" stop-color="#2f6fb0"/></linearGradient></defs>
+<path d="M30 400 L70 250 L150 250 L170 400Z" fill="#2c3552"/><path d="M60 280 L150 280 L160 330 L50 330Z" fill="#3a4568"/>
+<path d="M40 60 Q150 20 262 60 L258 170 Q250 270 150 320 Q50 270 42 170Z" fill="url(#fsh)" stroke="#16324f" stroke-width="7"/>
+<path d="M150 38 L150 300" stroke="#16324f" stroke-width="5" opacity=".55"/><path d="M58 150 L246 150" stroke="#16324f" stroke-width="5" opacity=".55"/><circle cx="150" cy="150" r="26" fill="#ffe28a" stroke="#16324f" stroke-width="5"/>
+<path d="M118 262 q-6 -34 14 -38 q10 -2 14 8 l4 28z M152 262 l4 -26 q6 -10 16 -6 q12 6 6 34z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/></svg></div>
+<div class="arm" id="fpsR"><svg viewBox="0 0 300 400">
+<g id="fpsSw" transform="rotate(14 150 330)"><rect x="140" y="-140" width="22" height="330" rx="4" fill="#dfe8f2" stroke="#6f7f93" stroke-width="4"/><rect x="149" y="-136" width="4" height="318" fill="#fff" opacity=".7"/><path d="M140 -140 L151 -178 L162 -140Z" fill="#dfe8f2" stroke="#6f7f93" stroke-width="4"/>
+<rect x="98" y="186" width="106" height="16" rx="7" fill="#d9a441" stroke="#7b5a1a" stroke-width="4"/><rect x="141" y="200" width="20" height="74" rx="6" fill="#6b3d22" stroke="#3a1f10" stroke-width="4"/><circle cx="151" cy="284" r="13" fill="#d9a441" stroke="#7b5a1a" stroke-width="4"/>
+<path d="M118 248 q0 -20 33 -20 q33 0 33 20 v44 q0 22 -33 22 q-33 0 -33 -22z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/><path d="M122 254 h58 M122 272 h58 M124 290 h54" stroke="#a8754f" stroke-width="4" stroke-linecap="round"/><path d="M178 240 q22 -4 18 22 q-4 14 -20 8z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/></g>
+<path d="M100 400 L128 300 L208 300 L248 400Z" fill="#2c3552"/><path d="M112 340 L216 340 L224 372 L104 372Z" fill="#3a4568"/></svg></div>
+</div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
 <div id="hurt"></div>
@@ -4369,7 +4388,7 @@ let wantFs=false;
 function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO.spark)+'</svg>');return t;}
 const guardMat=new THREE.SpriteMaterial({map:iconTex('shield','#6cd4ff'),depthTest:false,transparent:true,fog:false});
 let myGuardSp=null;
-let guardLatch=false,guardResume=0;
+let guardLatch=false,guardResume=0,fvG=0;
 function guardAtk(){if(guarding){const l=guardLatch;setGuard(false,true);if(l)guardResume=0.3;}}
 function setGuard(on,keep){
   if(!on&&!keep)guardLatch=false;
@@ -5646,6 +5665,15 @@ function update(dt){
   spriteMesh.rotation.y=cam.yaw;spriteMesh.rotation.x=-cam.pitch*0.55;
   spriteMesh.material.color.setHex(hurtFlash>0?0xff7a7a:(stunT>0?0xaee6ff:0xffffff));spriteMesh.visible=!fps&&!(invuln>0.25&&Math.floor(tAll*16)%2===0&&!dead);
   playerRoot.position.copy(pos);
+  {const fv=$('fpsView'),on=fps&&started&&!dead&&!sleeping&&aiming<0;
+    if(fv.classList.contains('show')!==on)fv.classList.toggle('show',on);
+    if(on){
+      const mv=clamp(sp/7,0,1),bw=Math.sin(walkT*Math.PI)*mv,bx=Math.cos(walkT*Math.PI*0.5)*mv;
+      const pk=attackT>0?Math.sin((1-attackT/0.32)*Math.PI):0,side=atkSide?1:-1;
+      const gu=guarding?1:0;fvG+=(gu-fvG)*Math.min(1,dt*14);
+      $('fpsR').style.transform='translate('+(bx*10-pk*side*90-fvG*40)+'px,'+(Math.abs(bw)*12-pk*40+fvG*30)+'px) rotate('+(pk*side*38-fvG*10)+'deg)';
+      $('fpsL').style.transform='translate('+(-bx*10+fvG*40)+'px,'+(Math.abs(bw)*12-fvG*90)+'px) scale('+(1+fvG*0.18)+') rotate('+(fvG*6)+'deg)';
+    }}
   if(swim)playerRoot.position.y+=Math.sin(tAll*3)*0.05;
   ghost.visible=!riding;
   if(riding){if(!myMount)myMount=mountMake();myMount.mesh.visible=!fps;mountPlace(myMount,pos.x,pos.y,pos.z,faceX,faceZ,rgt,fwd,0);playerRoot.position.x+=myMount.off.x;playerRoot.position.y+=myMount.off.y;playerRoot.position.z+=myMount.off.z;}else if(myMount)myMount.mesh.visible=false;
