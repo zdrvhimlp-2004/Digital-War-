@@ -2293,6 +2293,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
+    if (pathname === '/teknik') return fs.readFile(path.join(__dirname, 'teknik.html'), 'utf8', (err, txt) => err ? html(res, '<!doctype html><meta charset="utf-8"><title>404</title><p>teknik.html tidak ditemukan</p>') : html(res, txt));   /* halaman preview dan tutorial teknik */
     if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';</script>'));
     if (pathname === '/manifest.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Digital War', short_name: 'Digital War', start_url: '/', display: 'fullscreen', orientation: 'landscape', background_color: '#0b1020', theme_color: '#0b1020' })); }
     if (pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
