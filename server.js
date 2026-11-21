@@ -3150,7 +3150,7 @@ let guarding=false,guardPips=9,guardPipT=0,gbT=0,stunT=0,hasteT=0,hastePw=1.6,my
 
 /* ---------- UI helpers ---------- */
 let toastT=0;
-function toast(msg,secs){const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=secs||2.2;}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');toastT=3;}
 function feed(txt){const f=$('feed'),d=document.createElement('div');d.textContent=txt;f.appendChild(d);while(f.children.length>4)f.removeChild(f.firstChild);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},5000);}
 function nearestDoor(){let best=null,bd=3.1,bi=-1;doors.forEach((d,i)=>{const dist=Math.hypot(d.wx-pos.x,d.wz-pos.z);if(dist<bd&&Math.abs(pos.y)<3){bd=dist;best=d;bi=i;}});return best?{d:best,i:bi}:null;}
 function netSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));}
