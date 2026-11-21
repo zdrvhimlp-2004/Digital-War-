@@ -3068,6 +3068,16 @@ body:not(.train) #trainBox{display:none!important}
 #duelBox .me{color:#7dffae;font-weight:700}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
+#recDot{display:none;position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);z-index:7;pointer-events:none;font:700 11px Poppins,system-ui,sans-serif;color:#fff;background:rgba(190,30,40,.85);padding:3px 10px;border-radius:999px;letter-spacing:1px}
+#recDot.show{display:block;animation:recb 1.2s infinite}
+@keyframes recb{50%{opacity:.45}}
+#recBox{display:none;position:fixed;left:50%;bottom:170px;transform:translateX(-50%);z-index:9;width:min(92vw,360px);background:rgba(8,14,34,.95);border:1px solid rgba(160,190,255,.3);border-radius:16px;padding:12px 14px;color:#fff;font-family:Poppins,system-ui,sans-serif;text-align:center;touch-action:manipulation}
+#recBox.show{display:block}
+#recBox b{display:block;font-size:14px}
+#recBox small{display:block;font-size:11px;color:#9fb3d6;margin:4px 0 10px;line-height:1.4}
+#recBox .rb{display:flex;gap:8px}
+#recBox button{flex:1;border:0;border-radius:12px;padding:9px 0;font:600 13px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54}
+#recBox button.go{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f}
 #netRep{display:none;position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:9;width:min(92vw,340px);background:rgba(8,14,34,.94);border:1px solid rgba(160,190,255,.25);border-left:6px solid var(--nc,#4de27a);border-radius:14px;padding:12px 40px 14px 14px;font-family:Poppins,system-ui,sans-serif;color:#eaf1ff;box-shadow:0 10px 36px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;animation:netIn .22s ease-out}
 #netRep.show{display:block}
 @keyframes netIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -3194,10 +3204,11 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
 <label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
 <label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
+<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu (gambar dan suara game, tanpa tombol). Bisa diunduh setelah pertandingan, tidak disimpan di server dan hilang saat duel berikutnya mulai.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
-<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div>
+<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="recDot">● REC</div><div id="recBox"><b id="recT">Rekaman pertandingan siap</b><small id="recS"></small><div class="rb"><button id="recX" type="button">Buang</button><button id="recGo" class="go" type="button">Unduh</button></div></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -6072,8 +6083,10 @@ function onDuel(m){
   duel=m;duelAt=performance.now();refreshMates();
   const prev=duelPrevSt;duelPrevSt=m.st;
   renderDuelBox();
-  if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
+  if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();recDiscard();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
+  if(m.st==='fight'&&prev!=='fight')recStart();
+  if(m.st!=='fight'&&prev==='fight')recStop();
   if(m.st==='fight'&&prev!=='fight'){fightAt=performance.now();if(duelMine())netTrackStart();else netTrk=null;}
   if(m.st!=='fight'&&prev==='fight')netTrackFinish();
   if(m.st==='fight'&&(m.ph||0)!==duelPh){
@@ -6084,6 +6097,66 @@ function onDuel(m){
   duelPh=m.st==='fight'?(m.ph||0):0;
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
+/* ---------- rekam pertandingan ----------
+   Direkam di browser (canvas.captureStream + MediaRecorder), suara dari master Web Audio.
+   Hasilnya hanya Blob di memori: tidak dikirim atau disimpan di server, dan dibuang saat duel berikutnya mulai. */
+const REC_MAX_MS=8*60*1000,REC_MIN_MS=2000;
+let rec=null,recReady=null,recDest=null,recRevokeT=0;
+function recTapAudio(){if(AC&&master&&!recDest){try{recDest=AC.createMediaStreamDestination();master.connect(recDest);}catch(e){recDest=null;}}}
+function recNames(){
+  const nm=l=>(l&&l.length?l.map(x=>x&&x.name?x.name:'?').join('+'):'?');
+  return duel?(nm(duel.ta)+'-vs-'+nm(duel.tb)):'duel';
+}
+function recDiscard(){
+  clearTimeout(recRevokeT);
+  if(recReady){try{URL.revokeObjectURL(recReady.url);}catch(e){}recReady=null;}
+  $('recBox').classList.remove('show');
+}
+function recStart(){
+  recDiscard();
+  if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!canvas.captureStream)return;
+  try{
+    recTapAudio();
+    const vs=canvas.captureStream(30),tracks=vs.getVideoTracks().slice();
+    if(recDest)recDest.stream.getAudioTracks().forEach(t=>tracks.push(t));
+    const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+    const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+    const mr=new MediaRecorder(new MediaStream(tracks),mime?{mimeType:mime,videoBitsPerSecond:2000000}:{videoBitsPerSecond:2000000});
+    const r={mr,vs,chunks:[],t0:performance.now(),mime:mr.mimeType||mime||'video/webm',names:recNames(),cap:0};
+    mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data);};
+    mr.onstop=()=>recFinish(r);
+    mr.start(1000);
+    r.cap=setTimeout(recStop,REC_MAX_MS);
+    rec=r;$('recDot').classList.add('show');
+  }catch(e){rec=null;$('recDot').classList.remove('show');}
+}
+function recStop(){
+  if(!rec)return;
+  const r=rec;rec=null;clearTimeout(r.cap);$('recDot').classList.remove('show');
+  try{if(r.mr.state!=='inactive')r.mr.stop();else recFinish(r);}catch(e){recFinish(r);}
+}
+function recFinish(r){
+  try{r.vs.getTracks().forEach(t=>t.stop());}catch(e){}
+  const ms=performance.now()-r.t0;
+  if(!r.chunks.length||ms<REC_MIN_MS){r.chunks=[];return;}
+  const blob=new Blob(r.chunks,{type:r.mime});r.chunks=[];
+  recDiscard();
+  const ext=/mp4/.test(r.mime)?'mp4':'webm',d=new Date(),p2=n=>String(n).padStart(2,'0');
+  const safe=r.names.replace(/[^A-Za-z0-9+_-]+/g,'_').slice(0,60);
+  recReady={blob,url:URL.createObjectURL(blob),name:'digital-war-'+safe+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.'+ext};
+  const sec=Math.round(ms/1000);
+  $('recT').textContent='Rekaman pertandingan siap';
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' menit, '+(blob.size/1048576).toFixed(1)+' MB. Tidak disimpan di server: hilang saat duel berikutnya mulai atau halaman ditutup.';
+  $('recBox').classList.add('show');
+}
+$('recGo').addEventListener('click',()=>{
+  if(!recReady)return;
+  const a=document.createElement('a');a.href=recReady.url;a.download=recReady.name;document.body.appendChild(a);a.click();a.remove();
+  $('recBox').classList.remove('show');
+  clearTimeout(recRevokeT);recRevokeT=setTimeout(recDiscard,15000);   /* setelah diunduh, hapus dari memori */
+});
+$('recX').addEventListener('click',recDiscard);
+$('recBox').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ---------- catatan jaringan saat bertarung di ring ---------- */
 const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
 let netTrk=null,netMsgT=0,netRepTimer=0;
@@ -6149,7 +6222,7 @@ let duelCntN=0,duelPh=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({physObj:false,joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({rec:true,physObj:false,joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}

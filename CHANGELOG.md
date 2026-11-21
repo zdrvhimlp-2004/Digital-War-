@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Rekam pertandingan duel**: tiap duel direkam di browser (gambar dan suara game, tanpa tombol), lalu setelah pertandingan muncul panel "Unduh" atau "Buang". Rekaman tidak disimpan di server, hilang saat duel berikutnya mulai, halaman ditutup, atau setelah diunduh. Bisa dimatikan di Pengaturan. Maksimal 8 menit.
 - **Halaman preview teknik** di `/teknik`: tutorial singkat (ambil kode, pasang slot, pakai, cooldown, kombo), tabel tombol keyboard, dan kartu 29 teknik dengan animasi preview melawan musuh, damage, cooldown, dan cara pakai. File: `teknik.html`.
 - **Penyamun kini mendeteksi lebih banyak sasaran**: selain pemain, mereka juga melihat dan menyerang elang panggilan serta pasukan benteng dan pengawal.
 - **Tunggangan elang lebih lama**: 70 detik jadi 150 detik.
