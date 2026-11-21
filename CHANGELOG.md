@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Emote**: tombol senyum di kolom kiri (atau tekan `T`) membuka 8 emote sopan: Angkat tangan, Lambaikan tangan, Salam hormat, Setuju, Tidak setuju, Tolong, Semangat, dan Heran. Emote muncul sebagai gelembung ikon pixel di atas kepala dan terlihat semua pemain di sekitar selama 3 detik, beberapa disertai gerak kecil pada sprite. Cooldown 3 detik, tidak bisa dipakai saat mati atau tidur, dan otomatis berhenti kalau pemain bergerak atau menyerang. Di kamera FPS, emote sendiri tampil sebagai pil kecil di layar.
 - **Logo folder Gerak diganti jejak kaki** (sebelumnya petir) di menu pilih teknik.
 - **Menu pilih teknik (ketuk slot) berbentuk folder**: yang pertama muncul kartu kategori (Semua teknik, Serangan, Ledakan, Pemanggil, Pertahanan, Gerak) beserta jumlah tekniknya. Ketuk satu folder untuk melihat isinya, tombol "‹ Folder" untuk kembali. Berlaku di room dengan mode pilih teknik dari admin.
 - **Buku teknik punya tombol kategori**: Semua, Serangan, Ledakan, Pemanggil, Pertahanan, dan Gerak, masing-masing menampilkan jumlah tekniknya. Ketuk satu untuk menyaring daftar; halaman kembali ke awal.

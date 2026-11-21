@@ -53,6 +53,7 @@ Password disimpan sebagai hash (scrypt) di file data. Login dibatasi 6 percobaan
 | Kamera | seret mouse, Q / R | geser layar kanan |
 | Lompat (2x lebih tinggi) / naik saat berenang | Spasi | tombol Lompat |
 | Serang | J | tombol Serang |
+| Emote (8 pilihan sopan) | T | tombol senyum di kolom kiri |
 | Tahan (tameng) | K (tahan) | tombol Tahan |
 | Selam / turun saat terbang | V | tombol Selam |
 | Sniper | H | tombol Sniper |

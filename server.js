@@ -80,6 +80,8 @@ const MOB_HP = 40, MOUNT_HP = 70;
 const CAVE_MOUTH = { x: -15, z: 87 };
 const SOLDIER_RESPAWN_MS = 12000;
 const CHAT_MAX = 140;
+const EMOTE_COUNT = 8;      /* jumlah emote (indeks 0..7, ikon digambar di klien) */
+const EMOTE_CD_MS = 2800;
 const SPAWN_RADIUS = 96;                   // titik spawn: pojok/tepi peta
 const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   const a = (22.5 + k * 45) * Math.PI / 180;
@@ -1922,6 +1924,15 @@ function onMessage(ws, text) {
       broadcast(room, msg);
       break;
     }
+    case 'emote': {
+      const t = now();
+      if (p.dead || p.sleeping || t - (p.emoteAt || 0) < EMOTE_CD_MS) break;
+      const e = m.e | 0;
+      if (e < 0 || e >= EMOTE_COUNT) break;
+      p.emoteAt = t;
+      broadcast(room, { t: 'emote', id: p.id, e });
+      break;
+    }
     case 'rtc': {
       if (!room.voice) break;
       const to = room.players.get(m.to | 0);
@@ -2868,6 +2879,14 @@ body.playing #lcol.hud{display:flex!important}
 #lcolTog{background:rgba(10,16,32,.8)!important}
 #lcol button.active{background:rgba(30,111,255,.85)}
 #lcol .vo.off{display:none}
+#emoPanel{position:fixed;left:calc(max(var(--gx),env(safe-area-inset-left)) + 46px);top:calc(max(10px,env(safe-area-inset-top)) + 168px);display:none;grid-template-columns:repeat(4,60px);gap:6px;padding:8px;background:rgba(8,14,32,.94);border:1px solid rgba(120,190,255,.28);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:12;touch-action:manipulation;font-family:Poppins,system-ui,sans-serif}
+#emoPanel.show{display:grid}
+#emoPanel button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px 4px;border:0;border-radius:12px;background:rgba(255,255,255,.07);color:#fff;font:600 9.5px/1.1 Poppins,system-ui,sans-serif;cursor:pointer;text-align:center}
+#emoPanel button:active{background:rgba(30,111,255,.7)}
+#emoPanel button img{width:34px;height:34px;image-rendering:pixelated}
+#emoSelf{left:50%;top:20%;transform:translateX(-50%);display:none;align-items:center;gap:8px;padding:5px 14px 5px 8px;font-size:14px}
+#emoSelf img{width:30px;height:30px;image-rendering:pixelated}
+@media (max-height:560px){#emoPanel{left:calc(max(var(--gx),env(safe-area-inset-left)) + 90px)}}
 .badge{position:absolute;top:-4px;right:-4px;background:#ff4d4d;color:#fff;font-size:10px;font-weight:700;border-radius:8px;padding:1px 5px;display:none;font-style:normal}
 #chatFeed{position:fixed;left:max(var(--gx),env(safe-area-inset-left));bottom:84px;max-width:min(62vw,420px);z-index:3;pointer-events:none;display:none;flex-direction:column;gap:2px;font-size:13px}
 body.playing #chatFeed.hud{display:flex!important}
@@ -3094,10 +3113,13 @@ body.cine #setBox{display:none!important}
   <button id="tipBtn" title="Tips &amp; trik" aria-label="Tips dan trik" data-ico="bulb"></button>
   <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
+  <button id="emoBtn" data-ico="smile" title="Emote (T)" aria-label="Emote"></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
 </div>
 <div id="chatFeed" class="hud"></div>
+<div id="emoPanel" role="menu" aria-label="Emote"></div>
+<div id="emoSelf" class="pill"></div>
 <div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
@@ -3153,7 +3175,7 @@ body.cine #setBox{display:none!important}
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
-<div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · Tab skor</div>
+<div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · T emote · Tab skor</div>
 <div id="joyBase"></div><div id="joyKnob"></div>
 <div id="ko"><h2>KO!</h2><p id="koTxt"></p></div>
 
@@ -3234,6 +3256,7 @@ const ICO={
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
  orb:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4a8 8 0 0 1 0 16M12 4a8 8 0 0 0 0 16"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.500h8M8 12.500h5"/>',
+ smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14c1 1.500 2.300 2 4 2s3-.500 4-2"/><path d="M9 9.500h.01M15 9.500h.01"/>',
  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
  hideui:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -4297,6 +4320,7 @@ window.addEventListener('keydown',e=>{
   keys.add(e.code);
   if(e.code==='KeyK'||e.code==='KeyG')setGuard(true);
   if(e.code==='KeyB'){openBook();return;}
+  if(e.code==='KeyT'){toggleEmo();return;}
   if(e.code==='KeyH')fireSniper();
   if(e.code==='Space')jumpBuf=0.13;
   if(e.code==='KeyE')interact();
@@ -4933,6 +4957,93 @@ function onCap(m){
   sfxAt('horn',f.x,f.z);
 }
 
+/* ---------- emote (gelembung ikon pixel di atas kepala, 3 detik) ---------- */
+const EMO_DUR=3;
+const EMOTES=[
+  {n:'Angkat tangan',d:q=>{emoHand(q,0);}},
+  {n:'Lambaikan tangan',d:q=>{emoHand(q,-1);q(13,3,1,5,'#4db8ff');q(15,4,1,3,'#4db8ff');}},
+  {n:'Salam hormat',d:q=>{q(4,7,8,8,'#f2c28a');q(4,6,8,2,'#7a4a2a');q(6,10,1,1,'#2b2233');q(9,10,1,1,'#2b2233');q(7,4,8,2,'#f2c28a');q(13,4,2,5,'#f2c28a');}},
+  {n:'Setuju',d:q=>{q(3,8,9,6,'#f2c28a');q(3,10,9,1,'#d8a77c');q(3,12,9,1,'#d8a77c');q(5,2,3,7,'#f2c28a');q(3,14,9,2,'#4db8ff');}},
+  {n:'Tidak setuju',d:q=>{for(let i=0;i<12;i++){q(2+i,2+i,2,2,'#ff4d4d');q(12-i,2+i,2,2,'#ff4d4d');}}},
+  {n:'Tolong',d:q=>{q(6,1,4,9,'#ff4d4d');q(7,2,1,6,'#ff9a9a');q(6,12,4,3,'#ff4d4d');}},
+  {n:'Semangat',d:q=>{q(3,5,9,7,'#f2c28a');q(3,7,9,1,'#d8a77c');q(3,9,9,1,'#d8a77c');q(4,12,7,4,'#4db8ff');q(1,1,2,1,'#ffd84d');q(13,1,2,1,'#ffd84d');q(0,5,2,1,'#ffd84d');q(14,5,2,1,'#ffd84d');q(7,0,2,2,'#ffd84d');}},
+  {n:'Heran',d:q=>{q(5,1,6,2,'#ffd84d');q(10,3,2,4,'#ffd84d');q(7,7,4,2,'#ffd84d');q(7,9,2,2,'#ffd84d');q(7,12,2,2,'#ffd84d');}}
+];
+function emoHand(q,ox){q(4+ox,8,8,6,'#f2c28a');q(4+ox,11,8,1,'#d8a77c');q(4+ox,3,2,5,'#f2c28a');q(6+ox,1,2,7,'#f2c28a');q(8+ox,1,2,7,'#f2c28a');q(10+ox,3,2,5,'#f2c28a');q(2+ox,8,3,3,'#f2c28a');q(5+ox,14,6,2,'#4db8ff');}
+const EMO_ICON=[],EMO_URL=[],EMO_TEX=[];
+function emoIcon(e){
+  if(EMO_ICON[e])return EMO_ICON[e];
+  const cv=document.createElement('canvas');cv.width=cv.height=18;const g=cv.getContext('2d');
+  EMOTES[e].d((x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x+1,y+1,w,h);});
+  const im=g.getImageData(0,0,18,18),d=im.data,out=new Uint8ClampedArray(d);
+  for(let y=0;y<18;y++)for(let x=0;x<18;x++){const k=(y*18+x)*4;if(d[k+3]>0)continue;
+    if((x>0&&d[k-4+3]>0)||(x<17&&d[k+4+3]>0)||(y>0&&d[k-72+3]>0)||(y<17&&d[k+72+3]>0)){out[k]=43;out[k+1]=34;out[k+2]=51;out[k+3]=255;}}
+  im.data.set(out);g.putImageData(im,0,0);return EMO_ICON[e]=cv;
+}
+function emoURL(e){
+  if(EMO_URL[e])return EMO_URL[e];
+  const cv=document.createElement('canvas');cv.width=cv.height=72;const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(emoIcon(e),0,0,72,72);
+  return EMO_URL[e]=cv.toDataURL();
+}
+function emoTex(e){
+  if(EMO_TEX[e])return EMO_TEX[e];
+  const cv=document.createElement('canvas');cv.width=cv.height=80;const g=cv.getContext('2d');
+  g.fillStyle='rgba(255,255,255,.96)';g.strokeStyle='#2b2233';g.lineWidth=3;
+  g.beginPath();g.moveTo(18,4);g.lineTo(62,4);g.quadraticCurveTo(76,4,76,18);g.lineTo(76,52);g.quadraticCurveTo(76,66,62,66);g.lineTo(46,66);g.lineTo(40,77);g.lineTo(34,66);g.lineTo(18,66);g.quadraticCurveTo(4,66,4,52);g.lineTo(4,18);g.quadraticCurveTo(4,4,18,4);g.closePath();g.fill();g.stroke();
+  g.imageSmoothingEnabled=false;g.drawImage(emoIcon(e),0,0,18,18,13,8,54,54);
+  const t=new THREE.CanvasTexture(cv);return EMO_TEX[e]=t;
+}
+const rtS=()=>performance.now()/1000;
+const meEmo={emo:null};let emoCdUntil=0;
+function emoClear(h){const em=h.emo;if(!em)return;scene.remove(em.sp);em.sp.material.dispose();h.emo=null;if(h===meEmo)$('emoSelf').style.display='none';}
+function emoStart(h,e){
+  if(!(e>=0&&e<EMOTES.length))return;
+  emoClear(h);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:emoTex(e),depthTest:false,transparent:true,fog:false}));sp.scale.set(0.01,0.01,1);sp.renderOrder=21;scene.add(sp);
+  h.emo={e,t0:rtS(),sp};
+  if(h===meEmo&&fps){const b=$('emoSelf');b.innerHTML='<img src="'+emoURL(e)+'" alt=""><span>'+EMOTES[e].n+'</span>';b.style.display='flex';}
+}
+/* gerak kecil sprite: dy naik, rz miring, dx geser kanan, sy tinggi */
+function emoMotion(e,t){
+  const r={dy:0,rz:0,dx:0,sy:1};
+  switch(e){
+    case 0:r.dy=0.1*Math.abs(Math.sin(t*5));break;
+    case 1:r.rz=Math.sin(t*9)*0.18;break;
+    case 2:r.sy=1.04;break;
+    case 3:r.sy=1-0.07*Math.max(0,Math.sin(t*7));break;
+    case 4:r.dx=Math.sin(t*16)*0.07;break;
+    case 6:r.dy=0.28*Math.abs(Math.sin(t*6));break;
+    case 7:r.rz=0.16;break;
+  }
+  return r;
+}
+function emoTick(h,x,y,z,off,cancel,hide){
+  const em=h.emo;if(!em)return null;
+  const t=rtS()-em.t0;
+  if(cancel||t>=EMO_DUR){emoClear(h);return null;}
+  const k=clamp(Math.min(t/0.15,(EMO_DUR-t)/0.25),0,1),mo=emoMotion(em.e,t);
+  const sc=1.25*(t<0.22?(t/0.22)*(1+0.25*(1-t/0.22)):1);
+  em.sp.scale.set(sc,sc,1);em.sp.position.set(x,y+off+0.06*Math.sin(t*4),z);em.sp.material.opacity=clamp((EMO_DUR-t)/0.3,0,1);em.sp.visible=!hide;
+  return {dy:mo.dy*k,rz:mo.rz*k,dx:mo.dx*k,sy:1+(mo.sy-1)*k};
+}
+let emoOpen=false;
+function toggleEmo(force){emoOpen=force===undefined?!emoOpen:force;$('emoPanel').classList.toggle('show',emoOpen);}
+function sendEmote(e){
+  if(!started||dead||sleeping||chatOpen||modalOpen||bookOpen)return;
+  toggleEmo(false);
+  if(performance.now()<emoCdUntil){toast('Tunggu sebentar untuk emote lagi',1.4);return;}
+  emoCdUntil=performance.now()+3000;netSend({t:'emote',e});
+}
+(function(){
+  const pn=$('emoPanel');
+  EMOTES.forEach((em,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.title=em.n;
+    b.innerHTML='<img src="'+emoURL(i)+'" alt=""><span>'+em.n+'</span>';b.addEventListener('click',()=>{sfx.click();sendEmote(i);});pn.appendChild(b);});
+  pn.addEventListener('pointerdown',e=>e.stopPropagation());
+  $('emoBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+  $('emoBtn').addEventListener('click',()=>{if(started)toggleEmo();});
+  document.addEventListener('pointerdown',e=>{if(emoOpen&&!(e.target.closest&&e.target.closest('#emoPanel,#emoBtn')))toggleEmo(false);},true);
+})();
+
 /* ---------- remote players ---------- */
 function makeLabel(){
   const cv=document.createElement('canvas');cv.width=192;cv.height=44;const tex=new THREE.CanvasTexture(cv);
@@ -4964,7 +5075,7 @@ function addOther(info){
 }
 function removeOther(id){
   const o=others.get(id);if(!o)return;
-  killBadge(o.badge);scene.remove(o.mesh);scene.remove(o.sh);scene.remove(o.lab.sp);scene.remove(o.shield);if(o.gsp)scene.remove(o.gsp);if(o.mount)mountDrop(o.mount);
+  emoClear(o);killBadge(o.badge);scene.remove(o.mesh);scene.remove(o.sh);scene.remove(o.lab.sp);scene.remove(o.shield);if(o.gsp)scene.remove(o.gsp);if(o.mount)mountDrop(o.mount);
   o.mat.dispose();o.tex.dispose();o.lab.sp.material.dispose();o.lab.tex.dispose();o.shield.material.dispose();
   others.delete(id);
 }
@@ -4998,6 +5109,7 @@ function updOthers(dt,rgt,fwd){
     if(o.ride&&!o.dead){if(!o.mount)o.mount=mountMake();o.mount.mesh.visible=true;mountPlace(o.mount,o.x,o.y,o.z,o.fx,o.fz,rgt,fwd,o.id);lift=o.mount.off.y;rox=o.mount.off.x;roz=o.mount.off.z;}else if(o.mount)o.mount.mesh.visible=false;
     o.mesh.position.set(o.x+rox,o.y+bob+lift,o.z+roz);o.mesh.rotation.y=cam.yaw;o.mesh.rotation.x=-cam.pitch*0.55;
     o.mesh.scale.set(flip?-1:1,1,1);
+    {const mo=emoTick(o,o.x+rox,o.y+bob+lift,o.z+roz,3.3,o.dead||o.sleep||o.atkT>0||o.m>0,!(dp<60));o.mesh.rotation.z=mo?mo.rz:0;if(mo){o.mesh.position.x+=rgt.x*mo.dx;o.mesh.position.y+=mo.dy;o.mesh.position.z+=rgt.z*mo.dx;o.mesh.scale.y=mo.sy;}}
     o.mat.color.setHex(o.flash>0?(o.flash>0.2&&Math.sin(o.flash*42)>0?0xffffff:0xff6a6a):(o.stunT>0?0xaee6ff:0xffffff));
     const gy=groundAt(o.x,o.z,o.y-0.5);
     o.sh.position.set(o.x,Math.max(gy,wet?WATER_Y:-99)+0.07,o.z);o.sh.scale.setScalar(clamp(1-(o.y-gy)*0.1,0.35,1)*1.25);
@@ -5201,6 +5313,7 @@ function onMsg(m){
     case 'ringhit':hitRing(m.id,m.i,m.hp);break;
     case 'ringx':removeRing(m.id,m.i,m.x,m.z);break;
     case 'chat':addChatLine(m,true);if(m.id!==me.id)sfx.pop();break;
+    case 'emote':{if(m.id===me.id)emoStart(meEmo,m.e|0);else{const o=others.get(m.id);if(o)emoStart(o,m.e|0);}break;}
     case 'rtc':onRtc(m.from,m.d);break;
     case 'closed':{ws.onclose=null;showDc('Room ditutup','Admin menutup room ini.');break;}
   }
@@ -5684,6 +5797,7 @@ function update(dt){
   spriteMesh.scale.set(sxx*(flip?-1:1),syy,1);
   spriteMesh.rotation.y=cam.yaw;spriteMesh.rotation.x=-cam.pitch*0.55;
   spriteMesh.material.color.setHex(hurtFlash>0?0xff7a7a:(stunT>0?0xaee6ff:0xffffff));spriteMesh.visible=!fps&&!(invuln>0.25&&Math.floor(tAll*16)%2===0&&!dead);
+  {const mo=emoTick(meEmo,pos.x,pos.y,pos.z,3.3,dead||sleeping||attackT>0||sp>0.9||riding,fps);spriteMesh.rotation.z=mo?mo.rz:0;spriteMesh.position.set(mo?rgt.x*mo.dx:0,mo?mo.dy:0,mo?rgt.z*mo.dx:0);if(mo)spriteMesh.scale.y*=mo.sy;}
   playerRoot.position.copy(pos);
   {const fv=$('fpsView'),on=fps&&started&&!dead&&!sleeping&&aiming<0;
     if(fv.classList.contains('show')!==on)fv.classList.toggle('show',on);
