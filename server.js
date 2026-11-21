@@ -1532,6 +1532,13 @@ function duelBotStep(room, bot, enemies, dt, t) {
   if (bot.dead) return;
   let A = null, bd = 1e9;
   for (const e of enemies) { if (e.dead || room.duel.out[e.id] || !room.duel.team[e.id]) continue; /* yang sudah keluar dari ronde tidak dikejar */ const dd = Math.hypot(e.x - bot.x, e.z - bot.z); if (dd < bd) { bd = dd; A = e; } }
+  /* elang/singa musuh yang dekat dianggap ancaman: komputer menghadapinya dulu */
+  const tmA = room.duel.team, myTm = tmA[bot.id];
+  for (const m of room.mobs) {
+    if (m.hp <= 0 || !tmA[m.o] || tmA[m.o] === myTm) continue;
+    const dd = Math.hypot(m.x - bot.x, m.z - bot.z);
+    if (dd < 9 && dd < bd + 3) { bd = dd; A = { isMob: true, m, id: 'm' + m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z, atkAt: m.atkAt || 0, dead: false }; }
+  }
   if (!A) return;
   const ai = bot.ai;
   if (ai.tgt !== A.id) { ai.tgt = A.id; ai.lastAt = 0; ai.avx = ai.avz = 0; }
@@ -1656,7 +1663,11 @@ function lionStep(room, m, owner, dt, t) {
   for (const fo of focusOrder(owner)) {
     if (!fo || t >= fo.until) continue;
     const fv = fo.v;
-    if (!fv.isMob && !fv.dead && (fv.isSol ? room.sols.includes(fv) : room.players.get(fv.id) === fv) && (!room.duel || fv.isSol || duelFighting(room, fv)) && (fv.x < 1000) === (owner.x < 1000)) { tg = fv; bd = Math.hypot(fv.x - m.x, fv.z - m.z); break; }
+    if (fv.isMob) {   /* elang/singa musuh juga bisa dikejar */
+      if (room.mobs.includes(fv.m) && fv.m.o !== owner.id && !(room.duel && !duelFighting(room, room.players.get(fv.m.o) || owner)) && (fv.m.x < 1000) === (owner.x < 1000)) { tg = { isMob: true, m: fv.m, id: fv.m.id, o: fv.m.o, x: fv.m.x, y: fv.m.y - 0.9, z: fv.m.z }; bd = Math.hypot(tg.x - m.x, tg.z - m.z); break; }
+      continue;
+    }
+    if (!fv.dead && (fv.isSol ? room.sols.includes(fv) : room.players.get(fv.id) === fv) && (!room.duel || fv.isSol || duelFighting(room, fv)) && (fv.x < 1000) === (owner.x < 1000)) { tg = fv; bd = Math.hypot(fv.x - m.x, fv.z - m.z); break; }
   }
   let tx, tz, sp = m.sp;
   if (tg) { tx = tg.x; tz = tg.z; if (bd > 12) sp *= 1.5; }
