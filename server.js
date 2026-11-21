@@ -3107,6 +3107,7 @@ body:not(.train) #trainBox{display:none!important}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
 body.rp #start,body.rp :is(#lcol,#slots,#btnAtk,#btnGuard,#btnJump,#btnAct,#btnSnipe,#btnDive,#bookBtn,#sbBtn,#fsBtn,#hint,#chatFeed,#chatPanel,#hpBox,#oxyBox,#roomTag,#net,#xhair,#prompt,#toast,#board,#kd,#capBox,#recBox,#joyBase,#joyKnob,#emoPanel,#emoSelf,#aimbar,#dbgBox,#duelHelp,#netRep,#trainBox,#fpsView,#hurt){display:none!important}
+body.rp.playing :is(#lcol,#sbBtn,#bookBtn).hud,body.rp.playing #lcol{display:none!important}
 #rpLoad{display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:rgba(3,7,18,.82);font-family:Poppins,system-ui,sans-serif;color:#fff;padding:16px}
 body.rp #rpLoad.show{display:flex}
 #rpLoad .card{width:min(92vw,420px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:22px 22px 18px;text-align:center}
