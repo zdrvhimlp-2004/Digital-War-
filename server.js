@@ -3113,7 +3113,7 @@ body.cine #setBox{display:none!important}
   <button id="tipBtn" title="Tips &amp; trik" aria-label="Tips dan trik" data-ico="bulb"></button>
   <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
-  <button id="emoBtn" data-ico="smile" title="Emote (T)" aria-label="Emote"></button>
+  <button id="emoBtn" data-ico="raisehand" title="Emote (T)" aria-label="Emote"></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
 </div>
@@ -3256,7 +3256,7 @@ const ICO={
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
  orb:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4a8 8 0 0 1 0 16M12 4a8 8 0 0 0 0 16"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.500h8M8 12.500h5"/>',
- smile:'<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.500V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.800 0-4.500-.86-5.990-2.340l-3.600-3.600a2 2 0 0 1 2.830-2.820L7 15"/>',
+ raisehand:'<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.500V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.800 0-4.500-.86-5.990-2.340l-3.600-3.600a2 2 0 0 1 2.830-2.820L7 15"/>',
  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
  hideui:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
