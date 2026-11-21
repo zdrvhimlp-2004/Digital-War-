@@ -2887,10 +2887,10 @@ body.playing.chatopen #chatFeed.hud{display:none!important}
 #fpsView{position:fixed;inset:0;pointer-events:none;z-index:2;display:none;overflow:hidden}
 #fpsView.show{display:block}
 body.playing.cine #fpsView{display:none!important}
-#fpsView .arm{position:absolute;bottom:-4vh;height:min(58vh,420px);aspect-ratio:3/4;will-change:transform;}
+#fpsView .arm{position:absolute;bottom:calc(-4vh - min(58vh,420px)*12/32);height:calc(min(58vh,420px)*44/32);aspect-ratio:24/44;will-change:transform;}
 #fpsView .arm canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
-#fpsRc{transform:rotate(12deg);transform-origin:50% 100%}
-#fpsR{right:max(2vw,env(safe-area-inset-right));transform-origin:70% 100%}
+#fpsRc{transform:rotate(12deg);transform-origin:50% 72.73%}
+#fpsR{right:max(2vw,env(safe-area-inset-right));transform-origin:70% 72.73%}
 #xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 3px #000}
 #xhair:before{left:10px;top:0;width:2px;height:22px}#xhair:after{top:10px;left:0;height:2px;width:22px}
 #aimbar{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);display:none;gap:10px;z-index:6}
@@ -3091,7 +3091,7 @@ body.cine #setBox{display:none!important}
 <div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
-<div id="fpsView" aria-hidden="true"><div class="arm" id="fpsR"><canvas id="fpsRc" width="24" height="32"></canvas></div></div>
+<div id="fpsView" aria-hidden="true"><div class="arm" id="fpsR"><canvas id="fpsRc" width="24" height="44"></canvas></div></div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
 <div id="hurt"></div>
@@ -4383,11 +4383,11 @@ let fvCh=-1;
 function buildFpsArms(){
   const pal=Object.assign({},PAL_PLAYER,CHARS[clamp(me.ch|0,0,CHARS.length-1)].pal),SK2='#d8a77c';
   const mk=(id,draw)=>{
-    const cv=$(id),g=cv.getContext('2d');g.clearRect(0,0,24,32);
+    const cv=$(id),g=cv.getContext('2d');g.clearRect(0,0,24,44);
     C=pal;sx=g;OX=0;OY=0;draw();
-    const im=g.getImageData(0,0,24,32),d=im.data,out=new Uint8ClampedArray(d);
-    for(let y=0;y<32;y++)for(let x=0;x<24;x++){const k=(y*24+x)*4;if(d[k+3]>0)continue;
-      if((x>0&&d[k-4+3]>0)||(x<23&&d[k+4+3]>0)||(y>0&&d[k-96+3]>0)||(y<31&&d[k+96+3]>0)){out[k]=43;out[k+1]=34;out[k+2]=51;out[k+3]=255;}}
+    const im=g.getImageData(0,0,24,44),d=im.data,out=new Uint8ClampedArray(d);
+    for(let y=0;y<44;y++)for(let x=0;x<24;x++){const k=(y*24+x)*4;if(d[k+3]>0)continue;
+      if((x>0&&d[k-4+3]>0)||(x<23&&d[k+4+3]>0)||(y>0&&d[k-96+3]>0)||(y<43&&d[k+96+3]>0)){out[k]=43;out[k+1]=34;out[k+2]=51;out[k+3]=255;}}
     im.data.set(out);g.putImageData(im,0,0);
   };
   mk('fpsRc',()=>{
@@ -4395,7 +4395,7 @@ function buildFpsArms(){
     R(5,18,14,2,C.hilt);R(5,18,14,1,'#f0d060');
     R(10,20,3,5,C.belt);
     R(8,22,8,6,C.skin);R(8,22,8,1,SK2);R(8,24,8,1,SK2);R(8,26,8,1,SK2);R(15,21,3,4,C.skin);R(15,24,3,1,SK2);
-    R(6,28,13,4,C.tunic);R(6,28,13,1,C.tunicD);R(6,29,2,3,C.tunicD);
+    R(6,28,13,16,C.tunic);R(6,28,13,1,C.tunicD);R(6,29,2,15,C.tunicD);
   });
 }
 let guardLatch=false,guardResume=0;
