@@ -1173,6 +1173,7 @@ function stepForts(room, dt, t) {
 
 function stepRoom(room, dt, t) {
   CUR = room;
+  for (const p of [...room.players.values()]) if (p.away && t >= p.away) { p.away = 0; removePlayer(room, p); }   /* tidak kembali tepat waktu */
   /* peluru / bola / anak panah */
   /* gelombang angin memukul balik bola yang dilewatinya */
   for (const w of room.projs.filter(q => q.wv)) {
@@ -1842,6 +1843,15 @@ function removePlayer(room, p) {
   if (room.duel) { room.duel.queue = room.duel.queue.filter(id => id !== p.id); duelBroadcast(room); }
 }
 
+function welcomeFor(room, p, s, resumed) {
+  return {
+    t: 'welcome', resumed: resumed ? 1 : 0, id: p.id, tag: p.tag, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : (room.train ? 'train' : 'world') }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
+    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), walls: room.walls.map(w => ({ id: w.id, o: w.o, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(w.nx), nz: r2(w.nz), len: w.len, hp: Math.round(w.hp), dur: Math.max(0.1, (w.until - now()) / 1000), c: w.c || '#b8a27a' })), chat: room.chatLog.slice(-20),
+    spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
+    players: [...room.players.values()].map(q => ({ id: q.id, tag: q.tag, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
+  };
+}
+
 function onJoin(ws, m) {
   if (ws.player) return;
   const code = String(m.code || '').toUpperCase();
@@ -1852,9 +1862,18 @@ function onJoin(ws, m) {
   const uid = String(m.uid || '').slice(0, 40) || crypto.randomBytes(6).toString('hex');
   const ch = clampN(Math.floor(Number(m.ch)) || 0, 0, CHAR_COUNT - 1);
 
+  /* kembali ke pertandingan yang masih berjalan (keluar room atau terputus): lanjut dari posisi dan darah terakhir */
+  for (const p of room.players.values()) {
+    if (p.uid === uid && p.away && !p.ws) {
+      p.ws = ws; ws.player = p; p.away = 0; p.invuln = now() + 800;
+      send(ws, welcomeFor(room, p, { x: p.x, z: p.z }, true));
+      broadcast(room, { t: 'sc', s: scoreList(room) });
+      return;
+    }
+  }
   /* sesi lama dari orang yang sama (refresh halaman) -> gantikan */
   for (const p of room.players.values()) {
-    if (p.uid === uid) { try { send(p.ws, { t: 'err', msg: 'Kamu masuk dari tab lain' }); } catch (e) { } removePlayer(room, p); p.ws.terminate(); }
+    if (p.uid === uid) { try { send(p.ws, { t: 'err', msg: 'Kamu masuk dari tab lain' }); } catch (e) { } removePlayer(room, p); if (p.ws) p.ws.terminate(); }
   }
   const lower = name.toLowerCase();
   for (const p of room.players.values()) {
@@ -1873,12 +1892,7 @@ function onJoin(ws, m) {
   };
   room.players.set(p.id, p);
   ws.player = p;
-  send(ws, {
-    t: 'welcome', id: p.id, tag: p.tag, room: { name: room.name, max: room.max, voice: room.voice, pick: room.pick, debug: !!room.debug, mode: room.duel ? 'duel' : (room.train ? 'train' : 'world') }, duel: room.duel ? duelState(room) : null, hour: roomHour(room), hp: p.hp,
-    forts: room.forts.map(f => Object.assign(fortPublic(f), { name2: f.name, x: f.x, z: f.z })), sols: room.sols.map(solPublic), walls: room.walls.map(w => ({ id: w.id, o: w.o, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(w.nx), nz: r2(w.nz), len: w.len, hp: Math.round(w.hp), dur: Math.max(0.1, (w.until - now()) / 1000), c: w.c || '#b8a27a' })), chat: room.chatLog.slice(-20),
-    spawn: s, doors: room.doors, book: !!DB.settings.showBook, chest: room.chest.open,
-    players: [...room.players.values()].map(q => ({ id: q.id, tag: q.tag, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: q.sleeping }))
-  });
+  send(ws, welcomeFor(room, p, s, false));
   broadcast(room, { t: 'pj', p: { id: p.id, tag: p.tag, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } }, p.id);
   broadcast(room, { t: 'sc', s: scoreList(room) });
   if (room.duel) { room.duel.queue.push(p.id); duelBroadcast(room); }
@@ -2021,16 +2035,25 @@ function onMessage(ws, text) {
   }
 }
 
+/* petarung yang keluar/terputus saat pertandingan berjalan ditahan di arena (kebal) AWAY_MS; kalau kembali dalam waktu itu ia melanjutkan,
+   kalau tidak ia dianggap keluar (kalah) */
+const AWAY_MS = 45000;
+function awayStart(room, p) {
+  const d = room.duel;
+  if (!d || p.bot || p.dead || !d.team[p.id] || d.out[p.id] || (d.st !== 'fight' && d.st !== 'count')) return false;
+  p.ws = null; p.away = now() + AWAY_MS; p.invuln = p.away + 500;
+  if (p.guarding) setGuard(room, p, false);
+  return true;
+}
 function onClose(ws) {
   const p = ws.player;
-  if (p) { ws.player = null; removePlayer(p.room, p); }
+  if (p) { ws.player = null; if (!awayStart(p.room, p)) removePlayer(p.room, p); }
 }
 
 function closeRoom(room) {
   for (const p of [...room.players.values()]) {
     try { send(p.ws, { t: 'closed' }); } catch (e) { }
-    p.ws.player = null;
-    setTimeout(() => p.ws.terminate(), 200);
+    if (p.ws) { p.ws.player = null; const w0 = p.ws; setTimeout(() => w0.terminate(), 200); }
   }
   room.players.clear();
   rooms.delete(room.code);
@@ -3108,8 +3131,16 @@ body:not(.train) #trainBox{display:none!important}
 #duelBox .me{color:#7dffae;font-weight:700}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
-body.rp #start,body.rp :is(#lcol,#slots,#btnAtk,#btnGuard,#btnJump,#btnAct,#btnSnipe,#btnDive,#bookBtn,#sbBtn,#fsBtn,#hint,#chatFeed,#chatPanel,#hpBox,#oxyBox,#roomTag,#net,#xhair,#prompt,#toast,#board,#kd,#capBox,#recBox,#joyBase,#joyKnob,#emoPanel,#emoSelf,#aimbar,#dbgBox,#duelHelp,#netRep,#trainBox,#fpsView,#hurt){display:none!important}
+body.rp #start,body.rp :is(#leaveBox,#lcol,#slots,#btnAtk,#btnGuard,#btnJump,#btnAct,#btnSnipe,#btnDive,#bookBtn,#sbBtn,#fsBtn,#hint,#chatFeed,#chatPanel,#hpBox,#oxyBox,#roomTag,#net,#xhair,#prompt,#toast,#board,#kd,#capBox,#recBox,#joyBase,#joyKnob,#emoPanel,#emoSelf,#aimbar,#dbgBox,#duelHelp,#netRep,#trainBox,#fpsView,#hurt){display:none!important}
 body.rp.playing :is(#lcol,#sbBtn,#bookBtn).hud,body.rp.playing #lcol{display:none!important}
+#leaveBox{display:none;position:fixed;inset:0;z-index:58;background:rgba(2,6,18,.7);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif;padding:16px}
+#leaveBox.show{display:flex}
+#leaveBox .card{width:min(92vw,360px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:18px 18px 16px;color:#fff;text-align:center}
+#leaveBox h3{margin:0 0 6px;font-size:18px}
+#leaveBox p{margin:0 0 14px;font-size:13px;color:#9fb3d6;line-height:1.5}
+#leaveBox .rb{display:flex;gap:8px}
+#leaveBox button{flex:1;border:0;border-radius:12px;padding:10px 0;font:600 14px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54}
+#leaveBox button.go{background:linear-gradient(135deg,#d63a3a,#ff7a5a)}
 #rpLoad{display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:rgba(3,7,18,.82);font-family:Poppins,system-ui,sans-serif;color:#fff;padding:16px}
 body.rp #rpLoad.show{display:flex}
 #rpLoad .card{width:min(92vw,420px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:22px 22px 18px;text-align:center}
@@ -3204,6 +3235,7 @@ body.cine #setBox{display:none!important}
   <button id="setBtn" data-ico="gear" title="Pengaturan" aria-label="Pengaturan"></button>
   <button id="chatBtn" title="Chat (Enter)" aria-label="Chat"><span data-ico="chat" style="display:flex;width:20px;height:20px"></span><i class="badge" id="chatBadge"></i></button>
   <button id="emoBtn" data-ico="raisehand" title="Emote (T)" aria-label="Emote"></button>
+  <button id="leaveBtn" data-ico="exit" title="Keluar room" aria-label="Keluar room"></button>
   <button id="micBtn" class="vo off" data-ico="micoff" title="Mikrofon" aria-label="Mikrofon"></button>
   <button id="spkBtn" class="vo off active" data-ico="spk" title="Suara room" aria-label="Suara room"></button>
 </div>
@@ -3259,7 +3291,8 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
-<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label>Pilih file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
+<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="leaveBox"><div class="card"><h3>Keluar dari room?</h3><p id="leaveTxt">Kamu bisa kembali lewat link yang sama.</p><div class="rb"><button id="leaveNo" type="button">Batal</button><button id="leaveYes" class="go" type="button">Keluar</button></div></div></div>
+<div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label>Pilih file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
 <div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button></div>
 <div id="recBox" title="Replay pertandingan terakhir. Hanya data (bukan video), disimpan sementara di memori, tidak di server. Hilang saat halaman ditutup atau diganti replay berikutnya."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recGo" type="button">Unduh</button><button id="recX" type="button" aria-label="Tutup">×</button></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div><div id="dbgBox"></div>
@@ -3348,6 +3381,7 @@ const ICO={
  fsx:'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>',
  orb:'<circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="8" ry="3"/><path d="M12 4a8 8 0 0 1 0 16M12 4a8 8 0 0 0 0 16"/>',
+ exit:'<path d="M9 4H5.500a1.500 1.500 0 0 0-1.500 1.500v13A1.500 1.500 0 0 0 5.500 20H9"/><path d="M15.500 7.500L20 12l-4.500 4.500M20 12H9.500"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.500h8M8 12.500h5"/>',
  raisehand:'<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.500V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.800 0-4.500-.86-5.990-2.340l-3.600-3.600a2 2 0 0 1 2.830-2.820L7 15"/>',
  gear:'<path d="M19.4 10.5L21.9 10.7L21.9 13.3L19.4 13.5L18.3 16.2L19.9 18.1L18.1 19.9L16.2 18.3L13.5 19.4L13.3 21.9L10.7 21.9L10.5 19.4L7.8 18.3L5.9 19.9L4.1 18.1L5.7 16.2L4.6 13.5L2.1 13.3L2.1 10.7L4.6 10.5L5.7 7.8L4.1 5.9L5.9 4.1L7.8 5.7L10.5 4.6L10.7 2.1L13.3 2.1L13.5 4.6L16.2 5.7L18.1 4.1L19.9 5.9L18.3 7.8z"/><circle cx="12" cy="12" r="3"/>',
@@ -4398,6 +4432,7 @@ window.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code)&&document.activeElement!==$('nameIn')&&document.activeElement!==$('chatIn'))e.preventDefault();
   if(!started)return;
   if(RPM){rpKey(e);return;}
+  if($('leaveBox').classList.contains('show')){if(e.code==='Escape')closeLeave();return;}
   if(chatOpen)return;
   if(bookOpen){
     if(e.code==='Escape'||e.code==='KeyB')closeBook();else if(e.code==='ArrowLeft')bookGo(-1);else if(e.code==='ArrowRight')bookGo(1);
@@ -5339,7 +5374,7 @@ function onMsg(m){
       roomMode=(m.room&&m.room.mode)==='duel'?'duel':((m.room&&m.room.mode)==='train'?'train':'world');document.body.classList.toggle('train',roomMode==='train');
       applySet();netSend({t:'pref',dbg:SET.hitDbg?1:0});
       if(roomMode==='duel'){document.body.classList.add('duel');duelSize=(m.duel&&m.duel.size)||1;buildArena();forts.forEach(f=>{f.g.visible=false;});if(m.duel)onDuel(m.duel);cam.yaw=cam.yawT=Math.atan2(-(ARENA.x-pos.x),-(ARENA.z-pos.z));cam.pitchT=0.38;toast(duelSize>1?'Arena Tim '+duelSize+' vs '+duelSize+': tim menang lanjut. Kalau kurang pemain, komputer jadi rekan & lawan!':'Arena Duel 1 vs 1: menang lanjut, kalah antri. Siapkan tekniknya!',3.6);showDuelHelp();renderBoard();break;}
-      renderBoard();startIntro();break;}
+      renderBoard();if(m.resumed)toast('Melanjutkan pertandingan...',2.6);else startIntro();rsBeat();break;}
     case 'err':{$('ferr').textContent=m.msg;$('go').disabled=false;if(joined)toast(m.msg,2.5);break;}
     case 'pj':{if(m.p.id!==me.id){addOther(m.p);ensurePeer(m.p.id);feed(m.p.name+' bergabung',1000);renderBoard();}break;}
     case 'pl':{closePeer(m.id);const o=others.get(m.id);if(o){feed(o.name+' keluar');removeOther(m.id);renderBoard();}break;}
@@ -5410,7 +5445,7 @@ function onMsg(m){
     case 'chat':addChatLine(m,true);if(m.id!==me.id)sfx.pop();break;
     case 'emote':{if(m.id===me.id)emoStart(meEmo,m.e|0);else{const o=others.get(m.id);if(o)emoStart(o,m.e|0);}break;}
     case 'rtc':onRtc(m.from,m.d);break;
-    case 'closed':{ws.onclose=null;showDc('Room ditutup','Admin menutup room ini.');break;}
+    case 'closed':{LS.set('dw_resume','');ws.onclose=null;showDc('Room ditutup','Admin menutup room ini.');break;}
   }
 }
 const cwalls=new Map();
@@ -5549,6 +5584,28 @@ function connect(){
   ws.onerror=()=>{};
 }
 
+/* ---------- keluar room dan lanjut ----------
+   Penanda 'dw_resume' (room + waktu) diperbarui selama di room. Bila halaman room dibuka lagi dalam 60 dtk, game langsung masuk tanpa layar nama,
+   dan server melanjutkan petarung yang masih ditahan di arena (45 dtk) dari posisi dan darah terakhir. */
+const RESUME_MS=60000;
+function rsBeat(){if(RPM||!joined)return;LS.set('dw_resume',JSON.stringify({room:ROOM,t:Date.now()}));}
+if(!RPM)setInterval(rsBeat,4000);
+function rsFresh(){try{const r=JSON.parse(LS.get('dw_resume')||'null');return !!(r&&r.room===ROOM&&Date.now()-r.t<RESUME_MS);}catch(e){return false;}}
+function openLeave(){
+  if(!started||RPM)return;
+  $('leaveTxt').textContent=roomMode==='duel'?'Kalau kamu sedang bertarung, karaktermu ditahan kebal di arena 45 detik. Kembali lewat link yang sama dalam waktu itu untuk melanjutkan.':'Kamu bisa kembali lewat link yang sama.';
+  $('leaveBox').classList.add('show');
+}
+function closeLeave(){$('leaveBox').classList.remove('show');}
+function doLeave(){
+  LS.set('dw_resume',JSON.stringify({room:ROOM,t:Date.now()}));
+  try{if(ws){ws.onclose=null;ws.close();}}catch(e){}
+  location.href='/';
+}
+$('leaveBtn').addEventListener('click',openLeave);$('leaveBtn').addEventListener('pointerdown',e=>e.stopPropagation());
+$('leaveNo').addEventListener('click',closeLeave);$('leaveYes').addEventListener('click',doLeave);
+$('leaveBox').addEventListener('pointerdown',e=>e.stopPropagation());
+
 /* ---------- start screen ---------- */
 let uid=LS.get('dw_uid');if(!uid){uid=Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>b.toString(16).padStart(2,'0')).join('');LS.set('dw_uid',uid);}
 const LORE='Ini adalah dunia digital yang dibuat menggunakan kode-kode bukan asli. Di dunia ini kamu bisa mengeluarkan dan membuat hal-hal yang telah ditetapkan di buku. Jadi kamu hafalkan dan praktekkan untuk beradaptasi dan menyerang lawan.';
@@ -5580,6 +5637,7 @@ $('nameIn').addEventListener('keyup',e=>e.stopPropagation());
 let roomOk=false;
 fetch('/api/room/'+encodeURIComponent(ROOM)).then(r=>r.ok?r.json():Promise.reject()).then(j=>{
   roomOk=true;roomInfo=j;$('roomInfo').textContent='Room: '+j.name+' ('+j.count+'/'+j.max+' pemain)';
+  if(!RPM&&rsFresh()&&LS.get('dw_name')){showForm();$('go').click();}   /* baru keluar/terputus: langsung masuk lagi */
 }).catch(()=>{$('roomInfo').textContent='Room tidak ditemukan. Minta link baru ke admin.';$('roomInfo').style.color='#ff8a8a';$('go').disabled=true;});
 $('go').addEventListener('click',()=>{
   initAudio();
