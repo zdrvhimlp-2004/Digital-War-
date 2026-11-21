@@ -3203,7 +3203,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
 <label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
 <label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
-<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu (gambar dan suara game, tanpa tombol). Bisa diunduh setelah pertandingan. Tidak disimpan di server, dan hanya rekaman terakhir yang ada di browser.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
+<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu dari sudut pandang orang ketiga (walau kamu main FPS), dengan suara game, tanpa tombol. Bisa diunduh setelah pertandingan. Tidak disimpan di server, dan hanya rekaman terakhir yang ada di browser.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
@@ -5943,6 +5943,7 @@ function update(dt){
   else if(inCave){const ddx=cx-CX,ddz=cz-CZ,r0=Math.hypot(ddx,ddz);if(r0>CAVE_R-2){const k0=(CAVE_R-2)/r0;cx=CX+ddx*k0;cz=CZ+ddz*k0;}cy=clamp(cy,1.5,13);}
   if(!started){/* menu orbit above the village */cx=Math.sin(cam.yaw)*38;cz=Math.cos(cam.yaw)*38+10;cy=terrainH(cx,cz)+16;}
   camera.position.set(cx,cy,cz);camera.lookAt(started?cam.tx:0,started?cam.ty+1.0:2,started?cam.tz:0);
+  tpsCam.x=cx;tpsCam.y=cy;tpsCam.z=cz;tpsCam.lx=started?cam.tx:0;tpsCam.ly=started?cam.ty+1.0:2;tpsCam.lz=started?cam.tz:0;   /* untuk rekaman: selalu sudut orang ketiga */
   if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0)+introBob,cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
   if(shake>0&&SET.shake){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
   const fovGoal=(cam.baseFov||50)+(sp>8.5?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
@@ -6100,8 +6101,29 @@ function onDuel(m){
    Direkam di browser (canvas.captureStream + MediaRecorder), suara dari master Web Audio.
    Hasilnya hanya Blob di memori (satu rekaman terakhir): tidak dikirim atau disimpan di server; dibuang saat diunduh, dibuang, diganti, atau halaman ditutup. */
 const REC_MAX_MS=8*60*1000,REC_MIN_MS=2000;
-let rec=null,recReady=null,recDest=null,recRevokeT=0;
+let rec=null,recReady=null,recDest=null,recRevokeT=0,recCv=null,recCx=null,recLast=0;
+const tpsCam={x:0,y:0,z:0,lx:0,ly:0,lz:0};
 function recTapAudio(){if(AC&&master&&!recDest){try{recDest=AC.createMediaStreamDestination();master.connect(recDest);}catch(e){recDest=null;}}}
+function recDraw(){
+  const W=recCv.width,H=recCv.height,cw=canvas.width,ch=canvas.height,k=Math.min(W/cw,H/ch),dw=cw*k,dh=ch*k;
+  if(dw<W-1||dh<H-1)recCx.fillRect(0,0,W,H);
+  recCx.drawImage(canvas,(W-dw)/2,(H-dh)/2,dw,dh);
+}
+/* dipanggil tiap frame saat merekam: bila pemain main FPS, gambar dulu dari kamera orang ketiga untuk rekaman, lalu gambar normal untuk layarnya */
+function recFrame(now){
+  const want=now-recLast>=33,tps=want&&fps&&started;
+  if(tps){
+    const p=camera.position.clone(),q=camera.quaternion.clone(),fv=camera.fov,sv=spriteMesh.visible,mv=myMount?myMount.mesh.visible:false;
+    camera.position.set(tpsCam.x,tpsCam.y,tpsCam.z);camera.lookAt(tpsCam.lx,tpsCam.ly,tpsCam.lz);
+    camera.fov=cam.baseFov||50;camera.updateProjectionMatrix();
+    if(!dead){spriteMesh.visible=true;if(rideT>0&&myMount)myMount.mesh.visible=true;}
+    try{renderer.render(scene,camera);recDraw();}
+    finally{spriteMesh.visible=sv;if(myMount)myMount.mesh.visible=mv;camera.position.copy(p);camera.quaternion.copy(q);camera.fov=fv;camera.updateProjectionMatrix();}
+  }
+  renderer.render(scene,camera);
+  if(want&&!tps)recDraw();
+  if(want)recLast=now;
+}
 function recNames(){
   const nm=l=>(l&&l.length?l.map(x=>x&&x.name?x.name:'?').join('+'):'?');
   return duel?(nm(duel.ta)+'-vs-'+nm(duel.tb)):'duel';
@@ -6112,10 +6134,14 @@ function recDiscard(){
   $('recBox').classList.remove('show');
 }
 function recStart(){
-  if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!canvas.captureStream)return;
+  if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream)return;
   try{
     recTapAudio();
-    const vs=canvas.captureStream(30),tracks=vs.getVideoTracks().slice();
+    /* rekaman memakai canvas sendiri supaya selalu tampil dari sudut orang ketiga, walau pemain main FPS */
+    const sc=Math.min(1,1280/canvas.width);
+    recCv=document.createElement('canvas');recCv.width=Math.max(2,Math.round(canvas.width*sc/2)*2);recCv.height=Math.max(2,Math.round(canvas.height*sc/2)*2);
+    recCx=recCv.getContext('2d');recCx.fillStyle='#000';recCx.fillRect(0,0,recCv.width,recCv.height);recLast=0;
+    const vs=recCv.captureStream(30),tracks=vs.getVideoTracks().slice();
     if(recDest)recDest.stream.getAudioTracks().forEach(t=>tracks.push(t));
     const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
     const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
@@ -6126,11 +6152,11 @@ function recStart(){
     mr.start(1000);
     r.cap=setTimeout(recStop,REC_MAX_MS);
     rec=r;$('recDot').classList.add('show');
-  }catch(e){rec=null;$('recDot').classList.remove('show');}
+  }catch(e){rec=null;recCv=recCx=null;$('recDot').classList.remove('show');}
 }
 function recStop(){
   if(!rec)return;
-  const r=rec;rec=null;clearTimeout(r.cap);$('recDot').classList.remove('show');
+  const r=rec;rec=null;recCv=recCx=null;clearTimeout(r.cap);$('recDot').classList.remove('show');
   try{if(r.mr.state!=='inactive')r.mr.stop();else recFinish(r);}catch(e){recFinish(r);}
 }
 function recFinish(r){
@@ -6440,7 +6466,9 @@ function updHitboxes(dt){
 }
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
-  update(dt);renderer.render(scene,camera);requestAnimationFrame(frame);
+  update(dt);
+  if(rec&&recCv){try{recFrame(now);}catch(e){recStop();renderer.render(scene,camera);}}else renderer.render(scene,camera);   /* bila perekaman bermasalah: matikan rekaman, game tetap jalan */
+  requestAnimationFrame(frame);
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
