@@ -1015,8 +1015,13 @@ function stepBandits(room, dt, t) {
     if (!s.bandit) continue;
     const c = CAMPS[s.camp], sp = SOLDIER[s.kind];
     let best = null, bd = 1e9;
-    for (const v of room.players.values()) {
-      if (v.dead || v.x > 1000 || t < v.invuln) continue;
+    /* penyamun mendeteksi pemain, elang panggilan, dan pasukan benteng/pengawal (bukan sesama penyamun) */
+    const cands = [];
+    for (const v of room.players.values()) if (!v.dead && t >= v.invuln) cands.push(v);
+    for (const m of room.mobs) cands.push({ isMob: true, m, id: m.id, o: m.o, x: m.x, y: m.y - 0.9, z: m.z });
+    for (const o of room.sols) if (!o.bandit && !o.dead) cands.push(o);
+    for (const v of cands) {
+      if (v.x > 1000) continue;
       const d = Math.hypot(v.x - s.x, v.z - s.z);
       if (Math.hypot(v.x - c.x, v.z - c.z) > BANDIT_AGGRO && d > BANDIT_SEE) continue;
       if (d < bd) { bd = d; best = v; }

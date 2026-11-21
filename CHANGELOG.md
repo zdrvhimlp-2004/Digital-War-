@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Penyamun kini mendeteksi lebih banyak sasaran**: selain pemain, mereka juga melihat dan menyerang elang panggilan serta pasukan benteng dan pengawal.
 - **Tunggangan elang lebih lama**: 70 detik jadi 150 detik.
 - **Elang dan singa lebih awet**: nyawa 1.5 kali (elang 40 jadi 60, singa 90 jadi 135) dan waktu hidup 2 kali (elang 12 jadi 24 dtk, singa 15 jadi 30 dtk). Tunggangan elang tidak berubah.
 - **Meteor Drop**: bola jadi 9 (3 kali lipat) dan menyebar ke segala arah sejauh 3 sampai 16 meter dari pemain, bukan jatuh bertumpuk di satu titik.
