@@ -2888,9 +2888,8 @@ body.playing.chatopen #chatFeed.hud{display:none!important}
 body.playing.cine #fpsView{display:none!important}
 #fpsView .arm{position:absolute;bottom:-4vh;height:min(58vh,420px);aspect-ratio:3/4;will-change:transform;}
 #fpsView .arm canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
-#fpsRc{transform:rotate(12deg);transform-origin:50% 100%}#fpsLc{transform:rotate(-6deg);transform-origin:50% 100%}
+#fpsRc{transform:rotate(12deg);transform-origin:50% 100%}
 #fpsR{right:max(2vw,env(safe-area-inset-right));transform-origin:70% 100%}
-#fpsL{left:max(2vw,env(safe-area-inset-left));transform-origin:30% 100%}
 #xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 3px #000}
 #xhair:before{left:10px;top:0;width:2px;height:22px}#xhair:after{top:10px;left:0;height:2px;width:22px}
 #aimbar{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);display:none;gap:10px;z-index:6}
@@ -3091,7 +3090,7 @@ body.cine #setBox{display:none!important}
 <div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
-<div id="fpsView" aria-hidden="true"><div class="arm" id="fpsL"><canvas id="fpsLc" width="24" height="32"></canvas></div><div class="arm" id="fpsR"><canvas id="fpsRc" width="24" height="32"></canvas></div></div>
+<div id="fpsView" aria-hidden="true"><div class="arm" id="fpsR"><canvas id="fpsRc" width="24" height="32"></canvas></div></div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
 <div id="hurt"></div>
@@ -4397,16 +4396,8 @@ function buildFpsArms(){
     R(8,22,8,6,C.skin);R(8,22,8,1,SK2);R(8,24,8,1,SK2);R(8,26,8,1,SK2);R(15,21,3,4,C.skin);R(15,24,3,1,SK2);
     R(6,28,13,4,C.tunic);R(6,28,13,1,C.tunicD);R(6,29,2,3,C.tunicD);
   });
-  mk('fpsLc',()=>{
-    for(let y=3;y<=23;y++){const hw=y<15?9:Math.max(1,Math.round(9-(y-14)*0.95));R(12-hw,y,hw*2,1,C.tunicD);}
-    for(let y=4;y<=22;y++){const hw=y<15?7:Math.max(0,Math.round(7-(y-14)*0.95));if(hw>0)R(12-hw,y,hw*2,1,C.tunic);}
-    R(11,5,2,17,C.scarf);R(6,10,12,2,C.scarf);
-    R(10,9,4,4,C.hilt);R(11,9,2,1,'#f0d060');
-    R(8,22,8,5,C.skin);R(8,22,8,1,SK2);R(8,24,8,1,SK2);R(8,26,8,1,SK2);
-    R(6,27,13,5,C.tunic);R(6,27,13,1,C.tunicD);R(17,28,2,4,C.tunicD);
-  });
 }
-let guardLatch=false,guardResume=0,fvG=0;
+let guardLatch=false,guardResume=0;
 function guardAtk(){if(guarding){const l=guardLatch;setGuard(false,true);if(l)guardResume=0.3;}}
 function setGuard(on,keep){
   if(!on&&!keep)guardLatch=false;
@@ -5689,9 +5680,7 @@ function update(dt){
       if(fvCh!==me.ch){fvCh=me.ch;buildFpsArms();}
       const mv=clamp(sp/7,0,1),bw=Math.sin(walkT*Math.PI)*mv,bx=Math.cos(walkT*Math.PI*0.5)*mv;
       const pk=attackT>0?Math.sin((1-attackT/0.32)*Math.PI):0,side=atkSide?1:-1;
-      const gu=guarding?1:0;fvG+=(gu-fvG)*Math.min(1,dt*14);
-      $('fpsR').style.transform='translate('+(bx*10-pk*side*90-fvG*40)+'px,'+(Math.abs(bw)*12-pk*40+fvG*30)+'px) rotate('+(pk*side*38-fvG*10)+'deg)';
-      $('fpsL').style.transform='translate('+(-bx*10+fvG*40)+'px,'+(Math.abs(bw)*12-fvG*90)+'px) scale('+(1+fvG*0.18)+') rotate('+(fvG*6)+'deg)';
+            $('fpsR').style.transform='translate('+(bx*10-pk*side*90)+'px,'+(Math.abs(bw)*12-pk*40)+'px) rotate('+(pk*side*38)+'deg)';
     }}
   if(swim)playerRoot.position.y+=Math.sin(tAll*3)*0.05;
   ghost.visible=!riding;
