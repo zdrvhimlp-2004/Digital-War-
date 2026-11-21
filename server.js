@@ -4962,7 +4962,7 @@ const EMO_DUR=3;
 const EMOTES=[
   {n:'Angkat tangan',d:q=>{emoHand(q,0);}},
   {n:'Lambaikan tangan',d:q=>{emoHand(q,-1);q(13,3,1,5,'#4db8ff');q(15,4,1,3,'#4db8ff');}},
-  {n:'Salam hormat',d:q=>{q(4,7,8,8,'#f2c28a');q(4,6,8,2,'#7a4a2a');q(6,10,1,1,'#2b2233');q(9,10,1,1,'#2b2233');q(7,4,8,2,'#f2c28a');q(13,4,2,5,'#f2c28a');}},
+  {n:'Terima kasih',d:q=>{const R='#ff4d4d';q(3,1,4,2,R);q(9,1,4,2,R);q(2,3,12,2,R);q(3,5,10,2,R);q(4,7,8,2,R);q(5,9,6,1,R);q(6,10,4,1,R);q(7,11,2,1,R);q(4,2,1,2,'#ff9a9a');q(4,12,9,3,'#f2c28a');q(4,13,9,1,'#d8a77c');q(3,12,2,2,'#f2c28a');q(12,12,3,4,'#4db8ff');}},
   {n:'Setuju',d:q=>{q(3,8,9,6,'#f2c28a');q(3,10,9,1,'#d8a77c');q(3,12,9,1,'#d8a77c');q(5,2,3,7,'#f2c28a');q(3,14,9,2,'#4db8ff');}},
   {n:'Tidak setuju',d:q=>{for(let i=0;i<12;i++){q(2+i,2+i,2,2,'#ff4d4d');q(12-i,2+i,2,2,'#ff4d4d');}}},
   {n:'Tolong',d:q=>{q(6,1,4,9,'#ff4d4d');q(7,2,1,6,'#ff9a9a');q(6,12,4,3,'#ff4d4d');}},
@@ -5009,7 +5009,7 @@ function emoMotion(e,t){
   switch(e){
     case 0:r.dy=0.1*Math.abs(Math.sin(t*5));break;
     case 1:r.rz=Math.sin(t*9)*0.18;break;
-    case 2:r.sy=1.04;break;
+    case 2:r.sy=1-0.09*Math.max(0,Math.sin(t*2.5));break;
     case 3:r.sy=1-0.07*Math.max(0,Math.sin(t*7));break;
     case 4:r.dx=Math.sin(t*16)*0.07;break;
     case 6:r.dy=0.28*Math.abs(Math.sin(t*6));break;
