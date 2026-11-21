@@ -76,7 +76,8 @@ const FORT_ROSTER = [
   { kind: 'archer', role: 'guard' }, { kind: 'archer', role: 'escort' }
 ];
 const ESCORT_AGGRO = 30;
-const MOB_HP = 40, MOUNT_HP = 70;
+const MOB_DUR_MUL = 2, MOB_HP_MUL = 1.5;   /* elang dan singa: nyawa 1.5x, waktu hidup 2x */
+const MOB_HP = Math.round(40 * MOB_HP_MUL), MOUNT_HP = 70;
 const CAVE_MOUTH = { x: -15, z: 87 };
 const SOLDIER_RESPAWN_MS = 12000;
 const CHAT_MAX = 140;
@@ -330,7 +331,7 @@ function techDesc(t) {
     case 'heal': return 'Pulihkan ' + t.damage + ' HP';
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
-    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
+    case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur * MOB_DUR_MUL + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
     case 'ring': return 'Tembok melingkar 360° selama ' + t.dur + ' dtk lalu hancur, bisa dihancurkan (' + t.hp + ' HP per bagian)';
     case 'launch': return 'Cungkil musuh di depan sampai terpental sangat tinggi, ' + t.damage + ' dmg';
     case 'spin': return 'Berputar dengan pedang ' + t.dur + ' dtk, menebas semua musuh sekitar, ' + t.damage + ' dmg per tebasan';
@@ -343,7 +344,7 @@ function techDesc(t) {
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
     case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
     case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m), termasuk arah atas/bawah';
-    case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur + ' dtk, ' + t.damage + ' dmg/gigitan, ' + t.hp + ' HP';
+    case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur * MOB_DUR_MUL + ' dtk, ' + t.damage + ' dmg/gigitan, ' + Math.round(t.hp * MOB_HP_MUL) + ' HP';
     case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, padat tidak tembus pandang, memblokir semua bola & tebasan angin (bisa dilompati)';
     case 'jump': return 'Loncat sangat tinggi (daya ' + t.power + '), bisa melompati dinding';
     case 'blink': return 'Teleport ' + t.range + ' m ke depan';
@@ -781,8 +782,8 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const mx = p.x + fx * 2.5 + (i - (n - 1) / 2) * 2, mz = p.z + fz * 2.5, hp = tech.hp || 90;
-        const m = { id: mobSeq++, o: p.id, k: 'lion', hp, x: mx, y: terrainH(mx, mz) + 1.2, z: mz, fx, fz, until: t + (tech.dur || 15) * 1000, dmg: tech.damage || 25, sp: tech.speed || 7, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const mx = p.x + fx * 2.5 + (i - (n - 1) / 2) * 2, mz = p.z + fz * 2.5, hp = Math.round((tech.hp || 90) * MOB_HP_MUL);
+        const m = { id: mobSeq++, o: p.id, k: 'lion', hp, x: mx, y: terrainH(mx, mz) + 1.2, z: mz, fx, fz, until: t + (tech.dur || 15) * MOB_DUR_MUL * 1000, dmg: tech.damage || 25, sp: tech.speed || 7, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'lion', hp, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
@@ -910,7 +911,7 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 1;
       let have = room.mobs.filter(m => m.o === p.id).length;
       for (let i = 0; i < n && have < 4; i++, have++) {
-        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * 1000, dmg: tech.damage, sp: (tech.speed || 12) * TUNING.eagleSpeedMul, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
+        const m = { id: mobSeq++, o: p.id, k: 'eagle', hp: MOB_HP, x: p.x + (i - (n - 1) / 2) * 1.6, y: p.y + 3, z: p.z, fx, fz, until: t + tech.dur * MOB_DUR_MUL * 1000, dmg: tech.damage, sp: (tech.speed || 12) * TUNING.eagleSpeedMul, atkAt: 0, tgt: 0, tgtAt: 0, atkFlag: 0, c: tech.color };
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'eagle', hp: MOB_HP, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
