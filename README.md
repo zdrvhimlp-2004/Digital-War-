@@ -2,7 +2,7 @@
 
 Game multiplayer 2.5D (Three.js) untuk main bareng teman. Tanpa login pemain: cukup buka link room, tulis nama, pilih karakter.
 
-Seluruh server, game, halaman admin, dan landing ada di **satu file: `server.js`**. Tidak ada dependency, tidak perlu `npm install`.
+Seluruh server, game, halaman admin, dan landing ada di **satu file: `server.js`** (plus folder `vendor/` berisi Three.js dan font). Tidak ada dependency npm, tidak perlu `npm install`.
 
 > Ini adalah dunia digital yang dibuat menggunakan kode-kode bukan asli. Di dunia ini kamu bisa mengeluarkan dan membuat hal-hal yang telah ditetapkan di buku. Jadi kamu hafalkan dan praktekkan untuk beradaptasi dan menyerang lawan.
 
@@ -20,7 +20,7 @@ PORT=8080 node server.js
 | `PORT` | port HTTP dan WebSocket | `3000` |
 | `DATA_FILE` | lokasi file data | `./digital-war-data.json` |
 
-Pemain butuh internet untuk memuat Three.js (cdnjs) dan font Poppins (Google Fonts) dari CDN.
+Three.js dan font Poppins disajikan lokal dari folder `vendor/` (tanpa CDN), jadi folder ini harus ikut ter-deploy bersama `server.js`.
 
 ## Halaman
 

@@ -2243,6 +2243,16 @@ const server = http.createServer(async (req, res) => {
       if (!DB.settings.showBook) return json(res, 200, { enabled: false, techniques: [] });
       return json(res, 200, { enabled: true, techniques: DB.techniques.map(t => Object.assign(techPublic(t), { desc: techDesc(t) })) });
     }
+    /* aset pihak ketiga disajikan lokal dari folder vendor/ (tanpa CDN) */
+    const vm = /^\/vendor\/([A-Za-z0-9][A-Za-z0-9._-]*\.(js|css|woff2))$/.exec(pathname);
+    if (vm) {
+      const types = { js: 'application/javascript; charset=utf-8', css: 'text/css; charset=utf-8', woff2: 'font/woff2' };
+      return fs.readFile(path.join(__dirname, 'vendor', vm[1]), (err, buf) => {
+        if (err) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'Content-Type': types[vm[2]], 'Cache-Control': 'public, max-age=604800', 'Content-Length': buf.length });
+        res.end(buf);
+      });
+    }
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
     if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';</script>'));
@@ -2293,7 +2303,7 @@ const LANDING_HTML = String.raw`<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Digital War">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="/vendor/fonts.css" rel="stylesheet">
 <title>Digital War</title>
 <style>
 *{box-sizing:border-box}
@@ -2331,7 +2341,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="/vendor/fonts.css" rel="stylesheet">
 <title>Digital War · Admin</title>
 <style>
 :root{--bg:#05070d;--card:#0a1424;--line:#1c3a66;--tx:#f2f8ff;--mut:#8fb4e0;--ac:#4db8ff;--ok:#1fa05a;--bad:#d63a4a}
@@ -2698,7 +2708,7 @@ const GAME_HTML = String.raw`<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Digital War">
 <!--TUNING--><title>Digital War</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="/vendor/fonts.css" rel="stylesheet">
 <style>
 :root{--gx:10px;--s:clamp(46px,8vh,60px)}
 html,body{margin:0;position:fixed;left:0;top:0;width:100%;height:100%;height:var(--vh,100dvh);overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:#0b1020;color:#fff;font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -3204,10 +3214,10 @@ body.cine #setBox{display:none!important}
   </div>
 </div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/vendor/three.min.js"></script>
 <script>
 (function(){
-if(typeof THREE==='undefined'){document.body.innerHTML='<p style="padding:24px;font-size:16px">Three.js gagal dimuat (butuh internet). Coba muat ulang halaman.</p>';return;}
+if(typeof THREE==='undefined'){document.body.innerHTML='<p style="padding:24px;font-size:16px">Three.js gagal dimuat. Coba muat ulang halaman.</p>';return;}
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
