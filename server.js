@@ -3763,7 +3763,58 @@ async function onRtc(from,d){
     }else if(d.c){try{await pc.addIceCandidate(d.c);}catch(e){if(!peer.ignore)throw e;}}
   }catch(e){}
 }
-function closePeer(id){const p=peers.get(id);if(!p)return;try{p.pc.close();}catch(e){}p.el.srcObject=null;peers.delete(id);}
+/* indikator bicara: ikon speaker + gelombang di atas nama */
+let VAC=null;
+function makeAnalyser(stream){
+  try{
+    if(!VAC)VAC=new (window.AudioContext||window.webkitAudioContext)();
+    if(VAC.state==='suspended')VAC.resume().catch(()=>{});
+    const src=VAC.createMediaStreamSource(stream),an=VAC.createAnalyser();an.fftSize=512;src.connect(an);
+    return {an,src,buf:new Uint8Array(an.fftSize),lv:0};
+  }catch(e){return null;}
+}
+function readLevel(a){
+  if(!a)return 0;a.an.getByteTimeDomainData(a.buf);let s=0;
+  for(let i=0;i<a.buf.length;i++){const v=(a.buf[i]-128)/128;s+=v*v;}
+  const r=Math.sqrt(s/a.buf.length),t=clamp((r-0.015)*9,0,1);
+  a.lv=t>a.lv?t:a.lv*0.82;return a.lv;
+}
+function makeBadge(){
+  const cv=document.createElement('canvas');cv.width=cv.height=64;const tex=new THREE.CanvasTexture(cv);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true,fog:false}));
+  sp.scale.set(0.7,0.7,1);sp.renderOrder=21;sp.visible=false;scene.add(sp);return {cv,tex,sp,bucket:-1};
+}
+function drawBadge(b,n){
+  if(b.bucket===n)return;b.bucket=n;
+  const c=b.cv.getContext('2d');c.clearRect(0,0,64,64);
+  c.fillStyle='rgba(20,20,40,.78)';c.beginPath();c.arc(32,32,29,0,Math.PI*2);c.fill();
+  c.lineWidth=3;c.strokeStyle='#4dff88';c.stroke();
+  c.fillStyle='#4dff88';c.strokeStyle='#4dff88';c.lineWidth=4;c.lineCap='round';
+  c.beginPath();c.moveTo(14,26);c.lineTo(23,26);c.lineTo(33,17);c.lineTo(33,47);c.lineTo(23,38);c.lineTo(14,38);c.closePath();c.fill();
+  for(let i=1;i<=3;i++){if(i>n)break;c.beginPath();c.arc(33,32,5+i*6,-0.75,0.75);c.stroke();}
+  b.tex.needsUpdate=true;
+}
+function setBadge(b,lv,x,y,z){
+  const on=lv>0.06;b.sp.visible=on;if(!on){b.bucket=-1;return;}
+  drawBadge(b,lv>0.55?3:(lv>0.28?2:1));b.sp.position.set(x,y,z);const s=0.62+lv*0.18;b.sp.scale.set(s,s,1);
+}
+function killBadge(b){if(!b)return;scene.remove(b.sp);b.sp.material.dispose();b.tex.dispose();}
+let myBadge=null;
+function updVoice(){
+  peers.forEach((p,id)=>{
+    const o=others.get(id);if(!o)return;
+    if(!p.vu&&p.el.srcObject)p.vu=makeAnalyser(p.el.srcObject);
+    const lv=readLevel(p.vu);
+    if(lv>0.06&&!o.badge)o.badge=makeBadge();
+    if(o.badge)setBadge(o.badge,(o.dead||!o.lab.sp.visible)?0:lv,o.x,o.lab.sp.position.y+0.62,o.z);
+  });
+  let ml=0;
+  if(micOn&&localStream){if(!myVu)myVu=makeAnalyser(localStream);ml=readLevel(myVu);}else if(myVu)myVu.lv=0;
+  if(ml>0.06&&!myBadge)myBadge=makeBadge();
+  if(myBadge)setBadge(myBadge,(dead||fps)?0:ml,pos.x,pos.y+2.6,pos.z);
+}
+let myVu=null;
+function closePeer(id){const p=peers.get(id);if(!p)return;try{p.pc.close();}catch(e){}try{if(p.vu)p.vu.src.disconnect();}catch(e){}p.el.srcObject=null;peers.delete(id);const o=others.get(id);if(o&&o.badge){killBadge(o.badge);o.badge=null;}}
 function closeAllPeers(){[...peers.keys()].forEach(closePeer);}
 function setMicUI(){const b=$('micBtn');b.innerHTML=svg(micOn?'mic':'micoff');b.classList.toggle('active',micOn);}
 function setSpkUI(){const b=$('spkBtn');b.innerHTML=svg(spkOn?'spk':'spkoff');b.classList.toggle('active',spkOn);peers.forEach(p=>{p.el.muted=!spkOn;});}
@@ -3829,7 +3880,7 @@ function addOther(info){
 }
 function removeOther(id){
   const o=others.get(id);if(!o)return;
-  scene.remove(o.mesh);scene.remove(o.sh);scene.remove(o.lab.sp);scene.remove(o.shield);if(o.gsp)scene.remove(o.gsp);if(o.mount)mountDrop(o.mount);
+  killBadge(o.badge);scene.remove(o.mesh);scene.remove(o.sh);scene.remove(o.lab.sp);scene.remove(o.shield);if(o.gsp)scene.remove(o.gsp);if(o.mount)mountDrop(o.mount);
   o.mat.dispose();o.tex.dispose();o.lab.sp.material.dispose();o.lab.tex.dispose();o.shield.material.dispose();
   others.delete(id);
 }
@@ -4428,6 +4479,7 @@ function update(dt){
   const hAbove=pos.y-terrainBelow();
   pShadow.position.set(pos.x,Math.max(groundAt(pos.x,pos.z,pos.y-0.5)+0.07,swim?WATER_Y+0.03:-999),pos.z);
   const sc=clamp(1-hAbove*0.12,0.35,1);pShadow.scale.setScalar(sc*1.25);pShadow.material.opacity=clamp(1-hAbove*0.1,0.35,1);
+  updVoice();
   myShield.visible=myShieldT>0&&!dead;if(myShield.visible){myShield.position.set(pos.x,pos.y+0.95,pos.z);const s2=3.2+Math.sin(tAll*8)*0.15;myShield.scale.set(s2,s2,1);}
 
   if(guarding&&!dead){if(!myGuardSp)myGuardSp=makeShield3D(me.ch);myGuardSp.visible=true;placeShield(myGuardSp,pos.x,pos.y,pos.z,faceX,faceZ,tAll);}else if(myGuardSp)myGuardSp.visible=false;
