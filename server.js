@@ -3071,13 +3071,12 @@ body:not(.train) #trainBox{display:none!important}
 #recDot{display:none;position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);z-index:7;pointer-events:none;font:700 11px Poppins,system-ui,sans-serif;color:#fff;background:rgba(190,30,40,.85);padding:3px 10px;border-radius:999px;letter-spacing:1px}
 #recDot.show{display:block;animation:recb 1.2s infinite}
 @keyframes recb{50%{opacity:.45}}
-#recBox{display:none;position:fixed;left:50%;bottom:170px;transform:translateX(-50%);z-index:9;width:min(92vw,360px);background:rgba(8,14,34,.95);border:1px solid rgba(160,190,255,.3);border-radius:16px;padding:12px 14px;color:#fff;font-family:Poppins,system-ui,sans-serif;text-align:center;touch-action:manipulation}
-#recBox.show{display:block}
-#recBox b{display:block;font-size:14px}
-#recBox small{display:block;font-size:11px;color:#9fb3d6;margin:4px 0 10px;line-height:1.4}
-#recBox .rb{display:flex;gap:8px}
-#recBox button{flex:1;border:0;border-radius:12px;padding:9px 0;font:600 13px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54}
+#recBox{display:none;position:fixed;right:max(12px,env(safe-area-inset-right));top:max(58px,calc(env(safe-area-inset-top) + 50px));z-index:10;align-items:center;gap:4px;background:rgba(8,14,34,.92);border:1px solid rgba(160,190,255,.3);border-radius:999px;padding:3px;font-family:Poppins,system-ui,sans-serif;touch-action:manipulation}
+#recBox.show{display:flex}
+#recBox button{border:0;border-radius:999px;font:600 12px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54;padding:7px 12px}
 #recBox button.go{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f}
+#recBox button.go small{font-weight:500;opacity:.8;margin-left:4px}
+#recBox button#recX{padding:7px 10px}
 #netRep{display:none;position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:9;width:min(92vw,340px);background:rgba(8,14,34,.94);border:1px solid rgba(160,190,255,.25);border-left:6px solid var(--nc,#4de27a);border-radius:14px;padding:12px 40px 14px 14px;font-family:Poppins,system-ui,sans-serif;color:#eaf1ff;box-shadow:0 10px 36px rgba(0,0,0,.5);overflow:hidden;cursor:pointer;animation:netIn .22s ease-out}
 #netRep.show{display:block}
 @keyframes netIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -3208,7 +3207,7 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
-<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="recDot">● REC</div><div id="recBox"><b id="recT">Rekaman pertandingan siap</b><small id="recS"></small><div class="rb"><button id="recX" type="button">Buang</button><button id="recGo" class="go" type="button">Unduh</button></div></div>
+<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="recDot">● REC</div><div id="recBox" title="Rekaman duel terakhir. Hanya ada di browsermu, tidak disimpan di server. Hilang setelah diunduh, dibuang, diganti rekaman duel berikutnya, atau halaman ditutup."><button id="recGo" class="go" type="button">Unduh rekaman<small id="recS"></small></button><button id="recX" type="button" aria-label="Buang rekaman">×</button></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -6113,7 +6112,6 @@ function recDiscard(){
   $('recBox').classList.remove('show');
 }
 function recStart(){
-  $('recBox').classList.remove('show');   /* panel disembunyikan selama bertarung; rekaman lama tetap ada sampai diganti, diunduh, atau dibuang */
   if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!canvas.captureStream)return;
   try{
     recTapAudio();
@@ -6145,14 +6143,13 @@ function recFinish(r){
   const safe=r.names.replace(/[^A-Za-z0-9+_-]+/g,'_').slice(0,60);
   recReady={blob,url:URL.createObjectURL(blob),name:'digital-war-'+safe+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.'+ext};
   const sec=Math.round(ms/1000);
-  $('recT').textContent='Rekaman pertandingan siap';
-  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' menit, '+(blob.size/1048576).toFixed(1)+' MB. Tidak disimpan di server: hilang saat diunduh, dibuang, diganti rekaman duel berikutnya, atau halaman ditutup.';
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' · '+(blob.size/1048576).toFixed(1)+' MB';
   $('recBox').classList.add('show');
 }
 $('recGo').addEventListener('click',()=>{
   if(!recReady)return;
   const a=document.createElement('a');a.href=recReady.url;a.download=recReady.name;document.body.appendChild(a);a.click();a.remove();
-  $('recBox').classList.remove('show');
+  $('recBox').classList.remove('show');   /* satu kali unduh; URL dilepas dari memori 15 dtk kemudian */
   clearTimeout(recRevokeT);recRevokeT=setTimeout(recDiscard,15000);   /* setelah diunduh, hapus dari memori */
 });
 $('recX').addEventListener('click',recDiscard);
