@@ -110,7 +110,7 @@ const DEFAULT_TECHS = [
   { code: '9876', name: 'Auto Backup',   kind: 'regen',  color: '#8affc0', damage: 120, cd: 24,   dur: 6 },
   { code: '246', name: 'Firewall',       kind: 'shield', color: '#6cd4ff', dur: 4,     cd: 20 },
   { code: '1357', name: 'Overclock',     kind: 'haste',  color: '#fff27a', power: 1.6, dur: 5, cd: 20 },
-  { code: '777', name: 'Tembok Kode', kind: 'wall', color: '#b8a27a', hp: 120, dur: 6, len: 8, cd: 20 },
+  { code: '777', name: 'Tembok Kode', kind: 'wall', color: '#b8a27a', hp: 120, dur: 300, len: 8, cd: 20 },
   { code: '8181', name: 'Loncat Tinggi', kind: 'jump', color: '#9dffb0', power: 30, cd: 12 },
   { code: '2929', name: 'Kedip Teleport', kind: 'blink', color: '#c79bff', range: 14, cd: 16 },
   { code: '6464', name: 'Bola Pengejar', kind: 'homing', color: '#ff7ad9', damage: 30, cd: 10, count: 2, life: 7, size: 1.3, boom: 2.6, turn: 2.5 },
@@ -120,7 +120,7 @@ const DEFAULT_TECHS = [
   { code: '6193', name: 'Meteor Drop',   kind: 'meteor', color: '#ff8a3c', damage: 45, cd: 16, speed: 34, count: 3, size: 1.5, boom: 3 },
   { code: '4827', name: 'Pedang Berputar', kind: 'spin', color: '#bfe9ff', damage: 28, cd: 20, dur: 2, radius: 3.6 },
   { code: '5316', name: 'Cungkil', kind: 'launch', color: '#ffd24d', damage: 40, cd: 16, range: 4.2, lift: 34 },
-  { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 5, radius: 4, hp: 100 },
+  { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 300, radius: 4, hp: 100 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 6 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face', 'meteor', 'spin', 'launch', 'ring'];

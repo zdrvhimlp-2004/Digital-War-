@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Tembok bertahan 5 menit**: Tembok Kode dan Tembok Pelindung kini hilang setelah 300 detik (sebelumnya 6 dan 5 detik), atau lebih cepat bila hancur oleh damage.
 - **Komputer (bot duel) kini mendeteksi elang dan singa lawan** dan menghadapinya bila dekat (dalam 9 unit). **Singa juga bisa mengejar elang dan singa musuh**, bukan hanya pemain dan prajurit.
 - **Emote**: tombol senyum di kolom kiri (atau tekan `T`) membuka 8 emote sopan: Angkat tangan, Lambaikan tangan, Terima kasih, Setuju, Tidak setuju, Tolong, Semangat, dan Heran. Emote muncul sebagai gelembung ikon pixel di atas kepala dan terlihat semua pemain di sekitar selama 3 detik, beberapa disertai gerak kecil pada sprite. Cooldown 3 detik, tidak bisa dipakai saat mati atau tidur, dan otomatis berhenti kalau pemain bergerak atau menyerang. Di kamera FPS, emote sendiri tampil sebagai pil kecil di layar.
 - **Logo folder Gerak diganti jejak kaki** (sebelumnya petir) di menu pilih teknik.
