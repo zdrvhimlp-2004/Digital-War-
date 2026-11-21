@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Meteor Drop**: bola jadi 9 (3 kali lipat) dan menyebar ke segala arah sejauh 3 sampai 16 meter dari pemain, bukan jatuh bertumpuk di satu titik.
 - **Elang, singa, dan tunggangan elang hilang saat ronde diulang** (sebelumnya milik petarung masih tertinggal).
 - **Tembok dihapus saat ronde diulang**: semua Tembok Kode dan Tembok Pelindung hilang saat ronde duel baru dimulai atau duel kembali ke antrian, walau masih sisa waktu 5 menit.
 - **Tembok bertahan 5 menit**: Tembok Kode dan Tembok Pelindung kini hilang setelah 300 detik (sebelumnya 6 dan 5 detik), atau lebih cepat bila hancur oleh damage.

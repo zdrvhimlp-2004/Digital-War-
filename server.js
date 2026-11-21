@@ -117,7 +117,7 @@ const DEFAULT_TECHS = [
   { code: '8182', name: 'Loncat Super', kind: 'jump', color: '#7dffb2', power: 60, cd: 10 },
   { code: '4141', name: 'Kunci Lawan', kind: 'face', color: '#ffe066', range: 60, cd: 0 },
   { code: '4343', name: 'Singa Rimba', kind: 'lion', color: '#f0b45a', damage: 25, cd: 24, count: 1, dur: 15, speed: 7, hp: 90 },
-  { code: '6193', name: 'Meteor Drop',   kind: 'meteor', color: '#ff8a3c', damage: 45, cd: 16, speed: 34, count: 3, size: 1.5, boom: 3 },
+  { code: '6193', name: 'Meteor Drop',   kind: 'meteor', color: '#ff8a3c', damage: 45, cd: 16, speed: 34, count: 9, size: 1.5, boom: 3 },
   { code: '4827', name: 'Pedang Berputar', kind: 'spin', color: '#bfe9ff', damage: 28, cd: 20, dur: 2, radius: 3.6 },
   { code: '5316', name: 'Cungkil', kind: 'launch', color: '#ffd24d', damage: 40, cd: 16, range: 4.2, lift: 34 },
   { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 300, radius: 4, hp: 100 },
@@ -853,9 +853,13 @@ function doCast(room, p, slot, ax, ay, az) {
       const n = tech.count || 3, size = tech.size || 1.5, boom = tech.boom == null ? 3 : tech.boom;
       broadcast(room, { t: 'fx', k: 'meteor', id: p.id, c: tech.color });
       for (let i = 0; i < n; i++) {
-        room.later.push({ at: t + 1000 + i * 170, fn: () => {
+        room.later.push({ at: t + 1000 + i * 110, fn: () => {
           if (!room.players.has(p.id) || p.dead) return;
-          const pr = { id: projSeq++, o: p.id, x: p.x, y: p.y + 0.9, z: p.z, dx: 0, dy: -1, dz: 0, sp: tech.speed, life: 2, dmg: tech.damage, stun: 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: 0 };
+          /* bola menyebar ke segala arah, makin lama makin jauh (sudut emas, radius 3 sampai 16 m) */
+          const ang = i * 2.39996 + p.id, rr = 3 + 13 * Math.sqrt((i + 0.5) / n);
+          let mx = p.x + Math.cos(ang) * rr, mz = p.z + Math.sin(ang) * rr;
+          if (room.duel) { const od = Math.hypot(mx - ARENA.x, mz - ARENA.z), lim = ARENA.ringR - 1; if (od > lim) { mx = ARENA.x + (mx - ARENA.x) / od * lim; mz = ARENA.z + (mz - ARENA.z) / od * lim; } }
+          const pr = { id: projSeq++, o: p.id, x: mx, y: p.y + 0.9, z: mz, dx: 0, dy: -1, dz: 0, sp: tech.speed, life: 2, dmg: tech.damage, stun: 0, c: tech.color, hr: 0.9 + 0.55 * size, boom, size, grav: 0 };
           room.projs.push(pr);
           broadcast(room, { t: 'pr', id: pr.id, x: r2(pr.x), y: r2(pr.y), z: r2(pr.z), dx: 0, dy: -1, dz: 0, sp: pr.sp, life: pr.life, c: pr.c, sz: size });
         } });
