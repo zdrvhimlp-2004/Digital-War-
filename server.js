@@ -18,6 +18,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'digital-war-data.json');
@@ -381,6 +382,12 @@ function roomHour(room) { return (room.hour0 + (now() - room.t0) / 1000 * 0.04) 
 function send(ws, obj) { if (ws && !ws.closed) ws.send(JSON.stringify(obj)); }
 function broadcast(room, obj, exceptId) {
   const s = JSON.stringify(obj);
+  if (room.rp && obj.t !== 'chat' && obj.t !== 'rtc') {   /* perekam replay: simpan setiap pesan yang dilihat semua pemain (hanya di RAM) */
+    const el = now() - room.rp.t0;
+    if (el > RP_MAX_MS) replayEnd(room);
+    else if (obj.t === 'ps' && room.duel) room.rp.ev.push('[' + el + ',' + JSON.stringify({ t: 'ps', p: obj.p.filter(r => room.duel.team[r[0]]) }) + ']');   /* penonton tidak ikut direkam */
+    else room.rp.ev.push('[' + el + ',' + s + ']');
+  }
   for (const p of room.players.values()) if (p.id !== exceptId && p.ws && !p.ws.closed) p.ws.send(s);
 }
 function scoreList(room) { return [...room.players.values()].map(p => [p.id, p.k, p.d]); }
@@ -1433,6 +1440,31 @@ function duelRebuild(room) {
   for (const side of ['teamA', 'teamB']) { d[side] = d[side].filter(id => room.players.has(id)); for (const id of d[side]) d.team[id] = side === 'teamA' ? 'a' : 'b'; }
   for (const id of Object.keys(d.out)) if (!d.team[id]) delete d.out[id];
 }
+/* ---- REPLAY pertandingan duel ----
+   Yang direkam hanya data: kondisi awal (seperti pesan welcome untuk penonton) + semua pesan broadcast server beserta waktunya.
+   Disimpan di RAM saja (satu pertandingan terakhir per room), tidak ditulis ke disk, diganti saat pertandingan berikutnya selesai.
+   Klien memutar ulang dengan memasukkan pesan yang sama ke kode game, jadi tampilannya identik dan filenya kecil. */
+const RP_MAX_MS = 12 * 60 * 1000;
+function replayStart(room) {
+  const d = room.duel; if (!d) return;
+  if (room.rp) replayEnd(room);
+  const fighters = [...room.players.values()].filter(q => d.team[q.id]);
+  const snap = {
+    t: 'welcome', id: -1, tag: '', room: { name: room.name, max: room.max, voice: false, pick: false, debug: false, mode: 'duel' }, duel: duelState(room), hour: roomHour(room), hp: MAXHP,
+    forts: [], sols: [], walls: room.walls.map(w => ({ id: w.id, o: w.o, x: r2(w.x), z: r2(w.z), y: r2(w.y), nx: r2(w.nx), nz: r2(w.nz), len: w.len, hp: Math.round(w.hp), dur: Math.max(0.1, (w.until - now()) / 1000), c: w.c })),
+    spawn: standSpawn(), doors: room.doors, book: false, chest: room.chest.open,
+    players: fighters.map(q => ({ id: q.id, tag: q.tag, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: false }))
+  };
+  room.rp = { t0: now(), at: Date.now(), snap: JSON.stringify(snap), ev: [] };
+}
+function replayEnd(room) {
+  const r = room.rp; if (!r) return;
+  room.rp = null;
+  if (r.ev.length < 5) return;
+  const dur = now() - r.t0;
+  const json = '{"v":1,"name":' + JSON.stringify(room.name) + ',"at":' + r.at + ',"dur":' + dur + ',"snap":' + r.snap + ',"ev":[' + r.ev.join(',') + ']}';
+  try { room.lastReplay = { gz: zlib.gzipSync(Buffer.from(json, 'utf8')), dur, at: r.at }; } catch (e) { room.lastReplay = null; }
+}
 function duelState(room) {
   const d = room.duel;
   const P = id => { const q = room.players.get(id); return q ? { id, name: q.name, w: d.streak[id] || 0, o: d.out[id] ? 1 : 0, bot: q.bot ? 1 : 0 } : null; };
@@ -1698,7 +1730,7 @@ function lionStep(room, m, owner, dt, t) {
     hurt(room, tg, m.dmg, owner, m.fx * 8, m.fz * 8, { sx: -m.fx, sz: -m.fz });
   }
 }
-function duelToWait(room, d) { duelClearCombat(room); duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
+function duelToWait(room, d) { replayEnd(room); duelClearCombat(room); duelBotsClear(room); d.st = 'wait'; d.aloneAt = 0; }
 function duelTick(room, t, dt) {
   const d = room.duel;
   d.queue = d.queue.filter(id => room.players.has(id) && !d.team[id]);
@@ -1740,7 +1772,7 @@ function duelTick(room, t, dt) {
     if (t >= d.until) { duelToWait(room, d); changed = true; }
   } else if (d.st === 'count') {
     if (!mA.length || !mB.length) { duelToWait(room, d); changed = true; }
-    else if (t >= d.until) { d.st = 'fight'; d.fightAt = t; d.limit = d.dmin * 60000; d.sdMs = d.sdsec * 1000; d.drainRate = DUEL_DRAIN[d.drain] || 40; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
+    else if (t >= d.until) { d.st = 'fight'; replayStart(room); d.fightAt = t; d.limit = d.dmin * 60000; d.sdMs = d.sdsec * 1000; d.drainRate = DUEL_DRAIN[d.drain] || 40; d.ph = 0; d.sd = false; for (const p of [...mA, ...mB]) { p.invuln = 0; p.drainAcc = 0; } changed = true; }
   }
   if (d.st === 'wait') {
     /* isi tim dari antrian: yang menang tetap, penantang masuk ke sisi yang kurang */
@@ -1876,6 +1908,11 @@ function onMessage(ws, text) {
       break;
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
+    case 'getreplay': {   /* replay pertandingan terakhir di room ini (hanya untuk yang ada di room) */
+      if (room.lastReplay) send(p.ws, { t: 'replay', z: room.lastReplay.gz.toString('base64'), dur: room.lastReplay.dur, at: room.lastReplay.at });
+      else send(p.ws, { t: 'replay', none: 1 });
+      break;
+    }
     case 'tune': {   /* mode latihan: pengatur cooldown teknik & darah target */
       if (!room.train) break;
       const tu = room.tune || (room.tune = { cd: 1, hp: 1 });
@@ -2293,6 +2330,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/') return html(res, LANDING_HTML);
     if (pathname === '/admin') return html(res, ADMIN_HTML);
+    if (pathname === '/replay') return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';window.REPLAY_MODE=true;</script>'));   /* pemutar replay (file .dwreplay) */
     if (pathname === '/teknik') return fs.readFile(path.join(__dirname, 'teknik.html'), 'utf8', (err, txt) => err ? html(res, '<!doctype html><meta charset="utf-8"><title>404</title><p>teknik.html tidak ditemukan</p>') : html(res, txt));   /* halaman preview dan tutorial teknik */
     if (/^\/r\/[A-Za-z0-9]{4,10}$/.test(pathname)) return html(res, GAME_HTML.replace('<!--TUNING-->', '<script>window.TUNING=' + JSON.stringify(TUNING) + ';</script>'));
     if (pathname === '/manifest.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Digital War', short_name: 'Digital War', start_url: '/', display: 'fullscreen', orientation: 'landscape', background_color: '#0b1020', theme_color: '#0b1020' })); }
@@ -3068,9 +3106,21 @@ body:not(.train) #trainBox{display:none!important}
 #duelBox .me{color:#7dffae;font-weight:700}
 #duelBig{display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;text-align:center;font-family:Poppins,system-ui,sans-serif;color:#fff;font-weight:800;text-shadow:0 4px 24px rgba(0,0,0,.6);letter-spacing:1px}
 #duelBig.show{display:block}
-#recDot{display:none;position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%);z-index:7;pointer-events:none;font:700 11px Poppins,system-ui,sans-serif;color:#fff;background:rgba(190,30,40,.85);padding:3px 10px;border-radius:999px;letter-spacing:1px}
-#recDot.show{display:block;animation:recb 1.2s infinite}
-@keyframes recb{50%{opacity:.45}}
+body.rp #start,body.rp :is(#lcol,#slots,#btnAtk,#btnGuard,#btnJump,#btnAct,#btnSnipe,#btnDive,#bookBtn,#sbBtn,#fsBtn,#hint,#chatFeed,#chatPanel,#hpBox,#oxyBox,#roomTag,#net,#xhair,#prompt,#toast,#board,#kd,#capBox,#recBox,#joyBase,#joyKnob,#emoPanel,#emoSelf,#aimbar,#dbgBox,#duelHelp,#netRep,#trainBox,#fpsView,#hurt){display:none!important}
+#rpLoad{display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:rgba(3,7,18,.82);font-family:Poppins,system-ui,sans-serif;color:#fff;padding:16px}
+body.rp #rpLoad.show{display:flex}
+#rpLoad .card{width:min(92vw,420px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:22px 22px 18px;text-align:center}
+#rpLoad h2{margin:0 0 8px;font-size:22px;color:#ffd84d}
+#rpLoad p{margin:6px 0;font-size:13px;color:#9fb3d6;line-height:1.5}
+#rpLoad label{display:block;margin-top:12px;padding:12px;border:2px dashed #35508c;border-radius:14px;font-weight:600;font-size:14px;cursor:pointer}
+#rpLoad input{display:none}
+#rpErr{color:#ff8a8a!important;min-height:18px}
+#rpBar{display:none;position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:12;width:min(96vw,720px);align-items:center;gap:8px;background:rgba(8,14,34,.92);border:1px solid rgba(160,190,255,.3);border-radius:16px;padding:8px 10px;font-family:Poppins,system-ui,sans-serif;color:#fff;touch-action:manipulation}
+#rpBar button{border:0;border-radius:10px;background:#1e2d54;color:#fff;font:600 12px Poppins,system-ui,sans-serif;padding:8px 11px;cursor:pointer;white-space:nowrap}
+#rpBar button#rpPlay{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;min-width:40px;font-size:15px}
+#rpBar input[type=range]{flex:1;min-width:60px;accent-color:#4de1ff}
+#rpBar span{font:600 12px ui-monospace,Menlo,Consolas,monospace;color:#cfe3ff;white-space:nowrap}
+@media (max-width:560px){#rpBar{flex-wrap:wrap}#rpBar input[type=range]{order:-1;flex-basis:100%}}
 #recBox{display:none;position:fixed;right:max(12px,env(safe-area-inset-right));top:max(58px,calc(env(safe-area-inset-top) + 50px));z-index:10;align-items:center;gap:4px;background:rgba(8,14,34,.92);border:1px solid rgba(160,190,255,.3);border-radius:999px;padding:3px;font-family:Poppins,system-ui,sans-serif;touch-action:manipulation}
 #recBox.show{display:flex}
 #recBox button{border:0;border-radius:999px;font:600 12px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54;padding:7px 12px}
@@ -3203,12 +3253,12 @@ body.cine #setBox{display:none!important}
 <label class="srow"><span><b>Bar "A vs B" di atas layar</b><small>Nama petarung, antrian, dan juara di arena. Mati secara bawaan.</small></span><input type="checkbox" data-set="duelBar"><i class="sw"></i></label>
 <label class="srow"><span><b>Tulisan efek (MANTUL, TAHAN, KEBAL, dll)</b><small>Tulisan melayang di atas karakter saat bola dipantulkan, serangan ditahan, kebal, atau pedang beradu.</small></span><input type="checkbox" data-set="fxText"><i class="sw"></i></label>
 <label class="srow"><span><b>Angka damage</b><small>Angka merah/kuning yang melayang saat ada yang terkena serangan.</small></span><input type="checkbox" data-set="dmgText"><i class="sw"></i></label>
-<label class="srow"><span><b>Rekam pertandingan</b><small>Setiap duel direkam di browsermu dari sudut pandang orang ketiga (walau kamu main FPS), dengan suara game, tanpa tombol. Bisa diunduh setelah pertandingan. Tidak disimpan di server, dan hanya rekaman terakhir yang ada di browser.</small></span><input type="checkbox" data-set="rec"><i class="sw"></i></label>
 <label class="srow"><span><b>Indikator jaringan</b><small>Ikon sinyal dan angka ping di atas layar.</small></span><input type="checkbox" data-set="net"><i class="sw"></i></label>
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
-<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="recDot">● REC</div><div id="recBox" title="Rekaman duel terakhir. Hanya ada di browsermu, tidak disimpan di server. Hilang setelah diunduh, dibuang, diganti rekaman duel berikutnya, atau halaman ditutup."><button id="recGo" class="go" type="button">Unduh rekaman<small id="recS"></small></button><button id="recX" type="button" aria-label="Buang rekaman">×</button></div>
-<div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div>
+<div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label>Pilih file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
+<div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button></div>
+<div id="recBox" title="Replay pertandingan terakhir. Hanya data (bukan video), disimpan sementara di memori, tidak di server. Hilang saat halaman ditutup atau diganti replay berikutnya."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recGo" type="button">Unduh</button><button id="recX" type="button" aria-label="Tutup">×</button></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
@@ -3277,6 +3327,7 @@ body.cine #setBox{display:none!important}
 <script src="/vendor/three.min.js"></script>
 <script>
 (function(){
+const RPM=!!window.REPLAY_MODE;   /* true di halaman /replay: tidak ada koneksi, hanya memutar data */
 if(typeof THREE==='undefined'){document.body.innerHTML='<p style="padding:24px;font-size:16px">Three.js gagal dimuat. Coba muat ulang halaman.</p>';return;}
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -4342,6 +4393,7 @@ document.querySelectorAll('.slot').forEach(el=>{
 window.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code)&&document.activeElement!==$('nameIn')&&document.activeElement!==$('chatIn'))e.preventDefault();
   if(!started)return;
+  if(RPM){rpKey(e);return;}
   if(chatOpen)return;
   if(bookOpen){
     if(e.code==='Escape'||e.code==='KeyB')closeBook();else if(e.code==='ArrowLeft')bookGo(-1);else if(e.code==='ArrowRight')bookGo(1);
@@ -5310,6 +5362,7 @@ function onMsg(m){
     case 'pr':addProj(m);if(m.wv)break;if(m.sz===0.55)sfxAt('twang',m.x,m.z);else sfxAt('throw',m.x,m.z);break;
     case 'px':{const pj=projs.find(q=>q.id===m.id);if(pj&&pj.sm)sfxAt('arrowHit',m.x,m.z);if(m.sb){floatText(m.x,m.y+0.8,m.z,'PUKUL BALIK!','#fff2a0');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#fff6a0',12,5);}if(m.bb){floatText(m.x,m.y+0.8,m.z,'BENTROK!','#ffd24d');sfxAt('clash',m.x,m.z);burst(m.x,m.y,m.z,'#ffd24d',14,5);}if(m.wl){wallPulse=1;burst(m.x,m.y,m.z,'#9fe3ff',10,4);sfxAt('block',m.x,m.z);}if(m.ds){floatText(m.x,m.y+0.8,m.z,'TEBAS!','#ffffff');sfxAt('clash',m.x,m.z);}if(m.rf){floatText(m.x,m.y+0.8,m.z,'MANTUL!','#9fe3ff');sfxAt('block',m.x,m.z);burst(m.x,m.y,m.z,'#bfe9ff',10,4);}removeProj(m.id,m);break;}
     case 'fx':onFx(m);break;
+    case 'replay':rpReceive(m);break;
     case 'pong':{const r=performance.now()-m.ts;netTrackPing(r);netRtt=netRtt<0?r:netRtt*0.6+r*0.4;netLast=performance.now();drawNet();break;}
     case 'hit':onHit(m);break;
     case 'clash':onClash(m);break;
@@ -5669,6 +5722,7 @@ function occludes(h){
 
 function update(dt){
   tAll+=dt;
+  if(RPM)rpStep(dt);
   if(intro)updIntro(dt);
   updUiHide();
   updHitboxes(dt);
@@ -5676,7 +5730,7 @@ function update(dt){
   gameHour=(hourBase+(performance.now()-hourAt)/1000*0.04)%24;
   inCave=pos.x>1000;inArena=pos.x>4000;
   const fwd={x:-Math.sin(cam.yaw),z:-Math.cos(cam.yaw)},rgt={x:Math.cos(cam.yaw),z:-Math.sin(cam.yaw)};
-  const live=started&&!dead&&!modalOpen&&!bookOpen&&!chatOpen&&stunT<=0&&!fade&&!intro;
+  const live=!RPM&&started&&!dead&&!modalOpen&&!bookOpen&&!chatOpen&&stunT<=0&&!fade&&!intro;
   let ix=0,iy=0,run=false,diveHeld=diveBtnHeld;
   if(live){
     if(keys.has('KeyA')||keys.has('ArrowLeft'))ix-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))ix+=1;
@@ -5943,7 +5997,6 @@ function update(dt){
   else if(inCave){const ddx=cx-CX,ddz=cz-CZ,r0=Math.hypot(ddx,ddz);if(r0>CAVE_R-2){const k0=(CAVE_R-2)/r0;cx=CX+ddx*k0;cz=CZ+ddz*k0;}cy=clamp(cy,1.5,13);}
   if(!started){/* menu orbit above the village */cx=Math.sin(cam.yaw)*38;cz=Math.cos(cam.yaw)*38+10;cy=terrainH(cx,cz)+16;}
   camera.position.set(cx,cy,cz);camera.lookAt(started?cam.tx:0,started?cam.ty+1.0:2,started?cam.tz:0);
-  tpsCam.x=cx;tpsCam.y=cy;tpsCam.z=cz;tpsCam.lx=started?cam.tx:0;tpsCam.ly=started?cam.ty+1.0:2;tpsCam.lz=started?cam.tz:0;   /* untuk rekaman: selalu sudut orang ketiga */
   if(fps&&started){const ey=pos.y+(swim?0.9:1.6)+(riding?0.8:0)+introBob,cp=Math.cos(fpsPitch);camera.position.set(pos.x,ey,pos.z);camera.lookAt(pos.x-Math.sin(cam.yaw)*cp,ey+Math.sin(fpsPitch),pos.z-Math.cos(cam.yaw)*cp);}
   if(shake>0&&SET.shake){camera.position.x+=(Math.random()-0.5)*shake*0.5;camera.position.y+=(Math.random()-0.5)*shake*0.5;}
   const fovGoal=(cam.baseFov||50)+(sp>8.5?6:0)+(fps?12:0);cam.fov+=(fovGoal-cam.fov)*damp(4,dt);
@@ -5951,6 +6004,79 @@ function update(dt){
   underwater=camera.position.y<WATER_Y&&lakeDist(camera.position.x,camera.position.z)<LAKE.R+1;
   $('uw').style.opacity=underwater?1:0;
   applyEnv(dt);
+}
+
+/* ---------- PEMUTAR REPLAY (halaman /replay) ----------
+   Replay = kondisi awal (pesan welcome untuk penonton) + daftar [waktu_ms, pesan_server]. Diputar dengan memasukkan pesan yang sama
+   ke onMsg(), jadi tampilannya memakai kode game yang sama persis. Kamera bebas: seret untuk memutar, roda mouse untuk zoom. */
+const RP={d:null,i:0,t:0,play:false,spd:1,follow:0,ready:false,init:false,drag:false};
+const rpFmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+function rpReset(){
+  const c={y:cam.yawT,p:cam.pitchT,d:cam.distT};
+  onMsg(RP.d.snap);RP.i=0;RP.t=0;
+  if(RP.init){cam.yawT=cam.yaw=c.y;cam.pitchT=c.p;cam.distT=c.d;}else{RP.init=true;cam.pitchT=0.55;cam.distT=17;}
+}
+function rpFeed(ms){const ev=RP.d.ev;while(RP.i<ev.length&&ev[RP.i][0]<=ms){try{onMsg(ev[RP.i][1]);}catch(e){}RP.i++;}}
+function rpSeek(ms){
+  ms=clamp(ms,0,RP.d.dur);
+  if(ms<RP.t)rpReset();
+  const sv=SV;SV=0;rpFeed(ms);SV=sv;RP.t=ms;   /* saat loncat waktu suara dimatikan */
+  others.forEach(o=>{if(o.tx!==undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;}});
+  mobs.forEach(o=>{if(o.tx!==undefined){o.x=o.tx;o.y=o.ty;o.z=o.tz;}});
+}
+function rpStep(dt){
+  if(!RP.ready)return;
+  keys.clear();joy.x=joy.y=0;playerRoot.visible=false;pShadow.visible=false;
+  if(RP.play){RP.t+=dt*1000*RP.spd;if(RP.t>=RP.d.dur){RP.t=RP.d.dur;RP.play=false;}rpFeed(RP.t);}
+  const fl=[...others.values()].filter(o=>!o.dead).sort((a,b)=>a.id-b.id);
+  let tx=ARENA.x,tz=ARENA.z;
+  if(fl.length){
+    if(RP.follow===0){tx=0;tz=0;fl.forEach(o=>{tx+=o.x;tz+=o.z;});tx/=fl.length;tz/=fl.length;}
+    else{const o=fl[(RP.follow-1)%fl.length];tx=o.x;tz=o.z;}
+  }
+  pos.set(tx,0,tz);vel.set(0,0,0);
+  $('rpPlay').textContent=RP.play?'⏸':(RP.t>=RP.d.dur?'↺':'▶');
+  if(!RP.drag)$('rpSeek').value=Math.round(RP.t/Math.max(1,RP.d.dur)*1000);
+  $('rpTime').textContent=rpFmt(RP.t)+' / '+rpFmt(RP.d.dur);
+}
+function rpToggle(){if(RP.t>=RP.d.dur){rpSeek(0);RP.play=true;}else RP.play=!RP.play;}
+function rpCamNext(){const n=[...others.values()].length;RP.follow=(RP.follow+1)%(n+1);$('rpCam').textContent='Kamera: '+(RP.follow===0?'Tengah':'Petarung '+RP.follow);}
+function rpKey(e){
+  if(e.code==='Space')rpToggle();
+  else if(e.code==='ArrowRight')rpSeek(RP.t+5000);
+  else if(e.code==='ArrowLeft')rpSeek(RP.t-5000);
+  else if(e.code==='KeyC')rpCamNext();
+}
+async function rpLoadBuf(buf){
+  try{
+    const u8=new Uint8Array(buf);let txt;
+    if(u8[0]===0x1f&&u8[1]===0x8b){
+      if(typeof DecompressionStream==='undefined')throw new Error('Browser ini belum mendukung pemutar replay. Pakai Chrome, Edge, Firefox, atau Safari terbaru.');
+      txt=await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    }else txt=new TextDecoder().decode(u8);
+    const d=JSON.parse(txt);
+    if(!d||d.v!==1||!d.snap||!Array.isArray(d.ev))throw new Error('File replay tidak valid.');
+    RP.d=d;RP.ready=true;RP.play=true;RP.follow=0;$('rpCam').textContent='Kamera: Tengah';
+    $('rpLoad').classList.remove('show');$('rpBar').style.display='flex';initAudio();rpReset();
+  }catch(e){$('rpErr').textContent=(e&&e.message)||'Gagal membuka file replay.';}
+}
+if(RPM){
+  document.body.classList.add('rp');$('rpLoad').classList.add('show');
+  $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);});
+  ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();if(t==='drop'){const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);}}));
+  window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dwReplay)rpLoadBuf(e.data.dwReplay);});
+  if(window.opener){
+    const ping=()=>{if(RP.ready)return;try{window.opener.postMessage({dwReplayReady:1},location.origin);}catch(_){}};
+    ping();const pt=setInterval(()=>{if(RP.ready)clearInterval(pt);else ping();},1000);
+  }else $('rpMsg').textContent='Buka file replay yang kamu unduh dari game.';
+  $('rpPlay').addEventListener('click',rpToggle);
+  $('rpSpd').addEventListener('click',()=>{RP.spd=RP.spd===1?2:(RP.spd===2?0.5:1);$('rpSpd').textContent=RP.spd+'x';});
+  $('rpCam').addEventListener('click',rpCamNext);
+  $('rpSeek').addEventListener('pointerdown',()=>{RP.drag=true;});
+  window.addEventListener('pointerup',()=>{RP.drag=false;});
+  $('rpSeek').addEventListener('input',e=>{if(RP.ready)rpSeek(+e.target.value/1000*RP.d.dur);});
+  ['keydown'].forEach(t=>$('rpSeek').addEventListener(t,e=>e.stopPropagation()));
+  $('rpBar').addEventListener('pointerdown',e=>e.stopPropagation());
 }
 
 /* ---------- loop ---------- */
@@ -6085,8 +6211,7 @@ function onDuel(m){
   renderDuelBox();
   if(m.st==='count'&&prev!=='count'){sfx.horn&&sfx.horn();}
   if(m.st==='fight'&&prev==='count'){sfx.fanfare&&sfx.fanfare();duelBig('FIGHT!','',900);}
-  if(m.st==='fight'&&prev!=='fight')recStart();
-  if(m.st!=='fight'&&prev==='fight')recStop();
+  if(prev==='over'&&m.st!=='over'&&roomMode==='duel'&&!RPM)netSend({t:'getreplay'});   /* ronde selesai: ambil replay-nya */
   if(m.st==='fight'&&prev!=='fight'){fightAt=performance.now();if(duelMine())netTrackStart();else netTrk=null;}
   if(m.st!=='fight'&&prev==='fight')netTrackFinish();
   if(m.st==='fight'&&(m.ph||0)!==duelPh){
@@ -6097,88 +6222,36 @@ function onDuel(m){
   duelPh=m.st==='fight'?(m.ph||0):0;
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
-/* ---------- rekam pertandingan ----------
-   Direkam di browser (canvas.captureStream + MediaRecorder), suara dari master Web Audio.
-   Hasilnya hanya Blob di memori (satu rekaman terakhir): tidak dikirim atau disimpan di server; dibuang saat diunduh, dibuang, diganti, atau halaman ditutup. */
-const REC_MAX_MS=8*60*1000,REC_MIN_MS=2000;
-let rec=null,recReady=null,recDest=null,recRevokeT=0,recCv=null,recCx=null,recLast=0;
-const tpsCam={x:0,y:0,z:0,lx:0,ly:0,lz:0};
-function recTapAudio(){if(AC&&master&&!recDest){try{recDest=AC.createMediaStreamDestination();master.connect(recDest);}catch(e){recDest=null;}}}
-function recDraw(){
-  const W=recCv.width,H=recCv.height,cw=canvas.width,ch=canvas.height,k=Math.min(W/cw,H/ch),dw=cw*k,dh=ch*k;
-  if(dw<W-1||dh<H-1)recCx.fillRect(0,0,W,H);
-  recCx.drawImage(canvas,(W-dw)/2,(H-dh)/2,dw,dh);
-}
-/* dipanggil tiap frame saat merekam: bila pemain main FPS, gambar dulu dari kamera orang ketiga untuk rekaman, lalu gambar normal untuk layarnya */
-function recFrame(now){
-  const want=now-recLast>=33,tps=want&&fps&&started;
-  if(tps){
-    const p=camera.position.clone(),q=camera.quaternion.clone(),fv=camera.fov,sv=spriteMesh.visible,mv=myMount?myMount.mesh.visible:false;
-    camera.position.set(tpsCam.x,tpsCam.y,tpsCam.z);camera.lookAt(tpsCam.lx,tpsCam.ly,tpsCam.lz);
-    camera.fov=cam.baseFov||50;camera.updateProjectionMatrix();
-    if(!dead){spriteMesh.visible=true;if(rideT>0&&myMount)myMount.mesh.visible=true;}
-    try{renderer.render(scene,camera);recDraw();}
-    finally{spriteMesh.visible=sv;if(myMount)myMount.mesh.visible=mv;camera.position.copy(p);camera.quaternion.copy(q);camera.fov=fv;camera.updateProjectionMatrix();}
-  }
-  renderer.render(scene,camera);
-  if(want&&!tps)recDraw();
-  if(want)recLast=now;
-}
-function recNames(){
-  const nm=l=>(l&&l.length?l.map(x=>x&&x.name?x.name:'?').join('+'):'?');
-  return duel?(nm(duel.ta)+'-vs-'+nm(duel.tb)):'duel';
-}
-function recDiscard(){
-  clearTimeout(recRevokeT);
-  if(recReady){try{URL.revokeObjectURL(recReady.url);}catch(e){}recReady=null;}
-  $('recBox').classList.remove('show');
-}
-function recStart(){
-  if(!SET.rec||rec||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream)return;
-  try{
-    recTapAudio();
-    /* rekaman memakai canvas sendiri supaya selalu tampil dari sudut orang ketiga, walau pemain main FPS */
-    const sc=Math.min(1,1280/canvas.width);
-    recCv=document.createElement('canvas');recCv.width=Math.max(2,Math.round(canvas.width*sc/2)*2);recCv.height=Math.max(2,Math.round(canvas.height*sc/2)*2);
-    recCx=recCv.getContext('2d');recCx.fillStyle='#000';recCx.fillRect(0,0,recCv.width,recCv.height);recLast=0;
-    const vs=recCv.captureStream(30),tracks=vs.getVideoTracks().slice();
-    if(recDest)recDest.stream.getAudioTracks().forEach(t=>tracks.push(t));
-    const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
-    const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
-    const mr=new MediaRecorder(new MediaStream(tracks),mime?{mimeType:mime,videoBitsPerSecond:2000000}:{videoBitsPerSecond:2000000});
-    const r={mr,vs,chunks:[],t0:performance.now(),mime:mr.mimeType||mime||'video/webm',names:recNames(),cap:0};
-    mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data);};
-    mr.onstop=()=>recFinish(r);
-    mr.start(1000);
-    r.cap=setTimeout(recStop,REC_MAX_MS);
-    rec=r;$('recDot').classList.add('show');
-  }catch(e){rec=null;recCv=recCx=null;$('recDot').classList.remove('show');}
-}
-function recStop(){
-  if(!rec)return;
-  const r=rec;rec=null;recCv=recCx=null;clearTimeout(r.cap);$('recDot').classList.remove('show');
-  try{if(r.mr.state!=='inactive')r.mr.stop();else recFinish(r);}catch(e){recFinish(r);}
-}
-function recFinish(r){
-  try{r.vs.getTracks().forEach(t=>t.stop());}catch(e){}
-  const ms=performance.now()-r.t0;
-  if(!r.chunks.length||ms<REC_MIN_MS){r.chunks=[];return;}
-  const blob=new Blob(r.chunks,{type:r.mime});r.chunks=[];
-  recDiscard();   /* rekaman baru menggantikan yang lama: hanya satu yang ada di memori */
-  const ext=/mp4/.test(r.mime)?'mp4':'webm',d=new Date(),p2=n=>String(n).padStart(2,'0');
-  const safe=r.names.replace(/[^A-Za-z0-9+_-]+/g,'_').slice(0,60);
-  recReady={blob,url:URL.createObjectURL(blob),name:'digital-war-'+safe+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.'+ext};
-  const sec=Math.round(ms/1000);
-  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' · '+(blob.size/1048576).toFixed(1)+' MB';
+/* ---------- replay pertandingan (sisi pemain) ----------
+   Server merekam data pertandingan (bukan video). Setelah ronde selesai klien meminta replay-nya (gzip, puluhan KB),
+   lalu bisa diputar ulang di halaman /replay atau diunduh sebagai file .dwreplay. Hanya satu replay terakhir, hanya di memori. */
+let rpBytes=null,rpMeta=null,rpWin=null;
+function rpClear(){rpBytes=null;rpMeta=null;$('recBox').classList.remove('show');}
+function rpReceive(m){
+  if(m.none||!m.z)return;
+  try{const bin=atob(m.z),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);rpBytes=u;rpMeta={dur:m.dur|0,at:m.at|0};}catch(e){return;}
+  const sec=Math.round(rpMeta.dur/1000),p2=n=>String(n).padStart(2,'0');
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' · '+Math.max(1,Math.round(rpBytes.length/1024))+' KB';
   $('recBox').classList.add('show');
 }
-$('recGo').addEventListener('click',()=>{
-  if(!recReady)return;
-  const a=document.createElement('a');a.href=recReady.url;a.download=recReady.name;document.body.appendChild(a);a.click();a.remove();
-  $('recBox').classList.remove('show');   /* satu kali unduh; URL dilepas dari memori 15 dtk kemudian */
-  clearTimeout(recRevokeT);recRevokeT=setTimeout(recDiscard,15000);   /* setelah diunduh, hapus dari memori */
+$('recPlay').addEventListener('click',()=>{
+  if(!rpBytes)return;
+  const w=window.open('/replay','_blank');
+  if(!w){toast('Izinkan popup untuk memutar replay, atau pakai tombol Unduh',3.2);return;}
+  rpWin=w;
 });
-$('recX').addEventListener('click',recDiscard);
+window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||!e.data||!e.data.dwReplayReady||!rpBytes||e.source!==rpWin)return;
+  e.source.postMessage({dwReplay:rpBytes.buffer.slice(rpBytes.byteOffset,rpBytes.byteOffset+rpBytes.byteLength)},location.origin);
+});
+$('recGo').addEventListener('click',()=>{
+  if(!rpBytes)return;
+  const d=new Date(),p2=n=>String(n).padStart(2,'0'),nm=String(roomInfo.name||'duel').replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,30);
+  const url=URL.createObjectURL(new Blob([rpBytes],{type:'application/octet-stream'}));
+  const a=document.createElement('a');a.href=url;a.download='digital-war-'+nm+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.dwreplay';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
+});
+$('recX').addEventListener('click',rpClear);
 $('recBox').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ---------- catatan jaringan saat bertarung di ring ---------- */
 const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
@@ -6245,7 +6318,7 @@ let duelCntN=0,duelPh=0;
 
 
 /* ---------- pengaturan ---------- */
-const SET=Object.assign({rec:true,physObj:false,joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
+const SET=Object.assign({physObj:false,joyFull:true,autoAim:false,autoAimBall:true,hitDbg:false,shake:true,hitFx:true,net:true,physics:false,bigText:true,arenaWall:true,toast:false,duelBar:false,fxText:true,dmgText:true,sens:1},(()=>{try{return JSON.parse(localStorage.getItem('dw_set')||'{}');}catch(e){return {};}})());
 function applySet(){document.body.classList.toggle('nonet',!SET.net);document.body.classList.toggle('noduelbar',!SET.duelBar);document.body.classList.toggle('dbg',!!SET.hitDbg);}
 function saveSet(){try{localStorage.setItem('dw_set',JSON.stringify(SET));}catch(e){}}
 function openSet(){if(!started||modalOpen||chatOpen||setOpen)return;setOpen=true;bookOpen=true;keys.clear();jumpBtnHeld=false;diveBtnHeld=false;if(guarding)setGuard(false);document.querySelectorAll('#setBox input[data-set]').forEach(i=>{i.checked=!!SET[i.dataset.set];});$('sensIn').value=SET.sens;$('sensVal').textContent=(+SET.sens).toFixed(1)+'x';$('setBox').classList.add('show');}
@@ -6341,7 +6414,7 @@ const INTRO_LINES=[
 ];
 let intro=null,introBob=0;
 function startIntro(){
-  if(intro)return;
+  if(intro||RPM)return;
   const sx=pos.x,sz=pos.z;let dx=-sx,dz=-sz,dist=Math.hypot(dx,dz);
   if(dist<1){dx=0;dz=1;dist=1;}
   const ux=dx/dist,uz=dz/dist;                       /* arah ke pusat desa */
@@ -6467,7 +6540,7 @@ function updHitboxes(dt){
 function frame(now){
   let dt=Math.min(0.05,(now-last)/1000);last=now;
   update(dt);
-  if(rec&&recCv){try{recFrame(now);}catch(e){recStop();renderer.render(scene,camera);}}else renderer.render(scene,camera);   /* bila perekaman bermasalah: matikan rekaman, game tetap jalan */
+  renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
