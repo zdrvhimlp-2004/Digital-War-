@@ -2886,8 +2886,9 @@ body.playing.chatopen #chatFeed.hud{display:none!important}
 #fpsView{position:fixed;inset:0;pointer-events:none;z-index:2;display:none;overflow:hidden}
 #fpsView.show{display:block}
 body.playing.cine #fpsView{display:none!important}
-#fpsView .arm{position:absolute;bottom:-4vh;height:min(74vh,520px);aspect-ratio:3/4;will-change:transform;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))}
-#fpsView .arm svg{width:100%;height:100%;display:block;overflow:visible}
+#fpsView .arm{position:absolute;bottom:-4vh;height:min(58vh,420px);aspect-ratio:3/4;will-change:transform;}
+#fpsView .arm canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+#fpsRc{transform:rotate(12deg);transform-origin:50% 100%}#fpsLc{transform:rotate(-6deg);transform-origin:50% 100%}
 #fpsR{right:max(2vw,env(safe-area-inset-right));transform-origin:70% 100%}
 #fpsL{left:max(2vw,env(safe-area-inset-left));transform-origin:30% 100%}
 #xhair:before,#xhair:after{content:'';position:absolute;background:#fff;box-shadow:0 0 3px #000}
@@ -3090,18 +3091,7 @@ body.cine #setBox{display:none!important}
 <div id="rotHint" role="alert"><div class="ph"></div><div>Putar HP kamu ke mode horizontal<small>Game ini dimainkan dengan layar melebar. Pastikan kunci rotasi layar HP mati.</small></div></div>
 <div id="chatPanel"><div id="chatHead"><span>Chat</span><button id="chatX" type="button" aria-label="Tutup chat" data-ico="close"></button></div><div id="chatList"></div><form id="chatForm"><input id="chatIn" maxlength="140" placeholder="Tulis pesan..." autocomplete="off"><button type="submit" data-ico="send" aria-label="Kirim"></button></form></div>
 <div id="xhair"></div>
-<div id="fpsView" aria-hidden="true">
-<div class="arm" id="fpsL"><svg viewBox="0 0 300 400"><defs><linearGradient id="fsh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fd3ff"/><stop offset="1" stop-color="#2f6fb0"/></linearGradient></defs>
-<path d="M30 400 L70 250 L150 250 L170 400Z" fill="#2c3552"/><path d="M60 280 L150 280 L160 330 L50 330Z" fill="#3a4568"/>
-<path d="M40 60 Q150 20 262 60 L258 170 Q250 270 150 320 Q50 270 42 170Z" fill="url(#fsh)" stroke="#16324f" stroke-width="7"/>
-<path d="M150 38 L150 300" stroke="#16324f" stroke-width="5" opacity=".55"/><path d="M58 150 L246 150" stroke="#16324f" stroke-width="5" opacity=".55"/><circle cx="150" cy="150" r="26" fill="#ffe28a" stroke="#16324f" stroke-width="5"/>
-<path d="M118 262 q-6 -34 14 -38 q10 -2 14 8 l4 28z M152 262 l4 -26 q6 -10 16 -6 q12 6 6 34z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/></svg></div>
-<div class="arm" id="fpsR"><svg viewBox="0 0 300 400">
-<g id="fpsSw" transform="rotate(14 150 330)"><rect x="140" y="-140" width="22" height="330" rx="4" fill="#dfe8f2" stroke="#6f7f93" stroke-width="4"/><rect x="149" y="-136" width="4" height="318" fill="#fff" opacity=".7"/><path d="M140 -140 L151 -178 L162 -140Z" fill="#dfe8f2" stroke="#6f7f93" stroke-width="4"/>
-<rect x="98" y="186" width="106" height="16" rx="7" fill="#d9a441" stroke="#7b5a1a" stroke-width="4"/><rect x="141" y="200" width="20" height="74" rx="6" fill="#6b3d22" stroke="#3a1f10" stroke-width="4"/><circle cx="151" cy="284" r="13" fill="#d9a441" stroke="#7b5a1a" stroke-width="4"/>
-<path d="M118 248 q0 -20 33 -20 q33 0 33 20 v44 q0 22 -33 22 q-33 0 -33 -22z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/><path d="M122 254 h58 M122 272 h58 M124 290 h54" stroke="#a8754f" stroke-width="4" stroke-linecap="round"/><path d="M178 240 q22 -4 18 22 q-4 14 -20 8z" fill="#f2c7a1" stroke="#a8754f" stroke-width="4"/></g>
-<path d="M100 400 L128 300 L208 300 L248 400Z" fill="#2c3552"/><path d="M112 340 L216 340 L224 372 L104 372Z" fill="#3a4568"/></svg></div>
-</div>
+<div id="fpsView" aria-hidden="true"><div class="arm" id="fpsL"><canvas id="fpsLc" width="24" height="32"></canvas></div><div class="arm" id="fpsR"><canvas id="fpsRc" width="24" height="32"></canvas></div></div>
 <div id="aimbar"><button id="aimFire">Tembak</button><button id="aimCancel">Batal</button></div>
 <div id="capBox"><small id="capTxt"></small><div class="bar"><i id="capFill"></i></div></div>
 <div id="hurt"></div>
@@ -4388,6 +4378,34 @@ let wantFs=false;
 function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO.spark)+'</svg>');return t;}
 const guardMat=new THREE.SpriteMaterial({map:iconTex('shield','#6cd4ff'),depthTest:false,transparent:true,fog:false});
 let myGuardSp=null;
+/* tangan FPS: pixel art satu gaya dengan sprite karakter */
+let fvCh=-1;
+function buildFpsArms(){
+  const pal=Object.assign({},PAL_PLAYER,CHARS[clamp(me.ch|0,0,CHARS.length-1)].pal),SK2='#d8a77c';
+  const mk=(id,draw)=>{
+    const cv=$(id),g=cv.getContext('2d');g.clearRect(0,0,24,32);
+    C=pal;sx=g;OX=0;OY=0;draw();
+    const im=g.getImageData(0,0,24,32),d=im.data,out=new Uint8ClampedArray(d);
+    for(let y=0;y<32;y++)for(let x=0;x<24;x++){const k=(y*24+x)*4;if(d[k+3]>0)continue;
+      if((x>0&&d[k-4+3]>0)||(x<23&&d[k+4+3]>0)||(y>0&&d[k-96+3]>0)||(y<31&&d[k+96+3]>0)){out[k]=43;out[k+1]=34;out[k+2]=51;out[k+3]=255;}}
+    im.data.set(out);g.putImageData(im,0,0);
+  };
+  mk('fpsRc',()=>{
+    R(11,0,1,2,C.blade);R(10,2,3,16,C.blade);R(12,2,1,16,'#ffffff');
+    R(5,18,14,2,C.hilt);R(5,18,14,1,'#f0d060');
+    R(10,20,3,5,C.belt);
+    R(8,22,8,6,C.skin);R(8,22,8,1,SK2);R(8,24,8,1,SK2);R(8,26,8,1,SK2);R(15,21,3,4,C.skin);R(15,24,3,1,SK2);
+    R(6,28,13,4,C.tunic);R(6,28,13,1,C.tunicD);R(6,29,2,3,C.tunicD);
+  });
+  mk('fpsLc',()=>{
+    for(let y=3;y<=23;y++){const hw=y<15?9:Math.max(1,Math.round(9-(y-14)*0.95));R(12-hw,y,hw*2,1,C.tunicD);}
+    for(let y=4;y<=22;y++){const hw=y<15?7:Math.max(0,Math.round(7-(y-14)*0.95));if(hw>0)R(12-hw,y,hw*2,1,C.tunic);}
+    R(11,5,2,17,C.scarf);R(6,10,12,2,C.scarf);
+    R(10,9,4,4,C.hilt);R(11,9,2,1,'#f0d060');
+    R(8,22,8,5,C.skin);R(8,22,8,1,SK2);R(8,24,8,1,SK2);R(8,26,8,1,SK2);
+    R(6,27,13,5,C.tunic);R(6,27,13,1,C.tunicD);R(17,28,2,4,C.tunicD);
+  });
+}
 let guardLatch=false,guardResume=0,fvG=0;
 function guardAtk(){if(guarding){const l=guardLatch;setGuard(false,true);if(l)guardResume=0.3;}}
 function setGuard(on,keep){
@@ -5668,6 +5686,7 @@ function update(dt){
   {const fv=$('fpsView'),on=fps&&started&&!dead&&!sleeping&&aiming<0;
     if(fv.classList.contains('show')!==on)fv.classList.toggle('show',on);
     if(on){
+      if(fvCh!==me.ch){fvCh=me.ch;buildFpsArms();}
       const mv=clamp(sp/7,0,1),bw=Math.sin(walkT*Math.PI)*mv,bx=Math.cos(walkT*Math.PI*0.5)*mv;
       const pk=attackT>0?Math.sin((1-attackT/0.32)*Math.PI):0,side=atkSide?1:-1;
       const gu=guarding?1:0;fvG+=(gu-fvG)*Math.min(1,dt*14);
