@@ -1495,7 +1495,7 @@ function duelNextAlive(room) {
 function duelBotSpawn(room, side) {
   const sb = duelSide(side === 'teamA' ? 'a' : 'b', 0, 1);
   const p = {
-    id: room.nextPid++, uid: 'bot', name: 'Komputer', ch: Math.floor(Math.random() * 4), ws: null, room, bot: true,
+    id: room.nextPid++, uid: 'bot', name: 'Komputer ' + (1 + [...room.players.values()].filter(q => q.bot).length), ch: Math.floor(Math.random() * 4), ws: null, room, bot: true,
     x: sb.x, y: 0, z: sb.z, fx: sb.fx, fz: sb.fz, m: 0, a: 0, sw: 0, hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
     invuln: 0, shield: 0, atkAt: 0, slots: ['637', '8472', '753', '481', '5551'], cdUntil: {},
     guarding: false, gh: [], gbUntil: 0, stunUntil: 0, regenUntil: 0, regenRate: 0, regenAcc: 0, rideUntil: 0, sleeping: false, ammo: 0, snipeAt: 0,
