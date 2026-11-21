@@ -76,6 +76,7 @@ const FORT_ROSTER = [
   { kind: 'archer', role: 'guard' }, { kind: 'archer', role: 'escort' }
 ];
 const ESCORT_AGGRO = 30;
+const RIDE_DUR_MUL = 4;   /* waktu tunggangan elang 4x */
 const MOB_DUR_MUL = 2, MOB_HP_MUL = 1.5;   /* elang dan singa: nyawa 1.5x, waktu hidup 2x */
 const MOB_HP = Math.round(40 * MOB_HP_MUL), MOUNT_HP = 70;
 const CAVE_MOUTH = { x: -15, z: 87 };
@@ -340,7 +341,7 @@ function techDesc(t) {
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
     case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
     case 'regen': return 'Pulih ' + t.damage + ' HP selama ' + t.dur + ' dtk';
-    case 'ride': return 'Tunggangi elang terbang ' + t.dur + ' dtk (Lompat naik, Selam turun)';
+    case 'ride': return 'Tunggangi elang terbang ' + t.dur * RIDE_DUR_MUL + ' dtk (Lompat naik, Selam turun)';
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
     case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
     case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m), termasuk arah atas/bawah';
@@ -938,8 +939,8 @@ function doCast(room, p, slot, ax, ay, az) {
       break;
     }
     case 'ride': {
-      p.rideUntil = t + tech.dur * 1000; p.mountHp = MOUNT_HP;
-      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur, pw: (tech.speed || 24) * TUNING.eagleSpeedMul, c: tech.color });
+      p.rideUntil = t + tech.dur * RIDE_DUR_MUL * 1000; p.mountHp = MOUNT_HP;
+      broadcast(room, { t: 'fx', k: 'ride', id: p.id, dur: tech.dur * RIDE_DUR_MUL, pw: (tech.speed || 24) * TUNING.eagleSpeedMul, c: tech.color });
       break;
     }
     case 'wall': {
