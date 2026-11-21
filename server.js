@@ -4108,7 +4108,7 @@ function aimFar(){
 function fireSniper(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||ammo<=0||snipeCd>0||rideT>0)return;
   if(sleeping)wakeUp();
-  if(guarding)setGuard(false);
+  guardAtk();
   const a=aimFar();faceX=a.x;faceZ=a.z;snipeCd=2.2;attackT=Math.max(attackT,0.3);
   netSend({t:'snipe',fx:a.x,fz:a.z});
 }
@@ -4166,7 +4166,7 @@ function doAttack(){
   if(!started||dead||modalOpen||bookOpen||stunT>0||fade||attackT>0||atkCool>0)return;
   if(duelBlock())return;
   if(sleeping)wakeUp();
-  if(guarding)setGuard(false);
+  guardAtk();
   if(fps&&started){
     const v=aimVec(),hl=Math.hypot(v.x,v.z)||1,ax=v.x/hl,az=v.z/hl;faceX=ax;faceZ=az;
     {comboStep();attackT=0.32;atkCool=0.333;}sfx.swing();atkSide=!atkSide;slashFx(pos.x,pos.y,pos.z,ax,az,0xbfe9ff,1,atkSide,v.y);
@@ -4193,7 +4193,7 @@ function castSlot(i){
   sfx.techClick();   /* tombol teknik benar-benar tertekan dan jalan */
   if(AIM_KINDS[s.kind]){if(fps){castAimed(i);return;}if(SET.autoAimBall&&(s.kind==='bolt'||s.kind==='orb')){const bv=ballAim();if(bv){castAimed(i,bv);return;}}enterAim(i);return;}
   if(aiming>=0)cancelAim();
-  if(guarding)setGuard(false);
+  guardAtk();
   let a;
   if(s.kind==='dash'){a=tAll-moveDirT<0.3?{x:moveDirX,z:moveDirZ}:{x:faceX,z:faceZ};faceX=a.x;faceZ=a.z;}
   else{a=aim();faceX=a.x;faceZ=a.z;}
@@ -4323,7 +4323,10 @@ bindBtn($('btnJump'),()=>{jumpBtnHeld=true;jumpBuf=0.13;},()=>{jumpBtnHeld=false
 bindBtn($('btnDive'),()=>{diveBtnHeld=true;},()=>{diveBtnHeld=false;});
 bindBtn($('btnAct'),()=>interact());
 bindBtn($('btnAtk'),()=>doAttack());
-bindBtn($('btnGuard'),()=>setGuard(true),()=>setGuard(false));
+bindBtn($('btnGuard'),()=>{
+  if(guardLatch||guarding){setGuard(false);return;}
+  guardLatch=true;setGuard(true);if(!guarding)guardLatch=false;
+},null);
 bindBtn($('btnSnipe'),()=>fireSniper());
 
 /* ---------- fullscreen ---------- */
@@ -4366,7 +4369,10 @@ let wantFs=false;
 function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO.spark)+'</svg>');return t;}
 const guardMat=new THREE.SpriteMaterial({map:iconTex('shield','#6cd4ff'),depthTest:false,transparent:true,fog:false});
 let myGuardSp=null;
-function setGuard(on){
+let guardLatch=false,guardResume=0;
+function guardAtk(){if(guarding){const l=guardLatch;setGuard(false,true);if(l)guardResume=0.3;}}
+function setGuard(on,keep){
+  if(!on&&!keep)guardLatch=false;
   if(on&&!(started&&!dead&&!modalOpen&&!bookOpen&&stunT<=0&&gbT<=0&&rideT<=0&&!sleeping&&!swimNow))on=false;
   if(guarding===on)return;
   guarding=on;$('btnGuard').classList.toggle('on',on);netSend({t:'guard',on});if(on)sfx.shield();
@@ -4734,7 +4740,7 @@ function castAimed(i,vOverride){
   if(!s||slotCd[i]>0||!started||dead||modalOpen||bookOpen||stunT>0||fade)return false;
   const v=vOverride||aimVec(),hl=Math.hypot(v.x,v.z)||1;
   faceX=v.x/hl;faceZ=v.z/hl;
-  if(guarding)setGuard(false);if(sleeping)wakeUp();
+  guardAtk();if(sleeping)wakeUp();
   slotCd[i]=slotCdMax[i]=s.cd;attackT=Math.max(attackT,0.32);sfx.techClick();
   netSend({t:'cast',slot:i,fx:+v.x.toFixed(3),fy:+v.y.toFixed(3),fz:+v.z.toFixed(3)});
   return true;
@@ -5127,7 +5133,7 @@ function onMsg(m){
       if(m.id===me.id){dead=false;$('ko').style.display='none';setHp(MAXHP);{const f=findFree(m.x,m.z);pos.set(f.x,0,f.z);}vel.set(0,0,0);kb.x=kb.z=0;vy=0;grounded=true;cam.tx=pos.x;cam.tz=pos.z;invuln=2;stunT=0;gbT=0;myRegenT=0;hasteT=0;sfx.respawn();toast('Kembali bertarung!',1.6);}
       else{const o=others.get(m.id);if(o){o.dead=false;o.hp=MAXHP;o.tx=o.x=m.x;o.tz=o.z=m.z;o.ty=o.y=0;drawLabel(o);}}break;}
     case 'guard':{if(m.id===me.id){guarding=!!m.on;$('btnGuard').classList.toggle('on',!!m.on);}else{const o=others.get(m.id);if(o){o.guard=!!m.on;if(m.on)sfxAt('shield',o.x,o.z);}}break;}
-    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;$('btnGuard').classList.remove('on');toast('Tameng pecah!',3);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
+    case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;guardLatch=false;$('btnGuard').classList.remove('on');toast('Tameng pecah!',3);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
     case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku!',3);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
     case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
@@ -5599,6 +5605,10 @@ function update(dt){
   if(myRegenT>0){myRegenT-=dt;if(Math.random()<dt*9)emit(pos.x+(Math.random()-0.5)*1.2,pos.y+0.3,pos.z+(Math.random()-0.5)*1.2,0,1.4,0,0.9,0.4,'#7dffae',0,0.9,0.2);}
   if(guardPipT>0){guardPipT-=dt;if(guardPipT<=0)guardPips=guardMax;}
   if(guarding&&(!live||gbT>0||swim||riding))setGuard(false);
+  if(guardLatch){
+    if(!live||gbT>0||swim||riding||stunT>0||sleeping||modalOpen||bookOpen)guardLatch=false;
+    else if(!guarding){if(attackT<=0&&atkCool<=0){guardResume-=dt;if(guardResume<=0)setGuard(true);}}
+  }
   kb.x*=Math.exp(-9*dt);kb.z*=Math.exp(-9*dt);
   if(attackT>0)attackT-=dt;
   if(dead){deadT-=dt;$('koTxt').dataset.t=Math.max(0,Math.ceil(deadT));}
