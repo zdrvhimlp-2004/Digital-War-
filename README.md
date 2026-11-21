@@ -139,3 +139,4 @@ package.json
 README.md
 .gitignore
 ```
+- **Lawan komputer (Arena Duel)**: kalau hanya ada satu pemain di room duel, "Komputer" otomatis jadi lawan. Pemain kedua yang masuk menggantikannya setelah ronde berjalan selesai.

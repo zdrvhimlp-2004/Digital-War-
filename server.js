@@ -404,6 +404,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   dmg = Math.max(1, Math.round(dmg));
   victim.hp = Math.max(0, victim.hp - dmg);
   broadcast(room, { t: 'hit', id: victim.id, by: attacker ? attacker.id : 0, dmg, hp: victim.hp, kx: r2(kx || 0), kz: r2(kz || 0), hr: opt.hr ? r2(opt.hr) : 0 });
+  if (victim.bot) { victim.kx = (victim.kx || 0) + (kx || 0) * 0.6; victim.kz = (victim.kz || 0) + (kz || 0) * 0.6; }   /* bot tidak punya klien yang menerapkan knockback */
   if (victim.hp <= 0) {
     victim.dead = true;
     victim.respawnAt = t + RESPAWN_MS;
@@ -953,7 +954,7 @@ function stepRoom(room, dt, t) {
   if (!room.duel) stepForts(room, dt, t);
   for (const s of room.sols) s.y = terrainH(s.x, s.z);   /* prajurit/penyamun mengikuti tinggi tanah (dulu selalu 0, jadi di bukit tidak bisa kena dan tidak bisa memukul) */
   for (const s of room.sols) { if (s.kx || s.kz) { s.x += s.kx * dt; s.z += s.kz * dt; const dk = Math.exp(-9 * dt); s.kx *= dk; s.kz *= dk; if (Math.abs(s.kx) + Math.abs(s.kz) < 0.3) s.kx = s.kz = 0; } }
-  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t);
+  if (!room.duel) stepBandits(room, dt, t); else duelTick(room, t, dt);
   /* jadwal tertunda, regen, respawn */
   for (let i = room.later.length - 1; i >= 0; i--) {
     if (room.later[i].at <= t) { const f = room.later.splice(i, 1)[0]; try { f.fn(); } catch (e) { console.error(e); } }
@@ -1041,9 +1042,69 @@ function duelNextAlive(room) {
   for (let i = 0; i < d.queue.length; i++) { const q = room.players.get(d.queue[i]); if (q && !q.dead) { d.queue.splice(i, 1); return q.id; } }
   return 0;
 }
-function duelTick(room, t) {
+/* ---- lawan komputer: kalau di room duel hanya ada 1 pemain, bot ikut mengantri sebagai lawan ---- */
+const DUEL_BOT_NAME = 'Komputer', DUEL_BOT_DELAY_MS = 2500;
+function duelHumans(room) { let n = 0; for (const p of room.players.values()) if (!p.bot) n++; return n; }
+function duelBotOf(room) { for (const p of room.players.values()) if (p.bot) return p; return null; }
+function duelBotAdd(room) {
+  const s = standSpawn();
+  const p = {
+    id: room.nextPid++, uid: 'bot-' + room.code, name: DUEL_BOT_NAME, ch: Math.floor(Math.random() * CHAR_COUNT), bot: true,
+    ws: { closed: false, send() { }, terminate() { }, player: null }, room,
+    x: s.x, y: 0, z: s.z, fx: 0, fz: 1, m: 0, a: 0, sw: 0,
+    hp: MAXHP, k: 0, d: 0, dead: false, respawnAt: 0,
+    invuln: 0, shield: 0, atkAt: 0,
+    slots: new Array(MAX_TECH_SLOTS).fill(null), cdUntil: {},
+    guarding: false, gh: [], gbUntil: 0, stunUntil: 0, regenUntil: 0, regenRate: 0, regenAcc: 0, rideUntil: 0, sleeping: false, ammo: 0, snipeAt: 0,
+    kx: 0, kz: 0, ai: { strafe: 1, strafeAt: 0, nextAtk: 0, guardUntil: 0, guardCool: 0 }
+  };
+  room.players.set(p.id, p);
+  broadcast(room, { t: 'pj', p: { id: p.id, name: p.name, ch: p.ch, hp: p.hp, k: 0, d: 0, x: p.x, y: 0, z: p.z } });
+  broadcast(room, { t: 'sc', s: scoreList(room) });
+  room.duel.queue.push(p.id); duelBroadcast(room);
+}
+function duelBotManage(room, t) {
+  const d = room.duel, humans = duelHumans(room), bot = duelBotOf(room);
+  if (humans === 1 && !bot) {
+    if (!d.soloSince) d.soloSince = t;
+    if (t - d.soloSince >= DUEL_BOT_DELAY_MS) { d.soloSince = 0; duelBotAdd(room); }
+  } else d.soloSince = 0;
+  /* ada pemain kedua: bot pergi, tapi tidak di tengah ronde */
+  if (bot && (humans === 0 || (humans >= 2 && d.st !== 'fight' && d.st !== 'count'))) removePlayer(room, bot);
+}
+function duelBotAct(room, bot, foe, t, dt) {
+  const ai = bot.ai, dx = foe.x - bot.x, dz = foe.z - bot.z, d = Math.hypot(dx, dz) || 0.01, nx = dx / d, nz = dz / d;
+  bot.fx = nx; bot.fz = nz;
+  /* knockback */
+  if (bot.kx || bot.kz) { bot.x += bot.kx * dt; bot.z += bot.kz * dt; const dk = Math.exp(-9 * dt); bot.kx *= dk; bot.kz *= dk; if (Math.abs(bot.kx) + Math.abs(bot.kz) < 0.3) bot.kx = bot.kz = 0; }
+  const stunned = t < bot.stunUntil;
+  if (t >= ai.strafeAt) { ai.strafe = Math.random() < 0.5 ? -1 : 1; ai.strafeAt = t + 700 + Math.random() * 900; }
+  let mx = 0, mz = 0;
+  if (!stunned) {
+    if (d > 2.5) { mx = nx; mz = nz; } else if (d < 1.5) { mx = -nx * 0.6; mz = -nz * 0.6; }
+    if (d < 7) { mx += -nz * ai.strafe * 0.5; mz += nx * ai.strafe * 0.5; }
+  }
+  const ml = Math.hypot(mx, mz);
+  if (ml > 0.01) {
+    const sp = d > 8 ? 7.5 : 5.2;
+    bot.x += (mx / ml) * sp * dt; bot.z += (mz / ml) * sp * dt;
+    bot.m = d > 8 ? 2 : 1;
+  } else bot.m = 0;
+  /* tetap di dalam ring */
+  const ox = bot.x - ARENA.x, oz = bot.z - ARENA.z, od = Math.hypot(ox, oz);
+  if (od > ARENA.ringR - 2) { const k = (ARENA.ringR - 2) / od; bot.x = ARENA.x + ox * k; bot.z = ARENA.z + oz * k; }
+  bot.y = 0;
+  if (stunned) return;
+  /* tameng: kadang menahan saat lawan menebas dari dekat */
+  if (bot.guarding && t >= ai.guardUntil) setGuard(room, bot, false);
+  else if (!bot.guarding && d < 4 && t - foe.atkAt < 250 && t >= ai.guardCool && Math.random() < 0.4) { setGuard(room, bot, true); ai.guardUntil = t + 600; ai.guardCool = t + 2500; }
+  /* tebas */
+  if (!bot.guarding && d <= MELEE.range - 0.6 && t >= ai.nextAtk) { ai.nextAtk = t + 700 + Math.random() * 500; doMelee(room, bot, r2(nx), r2(nz)); }
+}
+function duelTick(room, t, dt) {
   const d = room.duel;
-  d.queue = d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
+  duelBotManage(room, t);
+  d.queue =d.queue.filter(id => room.players.has(id) && id !== d.a && id !== d.b);
   const A = d.a && room.players.get(d.a), B = d.b && room.players.get(d.b);
   if (d.a && !A) d.a = 0;
   if (d.b && !B) d.b = 0;
@@ -1080,6 +1141,10 @@ function duelTick(room, t) {
       A2.invuln = t + DUEL_COUNT_MS + 200; B2.invuln = t + DUEL_COUNT_MS + 200;
       d.st = 'count'; d.until = t + DUEL_COUNT_MS; d.last = null; changed = true;
     }
+  }
+  if (d.st === 'fight') {
+    const bot = A && A.bot ? A : (B && B.bot ? B : null), foe = bot === A ? B : A;
+    if (bot && foe && !bot.dead && !foe.dead && t >= (bot.tpUntil || 0)) duelBotAct(room, bot, foe, t, dt);
   }
   /* batas ring: penonton tidak boleh masuk, petarung tidak boleh keluar */
   for (const p of room.players.values()) {
@@ -1126,9 +1191,9 @@ function onJoin(ws, m) {
   }
   const lower = name.toLowerCase();
   for (const p of room.players.values()) {
-    if (p.name.toLowerCase() === lower) return send(ws, { t: 'err', msg: 'Nama "' + name + '" sudah dipakai di room ini. Pakai nama lain.' });
+    if (!p.bot && p.name.toLowerCase() === lower) return send(ws, { t: 'err', msg: 'Nama "' + name + '" sudah dipakai di room ini. Pakai nama lain.' });
   }
-  if (room.players.size >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
+  if (duelHumans(room) >= room.max) return send(ws, { t: 'err', msg: 'Room penuh (' + room.max + ' pemain)' });
 
   const s = room.duel ? standSpawn() : randomSpawn();
   const p = {
@@ -1410,7 +1475,7 @@ function readBody(req, limit) {
 }
 function roomView(r) {
   const rt = rooms.get(r.code);
-  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? rt.players.size : 0, players: rt ? [...rt.players.values()].map(p => p.name) : [] };
+  return { code: r.code, name: r.name, max: r.max, mode: r.mode === 'duel' ? 'duel' : 'world', debug: r.debug === true, voice: r.voice !== false, pick: r.pick === true, created: r.created, count: rt ? duelHumans(rt) : 0, players: rt ? [...rt.players.values()].filter(p => !p.bot).map(p => p.name) : [] };
 }
 
 async function handleAdmin(req, res, pathname) {
