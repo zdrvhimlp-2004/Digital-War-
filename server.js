@@ -2392,6 +2392,8 @@ input{width:100%;margin-top:6px;background:#050a14;border:2px solid #1c3a66;bord
 input:focus{border-color:#4db8ff}
 button{margin-top:14px;border:0;border-radius:999px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font-size:17px;font-weight:800;padding:12px 32px;cursor:pointer;box-shadow:0 5px 0 #0a3d99;font-family:inherit}
 a{color:#6fa8e8;font-size:12px;display:inline-block;margin-top:18px;text-decoration:none}
+.links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px}
+.links a{margin-top:18px}
 </style>
 </head>
 <body>
@@ -2400,7 +2402,7 @@ a{color:#6fa8e8;font-size:12px;display:inline-block;margin-top:18px;text-decorat
   <p>Pertarungan antar teman di dunia kode. Minta link room ke admin, atau masukkan kode room di bawah.</p>
   <input id="code" maxlength="10" placeholder="KODE ROOM" autocomplete="off">
   <br><button id="go">Masuk room</button><br>
-  <a href="/admin">Halaman admin</a>
+  <div class="links"><a href="/replay">Putar replay</a><a href="/teknik">Preview teknik</a><a href="/admin">Halaman admin</a></div>
 </div>
 <script>
 (function(){
