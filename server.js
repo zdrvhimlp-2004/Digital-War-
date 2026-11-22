@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 13;
+const TECH_VERSION = 14;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -124,6 +124,7 @@ const DEFAULT_TECHS = [
   { code: '4827', name: 'Pedang Berputar', kind: 'spin', color: '#bfe9ff', damage: 28, cd: 20, dur: 2, radius: 3.6 },
   { code: '5316', name: 'Cungkil', kind: 'launch', color: '#ffd24d', damage: 40, cd: 16, range: 4.2, lift: 34 },
   { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 300, radius: 4, hp: 100 },
+  { code: '2160', name: 'Benteng Raksasa', kind: 'ring', color: '#8fa8ff', cd: 24, dur: 900, radius: 20, hp: 200, h: 4.5 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 6 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face', 'meteor', 'spin', 'launch', 'ring'];
@@ -219,6 +220,7 @@ function loadDB() {
       if (ver < 11) for (const d of DEFAULT_TECHS) if (d.code === '6464' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 12) for (const d of DEFAULT_TECHS) if (['8182', '4141', '4343'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 13) for (const d of DEFAULT_TECHS) if (['6193', '4827', '5316', '2159'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 14) for (const d of DEFAULT_TECHS) if (d.code === '2160' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -299,7 +301,7 @@ function sanitizeTech(t) {
     out.damage = num(t.damage, 0, 100, 45); out.speed = num(t.speed, 15, 80, 34); out.count = Math.round(num(t.count, 1, 6, 3));
     out.size = num(t.size, 0.5, 4, 1.5); out.boom = num(t.boom, 0, 10, 3);
   } else if (kind === 'ring') {
-    out.dur = num(t.dur, 1, 20, 5); out.radius = num(t.radius, 2.5, 10, 4); out.hp = num(t.hp, 10, 500, 100);
+    out.dur = num(t.dur, 1, 1000, 5); out.radius = num(t.radius, 2.5, 25, 4); out.hp = num(t.hp, 10, 500, 100); out.h = num(t.h, 2, 8, 3);
   } else if (kind === 'launch') {
     out.damage = num(t.damage, 0, 100, 40); out.range = num(t.range, 2, 8, 4.2); out.lift = num(t.lift, 10, 60, 34);
   } else if (kind === 'spin') {
@@ -336,7 +338,7 @@ function techDesc(t) {
     case 'shield': return 'Perisai ' + t.dur + ' dtk, damage -70%';
     case 'dash': return 'Lesat ke arah gerakmu (kiri ya ke kiri), kebal sebentar';
     case 'summon': return 'Panggil ' + t.count + ' elang selama ' + t.dur * MOB_DUR_MUL + ' dtk, ' + t.damage + ' dmg/serangan. Mengejar musuh yang kamu serang. Jangan dipakai saat laga bersama kawan: bisa ikut menyerang kawan';
-    case 'ring': return 'Tembok melingkar 360° selama ' + t.dur + ' dtk lalu hancur, bisa dihancurkan (' + t.hp + ' HP per bagian)';
+    case 'ring': return 'Tembok melingkar 360° (radius ' + t.radius + ' m) selama ' + t.dur + ' dtk lalu hancur, bisa dihancurkan (' + t.hp + ' HP per bagian)';
     case 'launch': return 'Cungkil musuh di depan sampai terpental sangat tinggi, ' + t.damage + ' dmg';
     case 'spin': return 'Berputar dengan pedang ' + t.dur + ' dtk, menebas semua musuh sekitar, ' + t.damage + ' dmg per tebasan';
     case 'meteor': return 'Loncat tinggi, menghadap bawah, jatuhkan ' + t.count + ' bola cepat ke bawah, ' + t.damage + ' dmg/bola';
@@ -661,7 +663,7 @@ function ringHitAt(room, x, y, z, rad, dmg, ownerId) {
       const sg = w.segs[i];
       if (sg.hp <= 0) continue;
       if (Math.hypot(sg.x - x, sg.z - z) > RING_SEG_R + rad) continue;
-      if (y < sg.y - 0.5 || y > sg.y + 3.4) continue;
+      if (y < sg.y - 0.5 || y > sg.y + (w.h || 3) + 0.4) continue;
       ringDamage(room, w, i, dmg);
       return true;
     }
@@ -823,15 +825,15 @@ function doCast(room, p, slot, ax, ay, az) {
       break;
     }
     case 'ring': {
-      const R = tech.radius || 4, n = Math.max(8, Math.ceil(2 * Math.PI * R / 1.4)), hp = tech.hp || 100, dur = tech.dur || 5;
-      const w = { id: ringSeq++, o: p.id, until: t + dur * 1000, segs: [] };
+      const R = tech.radius || 4, n = Math.max(8, Math.ceil(2 * Math.PI * R / 1.4)), hp = tech.hp || 100, dur = tech.dur || 5, rh = tech.h || 3;
+      const w = { id: ringSeq++, o: p.id, until: t + dur * 1000, h: rh, segs: [] };
       const gy = terrainH(p.x, p.z);
       for (let k = 0; k < n; k++) {
         const a = k / n * Math.PI * 2;
         w.segs.push({ x: p.x + Math.cos(a) * R, z: p.z + Math.sin(a) * R, y: terrainH(p.x + Math.cos(a) * R, p.z + Math.sin(a) * R), hp });
       }
       room.rings.push(w);
-      broadcast(room, { t: 'ring', id: w.id, o: p.id, x: r2(p.x), z: r2(p.z), r: R, n, hp, dur, c: tech.color });
+      broadcast(room, { t: 'ring', id: w.id, o: p.id, x: r2(p.x), z: r2(p.z), r: R, n, hp, dur, h: rh, c: tech.color });
       break;
     }
     case 'launch': {
@@ -5496,9 +5498,9 @@ function startRing(m){
   for(let k=0;k<m.n;k++){
     const a=k/m.n*Math.PI*2,x=m.x+Math.cos(a)*m.r,z=m.z+Math.sin(a)*m.r,gy=terrainH(x,z);
     const mat2=new THREE.MeshBasicMaterial({color:col.clone()});
-    const mesh=new THREE.Mesh(cwallGeo,mat2);mesh.add(new THREE.LineSegments(cwallEdgeGeo,cwallEdgeMat));mesh.position.set(x,gy+1.5,z);mesh.rotation.y=-a+Math.PI/2;mesh.scale.y=0.01;scene.add(mesh);
+    const sy=(m.h||3)/3;const mesh=new THREE.Mesh(cwallGeo,mat2);mesh.add(new THREE.LineSegments(cwallEdgeGeo,cwallEdgeMat));mesh.position.set(x,gy+1.5*sy,z);mesh.rotation.y=-a+Math.PI/2;mesh.scale.y=0.01;scene.add(mesh);
     const circ={x,z,r:1.0};circles.push(circ);
-    arr.push({mesh,mat:mat2,circ,hp:m.hp,max:m.hp,x,z,gy,flash:0,base:col.clone().multiplyScalar(k%2?0.8:1),alive:true});
+    arr.push({mesh,mat:mat2,circ,sy,hp:m.hp,max:m.hp,x,z,gy,flash:0,base:col.clone().multiplyScalar(k%2?0.8:1),alive:true});
   }
   const w={id:m.id,segs:arr,t:0,dur:m.dur,col:m.c||'#9fb4d0'};cwalls.set(m.id,w);
   burst(m.x,terrainH(m.x,m.z)+0.5,m.z,m.c||'#9fb4d0',18,6);sfxAt('boom',m.x,m.z);
@@ -5521,7 +5523,7 @@ function updCWalls(dt){
     w.t+=dt;const rise=Math.min(1,w.t/0.25),left=w.dur-w.t;
     for(const sg of w.segs){
       if(!sg.alive)continue;
-      sg.mesh.scale.y=Math.max(0.01,rise);sg.mesh.position.y=sg.gy+1.5*rise;
+      sg.mesh.scale.y=Math.max(0.01,rise*sg.sy);sg.mesh.position.y=sg.gy+1.5*sg.sy*rise;
       const k=clamp(sg.hp/sg.max,0,1);
       sg.flash=Math.max(0,sg.flash-dt);
       sg.mat.color.copy(sg.base).multiplyScalar(0.45+0.55*k);
