@@ -6149,7 +6149,7 @@ async function rpRenderList(){
     row.appendChild(t);row.appendChild(go);row.appendChild(del);box.appendChild(row);
   });
 }
-if(RPM){
+function rpInit(){
   document.body.classList.add('rp');$('rpLoad').classList.add('show');
   $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);e.target.value='';});
   ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();if(t==='drop'){const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);}}));
@@ -6630,6 +6630,7 @@ function frame(now){
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
+if(RPM)rpInit();   /* di akhir skrip supaya RPDB dan semua fungsi sudah siap */
 window.__dw={RPDB,lionCv,mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
 })();
