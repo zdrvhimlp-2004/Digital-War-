@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 17;
+const TECH_VERSION = 18;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -124,7 +124,7 @@ const DEFAULT_TECHS = [
   { code: '4827', name: 'Pedang Berputar', kind: 'spin', color: '#bfe9ff', damage: 28, cd: 20, dur: 2, radius: 3.6 },
   { code: '5316', name: 'Cungkil', kind: 'launch', color: '#ffd24d', damage: 40, cd: 16, range: 4.2, lift: 34 },
   { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 300, radius: 4, hp: 100 },
-  { code: '2160', name: 'Benteng Raksasa', kind: 'ring', color: '#8fa8ff', cd: 24, dur: 900, radius: 20, hp: 200, h: 4.5 },
+  { code: '2161', name: 'Benteng Raksasa', kind: 'ring', color: '#8fa8ff', cd: 24, dur: 900, radius: 20, hp: 200, h: 4.5 },
   { code: '4828', name: 'Pedang Putar Raksasa', kind: 'spin', color: '#9fd8ff', damage: 35, cd: 30, dur: 3, radius: 6 },
   { code: '5317', name: 'Pukul Ke Langit', kind: 'launch', color: '#ffb02e', damage: 60, cd: 20, range: 4.2, lift: 60 },
   { code: '3939', name: 'Lempar Beruang Marah', kind: 'bear', color: '#8b5a2b', damage: 35, cd: 30, dur: 12, speed: 8, hp: 150 },
@@ -224,7 +224,7 @@ function loadDB() {
       if (ver < 11) for (const d of DEFAULT_TECHS) if (d.code === '6464' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 12) for (const d of DEFAULT_TECHS) if (['8182', '4141', '4343'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 13) for (const d of DEFAULT_TECHS) if (['6193', '4827', '5316', '2159'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
-      if (ver < 14) for (const d of DEFAULT_TECHS) if (d.code === '2160' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 14) for (const d of DEFAULT_TECHS) if (d.code === '2161' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 15) {   /* Freeze Frame radius 2x, Laser Beam lebih panjang dan lebar, teknik baru */
         for (const t of j.techniques) {
           if (t.code === '5551' && Number(t.radius) === 5.5) t.radius = 11;
@@ -234,6 +234,10 @@ function loadDB() {
       }
       if (ver < 16) for (const d of DEFAULT_TECHS) if (d.code === '3939' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 17) for (const d of DEFAULT_TECHS) if (d.code === '9111' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 18) {   /* kode harus angka 1-9 saja: 2160 -> 2161 */
+        for (const t of j.techniques) if (t.code === '2160' && !j.techniques.some(x => x.code === '2161')) t.code = '2161';
+        for (const d of DEFAULT_TECHS) if (d.code === '2161' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      }
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
