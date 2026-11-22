@@ -4674,7 +4674,7 @@ function setGuard(on,keep){
   guarding=on;$('btnGuard').classList.toggle('on',on);netSend({t:'guard',on});if(on)sfx.shield();
 }
 /* buku */
-const BOOK_CATS=[['all','Semua',null],['atk','Serangan',['bolt','orb','beam','homing']],['boom','Ledakan',['nova','slam','trap','tnt']],['sum','Pemanggil',['summon','lion','bear','ride']],['def','Pertahanan',['heal','regen','shield','wall']],['move','Gerak',['haste','dash','jump','blink','face']]];
+const BOOK_CATS=[['all','Semua',null],['atk','Serangan',['bolt','orb','beam','homing','meteor','spin','launch']],['boom','Ledakan',['nova','slam','trap','tnt']],['sum','Pemanggil',['summon','lion','bear','ride']],['def','Pertahanan',['heal','regen','shield','wall','ring']],['move','Gerak',['haste','dash','jump','blink','face']]];
 let bookCat='all';
 function bookList(){const c=BOOK_CATS.find(x=>x[0]===bookCat);return !c||!c[2]?bookData:bookData.filter(t=>c[2].includes(t.kind));}
 function renderBookTabs(){
