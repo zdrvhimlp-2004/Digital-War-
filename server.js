@@ -1456,7 +1456,8 @@ function replayStart(room) {
     spawn: standSpawn(), doors: room.doors, book: false, chest: room.chest.open,
     players: fighters.map(q => ({ id: q.id, tag: q.tag, name: q.name, ch: q.ch, hp: q.hp, k: q.k, d: q.d, x: q.x, y: q.y, z: q.z, dead: q.dead, sl: false }))
   };
-  room.rp = { t0: now(), at: Date.now(), snap: JSON.stringify(snap), ev: [] };
+  const nm = side => fighters.filter(q => d.team[q.id] === side).map(q => q.name).join(' & ') || '?';
+  room.rp = { t0: now(), at: Date.now(), snap: JSON.stringify(snap), ev: [], title: nm('a') + ' vs ' + nm('b') };
 }
 function replayEnd(room) {
   const r = room.rp; if (!r) return;
@@ -1464,7 +1465,8 @@ function replayEnd(room) {
   if (r.ev.length < 5) return;
   const dur = now() - r.t0;
   const json = '{"v":1,"name":' + JSON.stringify(room.name) + ',"at":' + r.at + ',"dur":' + dur + ',"snap":' + r.snap + ',"ev":[' + r.ev.join(',') + ']}';
-  try { room.lastReplay = { gz: zlib.gzipSync(Buffer.from(json, 'utf8')), dur, at: r.at }; } catch (e) { room.lastReplay = null; }
+  const win = room.duel && room.duel.last && room.duel.last.win ? String(room.duel.last.win) : '';
+  try { room.lastReplay = { gz: zlib.gzipSync(Buffer.from(json, 'utf8')), dur, at: r.at, title: r.title, win }; } catch (e) { room.lastReplay = null; }
 }
 function duelState(room) {
   const d = room.duel;
@@ -1923,7 +1925,7 @@ function onMessage(ws, text) {
     }
     case 'ping': { send(p.ws, { t: 'pong', ts: m.ts }); break; }
     case 'getreplay': {   /* replay pertandingan terakhir di room ini (hanya untuk yang ada di room) */
-      if (room.lastReplay) send(p.ws, { t: 'replay', z: room.lastReplay.gz.toString('base64'), dur: room.lastReplay.dur, at: room.lastReplay.at });
+      if (room.lastReplay) send(p.ws, { t: 'replay', z: room.lastReplay.gz.toString('base64'), dur: room.lastReplay.dur, at: room.lastReplay.at, title: room.lastReplay.title, win: room.lastReplay.win });
       else send(p.ws, { t: 'replay', none: 1 });
       break;
     }
@@ -3146,9 +3148,17 @@ body.rp #rpLoad.show{display:flex}
 #rpLoad .card{width:min(92vw,420px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:22px 22px 18px;text-align:center}
 #rpLoad h2{margin:0 0 8px;font-size:22px;color:#ffd84d}
 #rpLoad p{margin:6px 0;font-size:13px;color:#9fb3d6;line-height:1.5}
-#rpLoad label{display:block;margin-top:12px;padding:13px;border:0;border-radius:14px;background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;font-weight:700;font-size:15px;cursor:pointer}
+#rpLoad label{display:block;margin-top:10px;padding:10px;border:1px dashed #35508c;border-radius:12px;color:#cfe3ff;font-weight:600;font-size:12px;cursor:pointer}
 #rpLoad input{display:none}
 #rpErr{color:#ff8a8a!important;min-height:18px}
+#rpList{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px;text-align:left}
+.rpi{display:flex;align-items:center;gap:8px;background:#08112a;border:1px solid #243a70;border-radius:12px;padding:8px 10px}
+.rpi .t{flex:1;min-width:0}
+.rpi b{display:block;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rpi small{display:block;font-size:11px;color:#9fb3d6;margin-top:2px}
+.rpi button{border:0;border-radius:10px;padding:8px 12px;font:600 12px Poppins,system-ui,sans-serif;cursor:pointer;color:#fff;background:#1e2d54}
+.rpi button.go{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f}
+.rpe{font-size:12px;color:#9fb3d6;padding:10px 4px;text-align:center}
 #rpBar{display:none;position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:12;width:min(96vw,720px);align-items:center;gap:8px;background:rgba(8,14,34,.92);border:1px solid rgba(160,190,255,.3);border-radius:16px;padding:8px 10px;font-family:Poppins,system-ui,sans-serif;color:#fff;touch-action:manipulation}
 #rpBar button{border:0;border-radius:10px;background:#1e2d54;color:#fff;font:600 12px Poppins,system-ui,sans-serif;padding:8px 11px;cursor:pointer;white-space:nowrap}
 #rpBar button#rpPlay{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;min-width:40px;font-size:15px}
@@ -3292,9 +3302,9 @@ body.cine #setBox{display:none!important}
 </div></div>
 <div id="trainBox" class="hud"><b>Mode Latihan</b><label>Kecepatan gerak <span id="tvSpd">1.0x</span><input type="range" id="trSpd" min="0.5" max="3" step="0.1" value="1"></label><label>Tinggi lompat <span id="tvJmp">1.0x</span><input type="range" id="trJmp" min="0.5" max="2" step="0.1" value="1"></label><label>Cooldown teknik <span id="tvCd">1.0x</span><input type="range" id="trCd" min="0" max="2" step="0.1" value="1"></label><label>Darah target <span id="tvHp">1x</span><input type="range" id="trHp" min="1" max="10" step="1" value="1"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="trFight" style="width:auto;margin:0"> Target menyerang balik</label><div id="trDps" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(120,190,255,.2)">DPS <b style="display:inline;color:#fff" id="dpsV">0</b> · Total <b style="display:inline;color:#fff" id="dpsT">0</b> <button id="dpsR" type="button" style="float:right;border:0;border-radius:8px;background:#10264a;color:#cfe3ff;font:600 11px Poppins,sans-serif;padding:2px 8px;cursor:pointer">Reset</button></div></div>
 <div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="leaveBox"><div class="card"><h3>Keluar dari room?</h3><p id="leaveTxt">Kamu bisa kembali lewat link yang sama.</p><div class="rb"><button id="leaveNo" type="button">Batal</button><button id="leaveYes" class="go" type="button">Keluar</button></div></div></div>
-<div id="rpLoad"><div class="card"><h2>Putar Replay</h2><p id="rpMsg">Menunggu replay dari game...</p><p>Atau buka file replay (.dwreplay) yang pernah kamu unduh. Bisa juga seret file ke sini.</p><label id="rpPick">📂 Buka file replay<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
-<div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button><button id="rpOpen" type="button">Buka file</button></div>
-<div id="recBox" title="Replay pertandingan terakhir. Hanya data (bukan video), disimpan sementara di memori, tidak di server. Hilang saat halaman ditutup atau diganti replay berikutnya."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recGo" type="button">Unduh</button><button id="recX" type="button" aria-label="Tutup">×</button></div>
+<div id="rpLoad"><div class="card"><h2>Replay Tersimpan</h2><p id="rpMsg">Replay duel tersimpan otomatis di browser ini. Maksimal 3 terakhir.</p><div id="rpList"></div><label id="rpPick">📂 Buka file replay (.dwreplay)<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
+<div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button><button id="rpOpen" type="button">Daftar replay</button></div>
+<div id="recBox" title="Replay pertandingan tersimpan otomatis di browser ini (maksimal 3 terakhir), tidak di server."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recX" type="button" aria-label="Tutup">×</button></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -6122,23 +6132,40 @@ async function rpLoadBuf(buf){
     $('rpLoad').classList.remove('show');$('rpBar').style.display='flex';initAudio();rpReset();
   }catch(e){$('rpErr').textContent=(e&&e.message)||'Gagal membuka file replay.';}
 }
+async function rpRenderList(){
+  const box=$('rpList');box.innerHTML='';
+  let all=[];try{all=await RPDB.all();}catch(e){$('rpErr').textContent='Penyimpanan browser tidak tersedia. Kamu masih bisa membuka file .dwreplay.';}
+  if(!all.length){const d=document.createElement('div');d.className='rpe';d.textContent='Belum ada replay tersimpan. Replay muncul di sini otomatis setelah kamu menyelesaikan atau menonton duel.';box.appendChild(d);return;}
+  const p2=n=>String(n).padStart(2,'0');
+  all.forEach(r=>{
+    const row=document.createElement('div');row.className='rpi';
+    const t=document.createElement('div');t.className='t';
+    const b=document.createElement('b');b.textContent=r.title||'Duel';
+    const d=new Date(r.at),sec=Math.round((r.dur||0)/1000);
+    const sm=document.createElement('small');sm.textContent=p2(d.getDate())+'/'+p2(d.getMonth()+1)+' '+p2(d.getHours())+':'+p2(d.getMinutes())+' · '+Math.floor(sec/60)+':'+p2(sec%60)+(r.win?' · Menang: '+r.win:'');
+    t.appendChild(b);t.appendChild(sm);
+    const go=document.createElement('button');go.className='go';go.textContent='▶ Tonton';go.onclick=()=>{rpLoadBuf(r.bytes);};
+    const del=document.createElement('button');del.textContent='Hapus';del.onclick=async()=>{try{await RPDB.del(r.id);}catch(e){}rpRenderList();};
+    row.appendChild(t);row.appendChild(go);row.appendChild(del);box.appendChild(row);
+  });
+}
 if(RPM){
   document.body.classList.add('rp');$('rpLoad').classList.add('show');
-  $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);e.target.value='';});   /* kosongkan supaya file yang sama bisa dipilih lagi */
-  $('rpOpen').addEventListener('click',()=>$('rpFile').click());   /* buka file manager kapan saja, juga saat replay sedang diputar */
+  $('rpFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);e.target.value='';});
   ['dragover','drop'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();if(t==='drop'){const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)f.arrayBuffer().then(rpLoadBuf);}}));
-  window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.dwReplay)rpLoadBuf(e.data.dwReplay);});
-  if(window.opener){
-    const ping=()=>{if(RP.ready)return;try{window.opener.postMessage({dwReplayReady:1},location.origin);}catch(_){}};
-    ping();const pt=setInterval(()=>{if(RP.ready)clearInterval(pt);else ping();},1000);
-  }else $('rpMsg').textContent='Buka file replay yang kamu unduh dari game.';
+  const hid=parseInt((location.hash||'').slice(1),10);
+  (async()=>{
+    if(hid){try{const r=await RPDB.get(hid);if(r){rpLoadBuf(r.bytes);return;}}catch(e){}}
+    rpRenderList();
+  })();
   $('rpPlay').addEventListener('click',rpToggle);
   $('rpSpd').addEventListener('click',()=>{RP.spd=RP.spd===1?2:(RP.spd===2?0.5:1);$('rpSpd').textContent=RP.spd+'x';});
   $('rpCam').addEventListener('click',rpCamNext);
+  $('rpOpen').addEventListener('click',()=>{RP.play=false;$('rpErr').textContent='';$('rpLoad').classList.add('show');rpRenderList();});   /* kembali ke daftar replay */
   $('rpSeek').addEventListener('pointerdown',()=>{RP.drag=true;});
   window.addEventListener('pointerup',()=>{RP.drag=false;});
   $('rpSeek').addEventListener('input',e=>{if(RP.ready)rpSeek(+e.target.value/1000*RP.d.dur);});
-  ['keydown'].forEach(t=>$('rpSeek').addEventListener(t,e=>e.stopPropagation()));
+  $('rpSeek').addEventListener('keydown',e=>e.stopPropagation());
   $('rpBar').addEventListener('pointerdown',e=>e.stopPropagation());
 }
 
@@ -6286,35 +6313,30 @@ function onDuel(m){
   if(m.st==='over'&&m.last){duelBig(m.last.win+' menang!',m.last.w>1?m.last.w+'x beruntun':'',2600);if(m.last.names&&m.last.names.indexOf(me.name)>=0)sfx.fanfare&&sfx.fanfare();}
 }
 /* ---------- replay pertandingan (sisi pemain) ----------
-   Server merekam data pertandingan (bukan video). Setelah ronde selesai klien meminta replay-nya (gzip, puluhan KB),
-   lalu bisa diputar ulang di halaman /replay atau diunduh sebagai file .dwreplay. Hanya satu replay terakhir, hanya di memori. */
-let rpBytes=null,rpMeta=null,rpWin=null;
-function rpClear(){rpBytes=null;rpMeta=null;$('recBox').classList.remove('show');}
-function rpReceive(m){
+   Server merekam data pertandingan (bukan video). Setelah ronde selesai klien meminta replay-nya (gzip, puluhan KB) lalu menyimpannya otomatis
+   di browser (IndexedDB), maksimal 3 replay terakhir. Ditonton di halaman /replay. Tidak ada yang disimpan di server. */
+const RP_KEEP=3;
+const RPDB={
+  open(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error('no idb'));const q=indexedDB.open('dw_replays',1);q.onupgradeneeded=()=>q.result.createObjectStore('r',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});},
+  async all(){const db=await this.open();return new Promise((res,rej)=>{const r=db.transaction('r').objectStore('r').getAll();r.onsuccess=()=>res((r.result||[]).sort((a,b)=>b.id-a.id));r.onerror=()=>rej(r.error);});},
+  async get(id){const db=await this.open();return new Promise((res,rej)=>{const r=db.transaction('r').objectStore('r').get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});},
+  async put(rec){const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('r','readwrite');t.objectStore('r').put(rec);t.oncomplete=res;t.onerror=()=>rej(t.error);});const all=await this.all();for(const o of all.slice(RP_KEEP))await this.del(o.id);},
+  async del(id){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('r','readwrite');t.objectStore('r').delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error);});}
+};
+let rpLastId=0;
+async function rpReceive(m){
   if(m.none||!m.z)return;
-  try{const bin=atob(m.z),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);rpBytes=u;rpMeta={dur:m.dur|0,at:m.at|0};}catch(e){return;}
-  const sec=Math.round(rpMeta.dur/1000),p2=n=>String(n).padStart(2,'0');
-  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' · '+Math.max(1,Math.round(rpBytes.length/1024))+' KB';
+  try{
+    const bin=atob(m.z),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    const rec={id:m.at||Date.now(),at:m.at||Date.now(),dur:m.dur|0,title:m.title||'Duel',win:m.win||'',room:roomInfo.name||'',size:u.length,bytes:u.buffer};
+    await RPDB.put(rec);rpLastId=rec.id;
+  }catch(e){toast('Replay tidak bisa disimpan di browser ini',3);return;}
+  const sec=Math.round((m.dur|0)/1000),p2=n=>String(n).padStart(2,'0');
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60);
   $('recBox').classList.add('show');
 }
-$('recPlay').addEventListener('click',()=>{
-  if(!rpBytes)return;
-  const w=window.open('/replay','_blank');
-  if(!w){toast('Izinkan popup untuk memutar replay, atau pakai tombol Unduh',3.2);return;}
-  rpWin=w;
-});
-window.addEventListener('message',e=>{
-  if(e.origin!==location.origin||!e.data||!e.data.dwReplayReady||!rpBytes||e.source!==rpWin)return;
-  e.source.postMessage({dwReplay:rpBytes.buffer.slice(rpBytes.byteOffset,rpBytes.byteOffset+rpBytes.byteLength)},location.origin);
-});
-$('recGo').addEventListener('click',()=>{
-  if(!rpBytes)return;
-  const d=new Date(),p2=n=>String(n).padStart(2,'0'),nm=String(roomInfo.name||'duel').replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,30);
-  const url=URL.createObjectURL(new Blob([rpBytes],{type:'application/octet-stream'}));
-  const a=document.createElement('a');a.href=url;a.download='digital-war-'+nm+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.dwreplay';
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
-});
-$('recX').addEventListener('click',rpClear);
+$('recPlay').addEventListener('click',()=>{if(rpLastId)window.open('/replay#'+rpLastId,'_blank');});
+$('recX').addEventListener('click',()=>$('recBox').classList.remove('show'));
 $('recBox').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ---------- catatan jaringan saat bertarung di ring ---------- */
 const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
@@ -6608,7 +6630,7 @@ function frame(now){
 }
 document.querySelectorAll('[data-ico]').forEach(el=>{el.innerHTML=svg(el.dataset.ico);});
 cam.fov=cam.baseFov||50;camera.fov=cam.fov;
-window.__dw={lionCv,mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
+window.__dw={RPDB,lionCv,mobs:()=>mobs,sfx,aiming:()=>aiming,fps:()=>fps,forts,sols,orbs,houses,inCave:()=>inCave,chest:()=>chest,ammo:()=>ammo,sleeping:()=>sleeping,eagleCv,pos,others,slots,me:()=>me,castSlot,doAttack,cam};
 requestAnimationFrame(frame);
 })();
 </script>
