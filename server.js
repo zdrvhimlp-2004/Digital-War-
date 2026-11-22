@@ -3310,7 +3310,7 @@ body.cine #setBox{display:none!important}
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
 <div id="cine"><button id="cineSkip">Lewati &raquo;</button><div id="cineBox"><b id="cineName"></b><p id="cineTxt"></p><small id="cineHint">Ketuk untuk lanjut</small></div></div>
 <div id="prompt" class="pill"><span class="key">E</span><span id="ptxt">Buka pintu</span></div>
-<div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS · Enter chat · E aksi · T emote · Tab skor</div>
+<div id="hint" class="pill hud">WASD gerak · Shift lari · Spasi lompat/naik · V selam · J serang · K tahan · 1-5 teknik (bidik dulu) · B buku · C FPS (mouse terkunci: klik kiri serang, klik kanan tahan, Esc lepas) · Enter chat · E aksi · T emote · Tab skor</div>
 <div id="joyBase"></div><div id="joyKnob"></div>
 <div id="ko"><h2>KO!</h2><p id="koTxt"></p></div>
 
@@ -4477,6 +4477,11 @@ $('sbBtn').addEventListener('click',()=>{sbOn=!sbOn;$('board').classList.toggle(
 const joy={id:null,cx:0,cy:0,x:0,y:0},look={id:null,lx:0,ly:0};
 canvas.addEventListener('pointerdown',e=>{
   if(!started)return;initAudio();
+  if(e.pointerType==='mouse'&&fps&&FINE){   /* FPS di PC: mouse terkunci */
+    if(!plLocked()){if(!modalOpen&&!bookOpen&&!chatOpen&&!emoOpen)plRequest();return;}   /* klik pertama hanya mengunci */
+    if(e.button===2){guardLatch=false;setGuard(true);}else if(e.button===0)doAttack();
+    return;
+  }
   if(e.pointerType==='mouse'){look.id=e.pointerId;look.lx=e.clientX;look.ly=e.clientY;look.sx=e.clientX;look.sy=e.clientY;}
   else if(e.clientX<innerWidth*0.5&&joy.id===null){joy.id=e.pointerId;joy.cx=e.clientX;joy.cy=e.clientY;joy.x=joy.y=0;const b=$('joyBase'),k=$('joyKnob');b.style.display=k.style.display='block';b.style.left=k.style.left=e.clientX+'px';b.style.top=k.style.top=e.clientY+'px';}
   else if(look.id===null){look.id=e.pointerId;look.lx=e.clientX;look.ly=e.clientY;}
@@ -5081,8 +5086,24 @@ $('micBtn').addEventListener('pointerdown',e=>e.stopPropagation());$('spkBtn').a
 /* ---------- kamera FPS ---------- */
 function setFps(on){
   fps=!!on;if(fps)cancelAim();$('camBtn').classList.toggle('active',fps);$('xhair').classList.toggle('show',fps&&started);
-  toast(fps?'Kamera FPS (tekan C untuk kembali)':'Kamera orang ketiga',1.4);
+  if(fps)plRequest();else plRelease();
+  toast(fps?(FINE?'Kamera FPS: mouse terkunci. Klik kiri serang, klik kanan tahan, Esc lepas, C kembali':'Kamera FPS (tekan C untuk kembali)'):'Kamera orang ketiga',fps&&FINE?3:1.4);
 }
+/* ---------- kunci mouse saat FPS (hanya PC) ----------
+   Pointer Lock: kursor disembunyikan dan terkunci, arah pandang mengikuti gerak mouse tanpa menahan klik.
+   Klik kiri = serang, klik kanan = tahan. Esc melepas kunci; klik layar sekali untuk mengunci lagi. Terlepas otomatis saat buku, chat, atau menu dibuka. */
+const FINE=!!(window.matchMedia&&matchMedia('(pointer:fine)').matches)&&!RPM;
+function plLocked(){return document.pointerLockElement===canvas;}
+function plRequest(){if(!FINE||!fps||!started)return;try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{});}catch(e){}}
+function plRelease(){try{if(plLocked())document.exitPointerLock();}catch(e){}}
+window.addEventListener('mousemove',e=>{
+  if(!plLocked()||!fps)return;
+  const sn=(typeof SET!=='undefined'&&SET.sens>0)?SET.sens:1;
+  cam.yawT-=e.movementX*0.0042*sn;fpsPitch=clamp(fpsPitch-e.movementY*0.0032*sn,-1.3,1.3);
+});
+document.addEventListener('pointerlockchange',()=>{if(!plLocked()&&fps&&started&&FINE){if(guarding)setGuard(false);if(!modalOpen&&!bookOpen&&!chatOpen)toast('Klik layar untuk mengunci mouse lagi',2);}});
+canvas.addEventListener('contextmenu',e=>{if(fps&&FINE)e.preventDefault();});
+['mouseup','pointerup'].forEach(t=>window.addEventListener(t,e=>{if(e.button===2&&fps&&FINE&&guarding)setGuard(false);},true));   /* klik kanan dilepas: tahan mati */
 $('camBtn').addEventListener('click',()=>setFps(!fps));$('camBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 $('aimFire').addEventListener('click',fireAim);$('aimCancel').addEventListener('click',cancelAim);
 $('aimFire').addEventListener('pointerdown',e=>e.stopPropagation());$('aimCancel').addEventListener('pointerdown',e=>e.stopPropagation());
@@ -5795,6 +5816,7 @@ function occludes(h){
 function update(dt){
   tAll+=dt;
   if(RPM)rpStep(dt);
+  if(plLocked()&&(!fps||modalOpen||bookOpen||chatOpen||emoOpen||$('leaveBox').classList.contains('show')))plRelease();
   if(intro)updIntro(dt);
   updUiHide();
   updHitboxes(dt);

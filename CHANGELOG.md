@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Kunci mouse saat FPS di PC** (Pointer Lock): masuk FPS (tombol C atau ikon mata) langsung mengunci mouse, arah pandang mengikuti gerak mouse tanpa menahan klik. Klik kiri = serang, klik kanan = tahan, Esc melepas, klik layar sekali untuk mengunci lagi. Terlepas otomatis saat buku, chat, atau menu dibuka dan saat keluar FPS. HP tidak berubah.
 - **Replay tersimpan otomatis di browser** (IndexedDB), maksimal 3 terakhir. Setelah duel muncul tombol "Unduh replay" di kanan atas: sekali unduh (atau tekan ×) tombolnya hilang. Halaman `/replay` menampilkan daftar (judul, waktu, durasi, pemenang) dengan tombol Tonton dan Hapus; File `.dwreplay` lama tetap bisa dibuka lewat "Buka file replay". Tersimpan di browser perangkat itu saja, bukan di server.
 - **Halaman replay bisa buka file lewat file manager**: tombol "Buka file replay" di layar awal dan tombol "Buka file" di bilah kontrol (saat replay sedang diputar), selain seret file. Perbaikan: halaman replay tidak lagi meminta layar penuh otomatis, karena itu menghabiskan izin interaksi browser sehingga file manager tidak mau terbuka.
 - **Tombol keluar room** (ikon pintu di kolom kiri, dengan konfirmasi) dan **lanjut pertandingan**: petarung yang keluar atau terputus saat duel ditahan kebal di arena 45 detik. Bila membuka link room yang sama dalam 60 detik, game langsung masuk tanpa layar nama dan melanjutkan dari posisi dan darah terakhir. Bila terlambat, ia dianggap keluar (kalah).
