@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 16;
+const TECH_VERSION = 17;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -128,9 +128,10 @@ const DEFAULT_TECHS = [
   { code: '4828', name: 'Pedang Putar Raksasa', kind: 'spin', color: '#9fd8ff', damage: 35, cd: 30, dur: 3, radius: 6 },
   { code: '5317', name: 'Pukul Ke Langit', kind: 'launch', color: '#ffb02e', damage: 60, cd: 20, range: 4.2, lift: 60 },
   { code: '3939', name: 'Lempar Beruang Marah', kind: 'bear', color: '#8b5a2b', damage: 35, cd: 30, dur: 12, speed: 8, hp: 150 },
+  { code: '9111', name: 'Lempar TNT', kind: 'tnt', color: '#e0402a', damage: 80, cd: 18, radius: 5, fuse: 3 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 6 }
 ];
-const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face', 'meteor', 'spin', 'launch', 'ring', 'bear'];
+const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face', 'meteor', 'spin', 'launch', 'ring', 'bear', 'tnt'];
 
 /* ---- tinggi tanah (salinan fungsi di client, untuk ledakan peluru di tanah) ---- */
 function hash2(x, y) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
@@ -232,6 +233,7 @@ function loadDB() {
         for (const d of DEFAULT_TECHS) if (['4828', '5317'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       }
       if (ver < 16) for (const d of DEFAULT_TECHS) if (d.code === '3939' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 17) for (const d of DEFAULT_TECHS) if (d.code === '9111' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -324,6 +326,8 @@ function sanitizeTech(t) {
     out.range = num(t.range, 10, 120, 60);
   } else if (kind === 'lion') {
     out.damage = num(t.damage, 1, 80, 25); out.count = Math.round(num(t.count, 1, 2, 1)); out.dur = num(t.dur, 3, 40, 15); out.speed = num(t.speed, 3, 12, 7); out.hp = Math.round(num(t.hp, 20, 300, 90));
+  } else if (kind === 'tnt') {
+    out.damage = num(t.damage, 1, 200, 80); out.radius = num(t.radius, 2, 12, 5); out.fuse = num(t.fuse, 1, 10, 3);
   } else if (kind === 'bear') {
     out.damage = num(t.damage, 1, 100, 35); out.dur = num(t.dur, 3, 40, 12); out.speed = num(t.speed, 3, 14, 8); out.hp = Math.round(num(t.hp, 20, 400, 150));
   } else if (kind === 'wall') {
@@ -363,6 +367,7 @@ function techDesc(t) {
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
     case 'homing': return t.count + ' bola pengejar sekaligus, ' + t.damage + ' dmg per bola, membelok mengikuti musuh terdekat';
     case 'face': return 'Langsung menghadap ke lawan terdekat (jarak ' + t.range + ' m), termasuk arah atas/bawah';
+    case 'tnt': return 'Lempar TNT ke depan, meledak ' + t.fuse + ' dtk kemudian, radius ' + t.radius + ' m, ' + t.damage + ' dmg';
     case 'bear': return 'Lempar beruang marah ke depan, ' + t.dur + ' dtk mengamuk menyerang siapa saja terdekat (termasuk kamu sendiri), ' + t.damage + ' dmg/cakaran, ' + t.hp + ' HP';
     case 'lion': return 'Panggil ' + t.count + ' singa di darat selama ' + t.dur * MOB_DUR_MUL + ' dtk, ' + t.damage + ' dmg/gigitan, ' + Math.round(t.hp * MOB_HP_MUL) + ' HP';
     case 'wall': return 'Dinding sejauh ' + t.len + ' m di depanmu, tahan ' + t.hp + ' damage atau ' + t.dur + ' dtk, padat tidak tembus pandang, memblokir semua bola & tebasan angin (bisa dilompati)';
@@ -813,6 +818,27 @@ function doCast(room, p, slot, ax, ay, az) {
         room.mobs.push(m);
         broadcast(room, { t: 'mob', id: m.id, o: p.id, k: 'lion', hp, x: r2(m.x), y: r2(m.y), z: r2(m.z), c: m.c });
       }
+      break;
+    }
+    case 'tnt': {   /* TNT dilempar melengkung, mendarat, lalu meledak setelah sumbu habis */
+      const R = tech.radius || 5, fuse = (tech.fuse || 3) * 1000, dmg = tech.damage || 80, pid = p.id;
+      let ex = p.x + fx * 8, ez = p.z + fz * 8;
+      if (room.duel) { const od = Math.hypot(ex - ARENA.x, ez - ARENA.z), lim = ARENA.ringR - 1; if (od > lim) { ex = ARENA.x + (ex - ARENA.x) / od * lim; ez = ARENA.z + (ez - ARENA.z) / od * lim; } }
+      const ey = terrainH(ex, ez), id = projSeq++;
+      broadcast(room, { t: 'tnt', id, x0: r2(p.x + fx), y0: r2(p.y + 1.5), z0: r2(p.z + fz), x1: r2(ex), y1: r2(ey + 0.4), z1: r2(ez), fly: 600, fuse, c: tech.color });
+      room.later.push({ at: t + fuse, fn: () => {
+        const owner = room.players.get(pid) || null;
+        broadcast(room, { t: 'tntx', id, x: r2(ex), y: r2(ey), z: r2(ez), r: R, c: tech.color });
+        ringHitArea(room, ex, ez, R, dmg);
+        for (const w of [...room.walls]) if (Math.hypot(w.x - ex, w.z - ez) < R + w.len / 2) wallDamage(room, w, dmg);
+        for (const v of victims(room)) {
+          if (friendly(pid, v)) continue;
+          const dx = v.x - ex, dz = v.z - ez, d = Math.hypot(dx, dz);
+          if (d > R || Math.abs(v.y - ey) > 3.5) continue;
+          const nx = d > 0.01 ? dx / d : 1, nz = d > 0.01 ? dz / d : 0;
+          hurt(room, v, dmg, owner, nx * 14, nz * 14, { area: true });
+        }
+      } });
       break;
     }
     case 'bear': {   /* beruang dilempar melengkung ke depan, mendarat lalu mengamuk: menyerang siapa saja, termasuk pemiliknya */
@@ -2688,6 +2714,7 @@ const FIELDS={ // kind -> [field,label]
   jump:[['power','Daya lompat'],['cd','Cooldown (dtk)']],
   blink:[['range','Jarak teleport (m)'],['cd','Cooldown (dtk)']],
   face:[['range','Jarak cari lawan (m)'],['cd','Cooldown (dtk)']],
+  tnt:[['damage','Damage ledakan'],['cd','Cooldown (dtk)'],['radius','Radius ledakan'],['fuse','Sumbu (dtk)']],
   bear:[['damage','Damage per cakaran'],['cd','Cooldown (dtk)'],['dur','Durasi mengamuk (dtk)'],['speed','Kecepatan lari'],['hp','HP beruang']],
   lion:[['damage','Damage per gigitan'],['cd','Cooldown (dtk)'],['count','Jumlah singa (maks 2)'],['dur','Durasi (dtk)'],['speed','Kecepatan lari'],['hp','HP singa']],
   homing:[['damage','Damage per bola'],['cd','Cooldown (dtk)'],['count','Jumlah bola'],['life','Lama mengejar (dtk)'],['size','Ukuran bola'],['boom','Radius ledakan'],['turn','Ketajaman belok']]
@@ -3498,7 +3525,7 @@ const ICO={
  bubble:'<circle cx="9" cy="15" r="5"/><circle cx="17" cy="8" r="3"/><circle cx="16" cy="18" r="1.500"/>',
  bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.500 10.900c.700.600 1 1.300 1 2.100h5c0-.800.300-1.500 1-2.100A6 6 0 0 0 12 3z"/>'
 };
-function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO[name==='bear'?'lion':'spark']||ICO.spark)+'</svg>';}
+function svg(name,color,cls){return '<svg class="'+(cls||'svgi')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'+(color?' style="color:'+color+'"':'')+'>'+(ICO[name]||ICO[({bear:'lion',tnt:'trap'})[name]||'spark']||ICO.spark)+'</svg>';}
 function kdHtml(k,d){return svg('sword',null,'kdi')+' '+k+'&nbsp;&nbsp;'+svg('dead',null,'kdi')+' '+d;}
 
 
@@ -4609,7 +4636,7 @@ let wantFs=false;
 })();
 
 /* ---------- tameng, buku, elang, ranjau, sinar ---------- */
-function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO[name==='bear'?'lion':'spark']||ICO.spark)+'</svg>');return t;}
+function iconTex(name,color){const c=document.createElement('canvas');c.width=c.height=64;const t=new THREE.CanvasTexture(c);const im=new Image();im.onload=()=>{c.getContext('2d').drawImage(im,4,4,56,56);t.needsUpdate=true;};im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICO[name]||ICO[({bear:'lion',tnt:'trap'})[name]||'spark']||ICO.spark)+'</svg>');return t;}
 const guardMat=new THREE.SpriteMaterial({map:iconTex('shield','#6cd4ff'),depthTest:false,transparent:true,fog:false});
 let myGuardSp=null;
 /* tangan FPS: pixel art satu gaya dengan sprite karakter */
@@ -4641,7 +4668,7 @@ function setGuard(on,keep){
   guarding=on;$('btnGuard').classList.toggle('on',on);netSend({t:'guard',on});if(on)sfx.shield();
 }
 /* buku */
-const BOOK_CATS=[['all','Semua',null],['atk','Serangan',['bolt','orb','beam','homing']],['boom','Ledakan',['nova','slam','trap']],['sum','Pemanggil',['summon','lion','bear','ride']],['def','Pertahanan',['heal','regen','shield','wall']],['move','Gerak',['haste','dash','jump','blink','face']]];
+const BOOK_CATS=[['all','Semua',null],['atk','Serangan',['bolt','orb','beam','homing']],['boom','Ledakan',['nova','slam','trap','tnt']],['sum','Pemanggil',['summon','lion','bear','ride']],['def','Pertahanan',['heal','regen','shield','wall']],['move','Gerak',['haste','dash','jump','blink','face']]];
 let bookCat='all';
 function bookList(){const c=BOOK_CATS.find(x=>x[0]===bookCat);return !c||!c[2]?bookData:bookData.filter(t=>c[2].includes(t.kind));}
 function renderBookTabs(){
@@ -5556,6 +5583,8 @@ function onMsg(m){
     case 'ms':m.m.forEach(r=>{const o=mobs.get(r[0]);if(!o)return;o.tx=r[1];o.ty=r[2];o.tz=r[3];o.fx=r[4];o.fz=r[5];if(r[6])o.atkT=0.3;});break;
     case 'trap':addTrap(m);break;
     case 'trapx':removeTrap(m.id,m.quiet?null:m);break;
+    case 'tnt':addTnt(m);break;
+    case 'tntx':removeTnt(m.id,m);break;
     case 'wall':addWall(m);break;
     case 'wallx':removeWall(m.id,!!m.broke);break;
     case 'wallh':{const w=walls.get(m.id);if(w){w.hp=m.hp;w.mesh.material.opacity=0.45+0.4*Math.max(0,m.hp/m.max);}break;}
@@ -5609,6 +5638,27 @@ function removeRing(id,i,sx,sz){
   if(w.segs.every(q=>!q.alive))cwalls.delete(id);
 }
 function hitRing(id,i,hp){const w=cwalls.get(id);if(!w)return;const sg=w.segs[i];if(!sg||!sg.alive)return;sg.hp=hp;sg.flash=0.15;burst(sg.x,sg.gy+1.5,sg.z,w.col,6,3);sfxAt('hit',sg.x,sg.z);}
+/* TNT lempar: kotak merah melengkung, berkedip makin cepat sebelum meledak */
+const tnts=new Map(),tntGeo=new THREE.BoxGeometry(0.7,0.9,0.7),tntBandGeo=new THREE.BoxGeometry(0.74,0.16,0.74);
+function addTnt(m){
+  const mat1=new THREE.MeshBasicMaterial({color:0xd8321f}),mat2=new THREE.MeshBasicMaterial({color:0x2a2a2a});
+  const mesh=new THREE.Mesh(tntGeo,mat1);const b1=new THREE.Mesh(tntBandGeo,mat2),b2=b1.clone();b1.position.y=0.25;b2.position.y=-0.25;mesh.add(b1,b2);
+  mesh.position.set(m.x0,m.y0,m.z0);scene.add(mesh);
+  tnts.set(m.id,{mesh,mat1,mat2,m,t:0});sfxAt('whoosh',m.x0,m.z0);
+}
+function removeTnt(id,m){
+  const o=tnts.get(id);if(o){scene.remove(o.mesh);o.mat1.dispose();o.mat2.dispose();tnts.delete(id);}
+  if(m)explodeFx(m.x,m.y,m.z,m.r||5,m.c||'#e0402a',1);
+}
+function updTnts(dt){
+  for(const o of tnts.values()){
+    const m=o.m;o.t+=dt*1000;const k=Math.min(1,o.t/m.fly);
+    o.mesh.position.set(m.x0+(m.x1-m.x0)*k,m.y0+(m.y1-m.y0)*k+Math.sin(k*Math.PI)*3.5,m.z0+(m.z1-m.z0)*k);
+    o.mesh.rotation.x=k*9;o.mesh.rotation.z=k*5;if(k>=1){o.mesh.rotation.x=o.mesh.rotation.z=0;}
+    const left=m.fuse-o.t,rate=left<1000?18:(left<2000?10:5);
+    o.mat1.color.setHex(Math.floor(o.t/1000*rate)%2?0xffffff:0xd8321f);
+  }
+}
 function updCWalls(dt){
   for(const [id,w] of cwalls){
     w.t+=dt;const rise=Math.min(1,w.t/0.25),left=w.dur-w.t;
@@ -6126,7 +6176,7 @@ function update(dt){
     humT-=dt;if(humT<=0){humT=0.75;let nd=1e9;orbs.forEach(o=>{nd=Math.min(nd,Math.hypot(o.x-pos.x,o.y-pos.y,o.z-pos.z));});if(nd<SFX_RANGE){SV=distVol(nd,SFX_RANGE);sfx.orbHum();SV=1;}}
   }
   if(peers.size){peers.forEach((pe,id)=>{const o=others.get(id);let v=0;if(o&&!o.dead&&((o.x>1000)===inCave)){v=distVol(Math.hypot(o.x-pos.x,(o.y-pos.y)*0.5,o.z-pos.z),VOICE_RANGE);}pe.el.volume=clamp(v,0,1);});}
-  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updSpins(dt);updCWalls(dt);updWalls(dt);updForts(dt);updCamps(dt);updAim();
+  updOthers(dt,rgt,fwd);updMobs(dt,rgt,fwd);updTraps(dt);updBeams(dt);updSols(dt,rgt,fwd);updOrbs(dt);updSlashes(dt);updSpins(dt);updCWalls(dt);updTnts(dt);updWalls(dt);updForts(dt);updCamps(dt);updAim();
   if(capState){const kk=clamp(1-(capState.end-performance.now())/capState.ms,0,1);$('capFill').style.width=(kk*100)+'%';}
   if(chest){chest.vel+=(-70*(chest.ang-chest.target)-9*chest.vel)*dt;chest.ang+=chest.vel*dt;chest.pivot.rotation.x=-chest.ang;chest.glow.material.opacity=chestOpen?0.15:0.5+0.15*Math.sin(tAll*3);}
   if(inCave){updBats(dt,rgt);for(const c of crystals){c.mat.emissiveIntensity=0.75+0.35*Math.sin(tAll*1.6+c.ph);c.glow.material.opacity=0.5+0.2*Math.sin(tAll*1.6+c.ph);}}
