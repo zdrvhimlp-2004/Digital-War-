@@ -3037,7 +3037,7 @@ body.playing #slots{display:flex}
 #bkTabs button{flex:none;border:2px solid #8a5e38;background:#5a3b21;color:#f3e2b8;border-radius:999px;padding:5px 13px;font:600 12.5px Poppins,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
 #bkTabs button.on{background:#f3e2b8;color:#4a2c12;border-color:#f3e2b8}
 #bkPages{display:flex;flex:1;min-height:0;border-radius:4px;overflow:hidden;box-shadow:0 3px 0 #d3c08c,0 6px 0 #bda877,0 9px 0 #a8935f,0 14px 18px rgba(0,0,0,.55)}
-.pg{flex:1;min-width:0;padding:14px 16px 28px;color:#3a2a14;font-family:Georgia,"Times New Roman",serif;overflow:hidden;position:relative}
+.pg{flex:1;min-width:0;padding:14px 16px 14px;color:#3a2a14;font-family:Georgia,"Times New Roman",serif;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;position:relative}
 .pg.left{background:linear-gradient(to right,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
 .pg.right{background:linear-gradient(to left,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
 .spine{width:5px;background:linear-gradient(to right,#a89462,#6f5c36,#a89462)}
@@ -3047,7 +3047,7 @@ body.playing #slots{display:flex}
 .te b{font-size:14px;display:block}
 .te .cd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;letter-spacing:2px;color:#8a1f1f;font-weight:700}
 .te small{display:block;font-size:11px;color:#5b4524;line-height:1.3;font-style:italic}
-.pn{position:absolute;bottom:7px;left:0;right:0;text-align:center;font-size:11px;opacity:.6}
+.pn{text-align:center;font-size:11px;opacity:.6;padding-top:8px}
 .bkb{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:56px;border:0;border-radius:8px;background:rgba(40,25,10,.75);color:#f3e2b8;font-size:16px;cursor:pointer;padding:0;z-index:2}
 #bkPrev{left:-4px}#bkNext{right:-4px}
 #bkX{display:flex;align-items:center;justify-content:center;line-height:0;position:absolute;top:-10px;right:-8px;width:32px;height:32px;border-radius:50%;border:2px solid #f3e2b8;background:#46301a;color:#f3e2b8;font-size:14px;cursor:pointer;padding:0;z-index:3}
