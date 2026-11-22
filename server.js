@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 14;
+const TECH_VERSION = 15;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -102,8 +102,8 @@ const DEFAULT_TECHS = [
   { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   color: '#ff9a3c', damage: 14, cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
   { code: '858', name: 'Bola Biru',      kind: 'orb',    color: '#2f8fff', damage: 150, cd: 20,   speed: 11, life: 4, radius: 5.5 },
   { code: '519', name: 'Overflow Nova',  kind: 'nova',   color: '#ffd84d', damage: 30, cd: 12,   radius: 6 },
-  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   color: '#aee6ff', damage: 8,  cd: 20,   radius: 5.5, stun: 2 },
-  { code: '3735', name: 'Laser Beam',    kind: 'beam',   color: '#ff4de1', damage: 30, cd: 12,   range: 28 },
+  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   color: '#aee6ff', damage: 8,  cd: 20,   radius: 11, stun: 2 },
+  { code: '3735', name: 'Laser Beam',    kind: 'beam',   color: '#ff4de1', damage: 30, cd: 12,   range: 45, w: 3 },
   { code: '2718', name: 'Stack Overflow', kind: 'slam',  color: '#ffb84d', damage: 40, cd: 16,   radius: 5 },
   { code: '1618', name: 'Landmine',      kind: 'trap',   color: '#ff6a4d', damage: 35, cd: 12,   radius: 2.2, stun: 0.6 },
   { code: '481', name: 'Elang Digital',  kind: 'summon', color: '#ffd9a0', damage: 9,  cd: 28,   count: 1, dur: 12, speed: 12 },
@@ -125,6 +125,8 @@ const DEFAULT_TECHS = [
   { code: '5316', name: 'Cungkil', kind: 'launch', color: '#ffd24d', damage: 40, cd: 16, range: 4.2, lift: 34 },
   { code: '2159', name: 'Tembok Pelindung', kind: 'ring', color: '#9fb4d0', cd: 24, dur: 300, radius: 4, hp: 100 },
   { code: '2160', name: 'Benteng Raksasa', kind: 'ring', color: '#8fa8ff', cd: 24, dur: 900, radius: 20, hp: 200, h: 4.5 },
+  { code: '4828', name: 'Pedang Putar Raksasa', kind: 'spin', color: '#9fd8ff', damage: 35, cd: 30, dur: 3, radius: 6 },
+  { code: '5317', name: 'Pukul Ke Langit', kind: 'launch', color: '#ffb02e', damage: 60, cd: 20, range: 4.2, lift: 60 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 6 }
 ];
 const TECH_KINDS = ['bolt', 'nova', 'heal', 'shield', 'dash', 'summon', 'slam', 'trap', 'beam', 'regen', 'haste', 'ride', 'orb', 'wall', 'jump', 'blink', 'homing', 'lion', 'face', 'meteor', 'spin', 'launch', 'ring'];
@@ -221,6 +223,13 @@ function loadDB() {
       if (ver < 12) for (const d of DEFAULT_TECHS) if (['8182', '4141', '4343'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 13) for (const d of DEFAULT_TECHS) if (['6193', '4827', '5316', '2159'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       if (ver < 14) for (const d of DEFAULT_TECHS) if (d.code === '2160' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      if (ver < 15) {   /* Freeze Frame radius 2x, Laser Beam lebih panjang dan lebar, teknik baru */
+        for (const t of j.techniques) {
+          if (t.code === '5551' && Number(t.radius) === 5.5) t.radius = 11;
+          if (t.code === '3735' && Number(t.range) === 28) { t.range = 45; if (t.w == null) t.w = 3; }
+        }
+        for (const d of DEFAULT_TECHS) if (['4828', '5317'].includes(d.code) && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
+      }
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
@@ -290,7 +299,7 @@ function sanitizeTech(t) {
   } else if (kind === 'trap') {
     out.damage = num(t.damage, 0, 100, 35); out.radius = num(t.radius, 1, 5, 2.2);
   } else if (kind === 'beam') {
-    out.damage = num(t.damage, 0, 100, 30); out.range = num(t.range, 5, 50, 28);
+    out.damage = num(t.damage, 0, 100, 30); out.range = num(t.range, 5, 50, 28); out.w = num(t.w, 0.5, 8, 1.3);
   } else if (kind === 'regen') {
     out.damage = num(t.damage, 1, MAXHP, 40); out.dur = num(t.dur, 2, 20, 6);
   } else if (kind === 'ride') {
@@ -344,7 +353,7 @@ function techDesc(t) {
     case 'meteor': return 'Loncat tinggi, menghadap bawah, jatuhkan ' + t.count + ' bola cepat ke bawah, ' + t.damage + ' dmg/bola';
     case 'slam': return 'Lompat tinggi lalu hantam, radius ' + t.radius + ', ' + t.damage + ' dmg';
     case 'trap': return 'Ranjau tak terlihat musuh, tidak hilang sampai meledak, ' + t.damage + ' dmg' + st;
-    case 'beam': return 'Sinar tembus ' + t.range + ' m, ' + t.damage + ' dmg' + st;
+    case 'beam': return 'Sinar tembus ' + t.range + ' m, lebar ' + (t.w || 1.3) + ' m, ' + t.damage + ' dmg' + st;
     case 'regen': return 'Pulih ' + t.damage + ' HP selama ' + t.dur + ' dtk';
     case 'ride': return 'Tunggangi elang terbang ' + RIDE_SECONDS + ' dtk (Lompat naik, Selam turun)';
     case 'orb': return 'Bola biru raksasa radius ' + t.radius + ', ' + t.damage + ' dmg sekali hantam, bisa diarahkan ke atas, bawah, samping';
@@ -897,11 +906,11 @@ function doCast(room, p, slot, ax, ay, az) {
         const tt = ((w.x - p.x) * w.nx + (w.z - p.z) * w.nz) / den;
         if (tt > 0 && tt < len && Math.abs((p.x + fx * tt - w.x) * w.tx + (p.z + fz * tt - w.z) * w.tz) <= w.len / 2 + 0.3) { len = tt; wallDamage(room, w, tech.damage); }
       }
-      broadcast(room, { t: 'fx', k: 'beam', id: p.id, fx: r2(fx), fz: r2(fz), len, c: tech.color });
+      broadcast(room, { t: 'fx', k: 'beam', id: p.id, fx: r2(fx), fz: r2(fz), len, w: tech.w || 1.3, c: tech.color });
       for (const v of victims(room)) {
         if (v === p || friendly(p.id, v)) continue;
         const rx = v.x - p.x, rz = v.z - p.z, along = rx * fx + rz * fz, perp = Math.abs(rx * fz - rz * fx);
-        if (along < 0 || along > len || perp > 1.3 || Math.abs(v.y + 0.9 - (p.y + 1)) > 1.6) continue;
+        if (along < 0 || along > len || perp > (tech.w || 1.3) || Math.abs(v.y + 0.9 - (p.y + 1)) > 1.6) continue;
         hurt(room, v, tech.damage, p, fx * 7, fz * 7, { sx: -fx, sz: -fz, stun: tech.stun || 0 });
       }
       break;
@@ -1646,7 +1655,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
       const cast = (code, d2) => { const a = botAim(bot, A, ai, BALL_SPEED); botCast(room, bot, code, a.ax, a.ay, a.az); };
       if (bot.hp < MAXHP * 0.42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
       else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
-      else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
+      else if (dist < 10.5 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
       else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
       else if (dist > 4 && botReady(bot, '637', t) && Math.random() < (ai.style === 'ranged' ? 0.5 : 0.2)) cast('637');
       else if (bot.hp < MAXHP * 0.35 && dist < 5 && botReady(bot, '2929', t)) botCast(room, bot, '2929', -nx, 0, -nz);   /* kabur dengan teleport */
@@ -2621,7 +2630,7 @@ const FIELDS={ // kind -> [field,label]
   bolt:[['damage','Damage'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama terbang (dtk)'],['count','Jumlah bola'],['spread','Sebaran (rad)'],['size','Ukuran bola'],['boom','Radius ledakan'],['stun','Beku (dtk)']],
   orb:[['damage','Damage (sekali hantam)'],['cd','Cooldown (dtk)'],['speed','Kecepatan'],['life','Lama melaju (dtk)'],['radius','Radius bola']],
   nova:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius'],['stun','Beku (dtk)']],
-  beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['stun','Beku (dtk)']],
+  beam:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Panjang sinar'],['w','Lebar sinar'],['stun','Beku (dtk)']],
   slam:[['damage','Damage'],['cd','Cooldown (dtk)'],['radius','Radius']],
   ring:[['dur','Durasi (dtk)'],['cd','Cooldown (dtk)'],['radius','Radius tembok'],['hp','HP tiap bagian']],
   launch:[['damage','Damage'],['cd','Cooldown (dtk)'],['range','Jangkauan'],['lift','Daya cungkil (tinggi)']],
@@ -5567,7 +5576,7 @@ function onFx(m){
   else if(m.k==='ride'){if(m.id===me.id){rideT=m.dur;ridePw=m.pw;setGuard(false);toast('Naik elang! Lompat = naik, Selam = turun',3);sfx.eagle();}else{const o=others.get(m.id);if(o)o.ride=true;sfxAt('eagle',p.x,p.z);}burst(p.x,p.y+1,p.z,col,14,4);}
   else if(m.k==='rideend'){if(m.id===me.id){rideT=0;}else{const o=others.get(m.id);if(o)o.ride=false;}}
   else if(m.k==='snipe'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,'#ffffff',0.07);burst(p.x+m.fx,p.y+1,p.z+m.fz,'#fff6a0',6,3);sfxAt('snipe',p.x,p.z);}
-  else if(m.k==='beam'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,col);burst(p.x+m.fx,p.y+1,p.z+m.fz,col,8,4);sfxAt('beam',p.x,p.z);}
+  else if(m.k==='beam'){beamFx(p.x,p.y+1.0,p.z,m.fx,m.fz,m.len,col,m.w?m.w*0.7:0.2);burst(p.x+m.fx,p.y+1,p.z+m.fz,col,8,4);sfxAt('beam',p.x,p.z);}
   else if(m.k==='uppercut'){if(m.id===me.id){vy=Math.max(vy,7);grounded=false;jumping=false;attackT=Math.max(attackT,0.32);}for(let i=0;i<12;i++){const a=i/12*Math.PI;emit(p.x+m.fx*Math.sin(a)*2,p.y+0.2+Math.cos(a)*1.4+1.2,p.z+m.fz*Math.sin(a)*2,m.fx*2,3,m.fz*2,0.4,0.6,col,0,0.8,0.3);}sfxAt('swing',p.x,p.z);}
   else if(m.k==='launch'){if(m.id===me.id){vy=m.vy;grounded=false;jumping=false;sq.y=1.4;shake=Math.max(shake,0.4);sfx.jump();}ringFx(p.x,p.y+0.2,p.z,2.4,col);burst(p.x,p.y+0.5,p.z,col,16,6);sfxAt('hit',p.x,p.z);}
   else if(m.k==='spin'){startSpin(m.id,m.dur,m.r,col);burst(p.x,p.y+1,p.z,col,10,4);sfxAt('swing',p.x,p.z);if(m.id===me.id)attackT=Math.max(attackT,0.32);}
