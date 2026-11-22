@@ -323,7 +323,9 @@ function sanitizeTech(t) {
   return out;
 }
 const techByCode = code => DB.techniques.find(t => t.code === code);
-const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, color: t.color, cd: t.cd });
+const CD_MULT = { orb: 1.7, meteor: 1.7 };   /* bola biru besar dan bola api dari atas: cooldown 1.7x lebih lama */
+const effCd = t => Math.round(t.cd * (CD_MULT[t.kind] || 1) * 10) / 10;
+const techPublic = t => ({ code: t.code, name: t.name, kind: t.kind, color: t.color, cd: effCd(t) });
 function techDesc(t) {
   if (t.desc) return t.desc;
   const st = t.stun ? ', beku ' + t.stun + ' dtk' : '';
@@ -747,7 +749,7 @@ function doCast(room, p, slot, ax, ay, az) {
   const t = now();
   if (t < p.stunUntil) return;
   {
-    const cdv = tech.kind === 'face' ? 0 : (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : tech.cd) * (room.tune ? room.tune.cd : 1);   /* Kunci Lawan: tanpa cooldown */   /* dash: cooldown min 3 dtk */
+    const cdv = tech.kind === 'face' ? 0 : (tech.kind === 'dash' ? Math.max(tech.cd, TUNING.dashMinCd) : effCd(tech)) * (room.tune ? room.tune.cd : 1);   /* Kunci Lawan: tanpa cooldown */   /* dash: cooldown min 3 dtk */
     if ((p.cdUntil[code] || 0) > t + 120) return;
     p.cdUntil[code] = t + cdv * 1000;
   }
