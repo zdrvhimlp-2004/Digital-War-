@@ -3,6 +3,7 @@
 Ringkasan fitur dan perbaikan, dari yang terbaru.
 
 ## Terbaru
+- **Ikon tim biru dan merah di duel**: perisai SVG biru (tim kiri) atau merah (tim kanan) muncul di kiri nama petarung di atas kepala (dengan garis tepi nama berwarna tim), di samping namamu di pojok kiri atas, dan di bilah "A VS B" bila diaktifkan di Pengaturan.
 - **Kunci mouse saat FPS di PC** (Pointer Lock): masuk FPS (tombol C atau ikon mata) langsung mengunci mouse, arah pandang mengikuti gerak mouse tanpa menahan klik. Klik kiri = serang, klik kanan = tahan, Esc melepas, klik layar sekali untuk mengunci lagi. Terlepas otomatis saat buku, chat, atau menu dibuka dan saat keluar FPS. HP tidak berubah.
 - **Replay tersimpan otomatis di browser** (IndexedDB), maksimal 3 terakhir. Setelah duel muncul tombol "Unduh replay" di kanan atas: sekali unduh (atau tekan ×) tombolnya hilang. Halaman `/replay` menampilkan daftar (judul, waktu, durasi, pemenang) dengan tombol Tonton dan Hapus; File `.dwreplay` lama tetap bisa dibuka lewat "Buka file replay". Tersimpan di browser perangkat itu saja, bukan di server.
 - **Halaman replay bisa buka file lewat file manager**: tombol "Buka file replay" di layar awal dan tombol "Buka file" di bilah kontrol (saat replay sedang diputar), selain seret file. Perbaikan: halaman replay tidak lagi meminta layar penuh otomatis, karena itu menghabiskan izin interaksi browser sehingga file manager tidak mau terbuka.

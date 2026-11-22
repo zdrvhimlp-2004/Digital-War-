@@ -3127,6 +3127,8 @@ body:not(.train) #trainBox{display:none!important}
 #trainBox label{display:block;margin:5px 0 0}#trainBox label span{float:right;color:#6cd4ff}
 #trainBox input{width:100%;accent-color:#4de1ff;margin:2px 0 0}
 #duelBox .vs{display:inline-flex;align-items:center;gap:10px;background:rgba(8,14,34,.82);border:1px solid rgba(120,190,255,.35);border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#duelBox .vs .tm{width:16px;height:16px;vertical-align:-3px;margin-right:5px;flex:none}
+#hpName .tm{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
 #duelBox .vs i{font-style:normal;color:#ffd84d;font-size:12px}
 #duelBox .vs span.w{color:#6cd4ff;font-weight:600;font-size:11px}
 #duelBox .q{margin-top:5px;display:inline-block;background:rgba(8,14,34,.7);border-radius:12px;padding:4px 12px;font-size:12px;color:#cfe3ff}
@@ -3261,7 +3263,7 @@ body.cine #setBox{display:none!important}
 <div id="hurt"></div>
 <div id="fxScr"><div class="fl" id="fxIce"></div><div class="fl" id="fxShield"></div><div class="fl" id="fxHaste"></div><div class="fl" id="fxRegen"></div><div class="fl" id="fxGuard"></div><div class="fl" id="fxBreak"></div><div class="fl" id="fxRide"></div></div>
 
-<div id="hpBox" class="hud"><div id="hpName"><span id="myName"></span><span id="kd"></span></div><div class="bar"><i id="hpFill"></i></div></div>
+<div id="hpBox" class="hud"><div id="hpName"><span id="myTeam"></span><span id="myName"></span><span id="kd"></span></div><div class="bar"><i id="hpFill"></i></div></div>
 <div id="oxyBox" class="hud"><small><span data-ico="bubble" class="clki"></span> Napas</small><div class="bar"><i id="oxyFill"></i></div></div>
 <canvas id="mini" class="hud" width="192" height="192"></canvas>
 <div id="roomTag" class="pill hud"></div>
@@ -5213,8 +5215,14 @@ function drawLabel(o){
   const c=o.lab.cv.getContext('2d');c.clearRect(0,0,192,44);
   c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';
   const nmT=o.tag?o.name+' #'+o.tag:o.name;
-  let fs=22;while(c.measureText(nmT).width>180&&fs>12){fs--;c.font='bold '+fs+'px sans-serif';}
-  c.lineWidth=5;c.strokeStyle='rgba(20,20,40,.85)';c.strokeText(nmT,96,13);c.fillStyle='#fff';c.fillText(nmT,96,13);
+  const tm=o.team||0,maxW=tm?146:180,cx=tm?112:96;
+  let fs=22;while(c.measureText(nmT).width>maxW&&fs>12){fs--;c.font='bold '+fs+'px sans-serif';}
+  c.lineWidth=5;c.strokeStyle=tm===1?'rgba(20,60,170,.95)':(tm===2?'rgba(170,20,25,.95)':'rgba(20,20,40,.85)');c.strokeText(nmT,cx,13);c.fillStyle='#fff';c.fillText(nmT,cx,13);   /* garis tepi nama mengikuti warna tim */
+  if(tm){   /* ikon perisai tim: biru atau merah, di kiri nama */
+    const w=c.measureText(nmT).width,ix=Math.max(1,cx-w/2-27);
+    c.save();c.translate(ix,-1);c.scale(1.05,1.05);const sp=new Path2D(TEAM_SHIELD);
+    c.lineJoin='round';c.lineWidth=2.6;c.strokeStyle='#fff';c.stroke(sp);c.fillStyle=TEAM_COL[tm];c.fill(sp);c.restore();
+  }
   c.fillStyle='#2b2233';c.fillRect(26,28,140,11);c.fillStyle='#5a1f26';c.fillRect(28,30,136,7);
   c.fillStyle=o.shieldT>0?'#6cd4ff':(o.friend?'#3fe06c':'#ff3b3b');c.fillRect(28,30,Math.round(136*clamp(o.hp/MAXHP,0,1)),7);
   o.lab.tex.needsUpdate=true;
@@ -6294,7 +6302,14 @@ function updArena(dt){
   if(!arenaFires.length)return;arenaFires.forEach((f,i)=>{f.scale.y=1+0.18*Math.sin(tAll*11+i*1.7);f.scale.x=f.scale.z=1+0.08*Math.sin(tAll*9+i);});}
 /* teman satu tim (arena tim): bar HP hijau */
 function isMate(id){if(!duel||!id||id===me.id)return false;const mt=duelMine();if(!mt)return false;const l=mt===1?duel.ta:duel.tb;return !!(l&&l.some(x=>x.id===id));}
-function refreshMates(){others.forEach(o=>{const f=isMate(o.id);if(o.friend!==f){o.friend=f;drawLabel(o);}});mobs.forEach(m=>{const f=m.o===me.id||isMate(m.o);if(m.friend!==f){m.friend=f;drawMobLabel(m);}});}
+/* tim: 1 = biru (kiri arena), 2 = merah (kanan arena) */
+const TEAM_COL={1:'#3b82f6',2:'#ef4444'},TEAM_NAME={1:'Tim biru',2:'Tim merah'},TEAM_SHIELD='M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z';
+function teamIco(t){return t?'<svg class="tm" viewBox="0 0 24 24" aria-label="'+TEAM_NAME[t]+'"><path d="'+TEAM_SHIELD+'" fill="'+TEAM_COL[t]+'" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>':'';}
+function teamOf(id){if(!duel||roomMode!=='duel')return 0;if((duel.ta||[]).some(x=>x.id===id))return 1;if((duel.tb||[]).some(x=>x.id===id))return 2;return 0;}
+function refreshMates(){
+  $('myTeam').innerHTML=teamIco(teamOf(me.id));
+  others.forEach(o=>{const t=teamOf(o.id);if(o.team!==t){o.team=t;drawLabel(o);}});
+  others.forEach(o=>{const f=isMate(o.id);if(o.friend!==f){o.friend=f;drawLabel(o);}});mobs.forEach(m=>{const f=m.o===me.id||isMate(m.o);if(m.friend!==f){m.friend=f;drawMobLabel(m);}});}
 function duelMine(){if(!duel)return 0;const f=l=>(l||[]).some(x=>x.id===me.id&&!x.o);if(f(duel.ta))return 1;if(f(duel.tb))return 2;return 0;}
 function duelCanFight(){return roomMode!=='duel'||(duel&&duel.st==='fight'&&duelMine()>0);}
 let duelWarnT=0;
@@ -6307,7 +6322,7 @@ function renderDuelBox(){
   const el=$('duelBox');if(!duel||roomMode!=='duel'){el.innerHTML='';return;}
   const nm=p=>p?esc(p.name)+(p.w>0?' <span class="w">'+p.w+'x menang</span>':''):'?';
   const side=l=>(l&&l.length?l.map(x=>nm(x)+(x.o?' (kalah)':'')).join(' &amp; '):'?');
-  let h='<div class="vs"><span>'+side(duel.ta)+'</span><i>VS</i><span>'+side(duel.tb)+'</span></div>';
+  let h='<div class="vs"><span>'+teamIco(1)+side(duel.ta)+'</span><i>VS</i><span>'+teamIco(2)+side(duel.tb)+'</span></div>';
   const mine=duelMine();let q='';
   if(mine)q='<span class="me">Kamu bertarung!</span>';
   else{const i=duel.q.findIndex(x=>x.id===me.id);q=i>=0?'Antrianmu: <b>#'+(i+1)+'</b>':'';}
