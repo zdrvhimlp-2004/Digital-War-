@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digital War - Preview Teknik</title>
+<style>
+:root{--bg:#070d1c;--card:#0d1630;--line:#1e3566;--tx:#eaf2ff;--mut:#9fb3d6;--acc:#4de1ff;--gold:#ffd84d}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(ellipse at 50% 0,#0d2347,var(--bg) 60%);color:var(--tx);font-family:"Poppins","Segoe UI","Helvetica Neue",-apple-system,BlinkMacSystemFont,Roboto,sans-serif;min-height:100%}
+body{padding:0 16px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+header{padding:34px 0 10px;text-align:center}
+h1{margin:0;font-size:clamp(26px,5vw,40px);letter-spacing:.5px;text-shadow:0 0 18px rgba(77,225,255,.35)}
+header p{margin:8px auto 0;max-width:640px;color:var(--mut);font-size:15px;line-height:1.55}
+h2{font-size:20px;margin:34px 0 12px;color:var(--acc)}
+.tut{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 14px 16px;position:relative}
+.step b{display:block;font-size:14px;margin:4px 0 6px}
+.step p{margin:0;font-size:13px;line-height:1.5;color:var(--mut)}
+.num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+.keys{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--mut)}
+.keys span b{color:var(--tx)}
+kbd{display:inline-block;min-width:24px;padding:2px 7px;border-radius:7px;border:1px solid #38568f;border-bottom-width:3px;background:#0a1226;color:#fff;font:600 12px ui-monospace,Menlo,Consolas,monospace;text-align:center}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:999px;padding:8px 16px;font:600 13px inherit;font-family:inherit;cursor:pointer}
+.tab.on{background:linear-gradient(135deg,#2a7bff,#4de1ff);color:#04101f;border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.card canvas{width:100%;aspect-ratio:16/9;display:block;background:#0a1430}
+.cb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.ct{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ct h3{margin:0;font-size:16px;flex:1;min-width:0}
+.code{font:700 13px ui-monospace,Menlo,Consolas,monospace;background:#08102a;border:1px solid #2a3f78;border-radius:8px;padding:3px 9px;color:var(--gold);letter-spacing:2px}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:#0a1226;border:1px solid #243a70;color:var(--mut)}
+.chip.aim{color:#9dffb0;border-color:#2c6a45}
+.desc{font-size:13px;line-height:1.5;color:#c9d8f3;margin:0}
+.how{margin:0;padding:10px 12px;background:#08112a;border-radius:12px;border:1px dashed #2a4278;font-size:12.5px;line-height:1.55;color:var(--mut)}
+.how b{color:var(--gold)}
+.how ol{margin:4px 0 0;padding-left:18px}
+.tip{font-size:12px;color:#7fe3a8;line-height:1.45}
+.pause{position:absolute;right:8px;top:8px}
+.note{margin-top:28px;font-size:12px;color:var(--mut);text-align:center;line-height:1.6}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Preview Teknik</h1>
+  <p>Lihat seperti apa tiap teknik kelihatan di depan musuh, kapan dipakai, dan cara memakainya di Digital War. Pemain di kiri (biru), musuh di kanan (merah).</p>
+</header>
+
+<h2>Tutorial singkat</h2>
+<div class="tut">
+  <div class="step"><div class="num">1</div><b>Ambil kode di buku</b><p>Buka <b>Buku teknik</b> (tombol buku di pojok atas, atau tekan <kbd>B</kbd>). Tiap teknik punya kode angka, misalnya <b>637</b> untuk Byte Bolt.</p></div>
+  <div class="step"><div class="num">2</div><b>Pasang ke slot</b><p>Ketuk slot kosong (<b>+</b>) di layar atau tekan angkanya, ketik kode, lalu <b>Pasang</b>. Ada 5 slot, jadi pilih teknik yang saling melengkapi.</p></div>
+  <div class="step"><div class="num">3</div><b>Pakai di depan musuh</b><p>Tekan <kbd>1</kbd>-<kbd>5</kbd> atau ketuk slotnya. Teknik <span style="color:#9dffb0">bidik</span> (bola, sinar, bola biru, hantam) menunggu kamu mengarahkan kamera, lalu tekan sekali lagi atau <b>Tembak</b>.</p></div>
+  <div class="step"><div class="num">4</div><b>Perhatikan cooldown</b><p>Setelah dipakai slot menggelap sampai siap lagi. Pakai teknik cepat (cooldown pendek) untuk menekan, simpan yang besar untuk saat musuh lengah.</p></div>
+  <div class="step"><div class="num">5</div><b>Kombinasikan</b><p>Contoh: <b>Kunci Lawan</b> lalu <b>Bola Biru</b>; <b>Tembok</b> untuk bertahan lalu <b>Meteor Drop</b>; <b>Beku</b> lalu <b>Cungkil</b>. Di Arena Duel teknik hanya bisa dipakai saat giliranmu bertarung.</p></div>
+</div>
+<div class="keys">
+  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <b>gerak</b></span>
+  <span><kbd>Shift</kbd> <b>lari</b></span>
+  <span><kbd>Spasi</kbd> <b>lompat</b></span>
+  <span><kbd>J</kbd> <b>serang</b></span>
+  <span><kbd>K</kbd> <b>tahan (perisai)</b></span>
+  <span><kbd>1</kbd>-<kbd>5</kbd> <b>teknik</b></span>
+  <span><kbd>B</kbd> <b>buku</b></span>
+  <span><kbd>C</kbd> <b>kamera FPS</b></span>
+  <span><kbd>E</kbd> <b>aksi</b></span>
+  <span><kbd>V</kbd> <b>selam / turun</b></span>
+  <span><kbd>T</kbd> <b>emote</b></span>
+  <span><kbd>Enter</kbd> <b>chat</b></span>
+</div>
+
+<h2>Semua teknik</h2>
+<div class="tabs" id="tabs"></div>
+<div class="grid" id="grid"></div>
+<p class="note">Angka (damage, cooldown, durasi) adalah nilai bawaan game. Admin bisa mengubahnya, jadi di room tertentu bisa berbeda.<br>Animasi ini hanya ilustrasi, bukan rekaman game.</p>
+</div>
+
+<script>
+/* ===== data teknik (nilai bawaan game) ===== */
+var CATS=[['all','Semua'],['atk','Serangan'],['boom','Ledakan & jebakan'],['sum','Pemanggil'],['def','Pertahanan & pulih'],['move','Gerak']];
+var T=[
+ {c:'atk',code:'637',name:'Byte Bolt',kind:'bolt',col:'#4de1ff',dmg:30,cd:2.4,count:1,spread:0,aim:1,d:'Bola lempar cepat, meledak saat kena musuh atau tanah.',how:['Tekan angka slot, geser kamera sampai bidikan ke musuh.','Tekan lagi (atau Tembak) untuk melepas bola.'],tip:'Cooldown pendek: spam untuk menekan musuh.'},
+ {c:'atk',code:'314',name:'Loop Barrage',kind:'bolt',col:'#b57bff',dmg:18,cd:8,count:3,spread:.22,aim:1,d:'Tiga bola sekaligus menyebar sedikit.',how:['Bidik ke tengah musuh.','Tembak: tiga bola menyebar menutup arah kabur.'],tip:'Bagus melawan musuh yang suka menyamping.'},
+ {c:'atk',code:'8472',name:'Null Pointer',kind:'bolt',col:'#ff5d5d',dmg:57,cd:10,count:1,spread:0,aim:1,big:1,d:'Bola besar, sangat cepat dan berat damage-nya.',how:['Bidik, tunggu musuh berhenti sebentar.','Tembak untuk damage besar.'],tip:'Cepat tapi satu; pancing musuh berhenti dulu.'},
+ {c:'atk',code:'4242',name:'Fork Bomb',kind:'bolt',col:'#ff9a3c',dmg:14,cd:12,count:5,spread:.16,aim:1,d:'Lima bola kecil menyebar seperti peluru sebar.',how:['Dekati musuh sampai jarak sedang.','Bidik lalu Tembak: makin dekat makin banyak yang kena.'],tip:'Paling efektif dari jarak dekat-sedang.'},
+ {c:'atk',code:'858',name:'Bola Biru',kind:'orb',col:'#2f8fff',dmg:150,cd:20,aim:1,d:'Bola biru raksasa yang pelan tapi menghantam sangat keras, bisa diarahkan ke atas, bawah, atau samping.',how:['Bidik ke musuh, atur ketinggian lewat kamera.','Tembak, lalu giring musuh agar tetap di jalurnya.'],tip:'Kombo bagus setelah musuh dibekukan atau dikunci.'},
+ {c:'atk',code:'6464',name:'Bola Pengejar',kind:'homing',col:'#ff7ad9',dmg:30,cd:10,d:'Dua bola yang membelok mengikuti musuh terdekat.',how:['Tekan angka slot sambil menghadap kira-kira ke musuh.','Bola mengejar sendiri; kamu bebas bergerak.'],tip:'Kuat melawan musuh yang terus bergerak.'},
+ {c:'atk',code:'3735',name:'Laser Beam',kind:'beam',col:'#ff4de1',dmg:30,cd:12,aim:1,d:'Sinar lebar tembus sepanjang 45 m, kena semua yang ada di garis.',how:['Bidik lurus ke musuh.','Tembak: sinar langsung kena, tidak bisa dihindari setelah keluar.'],tip:'Bisa menembus beberapa musuh sekaligus.'},
+ {c:'atk',code:'4827',name:'Pedang Berputar',kind:'spin',col:'#bfe9ff',dmg:28,cd:20,d:'Berputar 2 detik, menebas semua musuh di sekitar.',how:['Dekati musuh sampai dalam jangkauan.','Tekan slot lalu tetap dekat selama berputar.'],tip:'Pakai saat dikeroyok.'},
+ {c:'atk',code:'5316',name:'Cungkil',kind:'launch',col:'#ffd24d',dmg:40,cd:16,d:'Mencungkil musuh di depan sampai terpental sangat tinggi.',how:['Dekat ke musuh (sekitar 4 m).','Tekan slot: musuh terlempar ke atas dan jatuh.'],tip:'Lanjutkan dengan Meteor Drop atau serangan udara.'},
+ {c:'atk',code:'4828',name:'Pedang Putar Raksasa',kind:'spin',col:'#9fd8ff',dmg:35,cd:30,d:'Berputar 3 detik dengan radius 6, menebas semua musuh di sekitar.',how:['Dekati musuh atau tunggu dikepung.','Tekan slot lalu terus bergerak.'],tip:'Cooldown panjang, pakai saat dikepung.'},
+ {c:'atk',code:'5317',name:'Pukul Ke Langit',kind:'launch',col:'#ffb02e',dmg:60,cd:20,d:'Mencungkil musuh di depan sampai terpental sangat tinggi (daya 60).',how:['Dekat ke musuh (sekitar 4 m).','Tekan slot: musuh terlempar tinggi dan tak bisa membalas sebentar.'],tip:'Lanjutkan dengan Meteor Drop saat lawan di udara.'},
+ {c:'atk',code:'6193',name:'Meteor Drop',kind:'meteor',col:'#ff8a3c',dmg:45,cd:16,count:9,d:'Loncat tinggi, menghadap bawah, lalu menjatuhkan 9 bola yang menyebar jauh (3 sampai 16 m).',how:['Tekan slot: kamu loncat dan kamera menunduk.','Bola jatuh bertahap ke segala arah, jadi musuh yang kabur pun bisa kena.'],tip:'Bagus untuk membersihkan area atau musuh yang berpencar.'},
+ {c:'boom',code:'9111',name:'Lempar TNT',kind:'tnt',col:'#e0402a',dmg:80,cd:18,r:5,d:'Melempar TNT 8 m ke depan. Sumbu menyala 3 detik lalu meledak radius 5.',how:['Lempar ke tempat lawan akan lewat.','Mundur sebelum sumbu habis; TNT berkedip makin cepat.'],tip:'Tidak melukai kamu dan timmu, tapi merusak tembok.'},
+ {c:'boom',code:'519',name:'Overflow Nova',kind:'nova',col:'#ffd84d',dmg:30,cd:12,r:6,d:'Ledakan melingkar radius 6 di sekelilingmu.',how:['Biarkan musuh mendekat.','Tekan slot saat mereka sudah dalam lingkaran.'],tip:'Cara cepat mengusir musuh yang menempel.'},
+ {c:'boom',code:'5551',name:'Freeze Frame',kind:'nova',col:'#aee6ff',dmg:8,cd:20,r:8,stun:2,d:'Ledakan es radius 8: musuh sekitar beku 2 detik.',how:['Tekan slot saat musuh dekat.','Manfaatkan 2 detik beku untuk serangan besar.'],tip:'Kombo: Beku lalu Bola Biru.'},
+ {c:'boom',code:'2718',name:'Stack Overflow',kind:'slam',col:'#ffb84d',dmg:40,cd:16,r:5,aim:1,d:'Lompat tinggi lalu menghantam tanah, damage area radius 5.',how:['Bidik ke arah musuh.','Tembak: kamu melompat lalu mendarat dan meledak.'],tip:'Menutup jarak sekaligus menyerang.'},
+ {c:'boom',code:'1618',name:'Landmine',kind:'trap',col:'#ff6a4d',dmg:35,cd:12,d:'Ranjau tak terlihat musuh, meledak saat diinjak dan tidak hilang sebelum meledak.',how:['Pasang di jalur yang akan dilalui musuh (pintu, jalan sempit).','Mundur dan tunggu; musuh yang menginjak langsung meledak.'],tip:'Pasang sambil kabur supaya musuh mengejar lewat situ.'},
+ {c:'sum',code:'3939',name:'Lempar Beruang Marah',kind:'bear',col:'#8b5a2b',dmg:70,cd:30,d:'Melempar beruang (450 HP, 12 dtk) yang mengamuk dan menyerang siapa saja yang terdekat, termasuk kamu sendiri.',how:['Lempar ke arah lawan.','Menjauhlah dari beruang setelah mendarat.'],tip:'Berbahaya buat pemakainya juga. Jangan berdiri dekat.'},
+ {c:'sum',code:'481',name:'Elang Digital',kind:'summon',col:'#ffd9a0',dmg:9,cd:28,count:1,d:'Memanggil 1 elang (60 HP, 24 dtk) yang mengejar musuh yang kamu serang.',how:['Serang dulu satu musuh.','Tekan slot: elang menyerang sasaranmu secara otomatis.'],tip:'Jangan dipakai saat ada kawan di sekitar: bisa ikut menyerang kawan.'},
+ {c:'sum',code:'1928',name:'Elang Kembar',kind:'summon',col:'#ffe9c0',dmg:7,cd:40,count:2,d:'Memanggil 2 elang (60 HP, 20 dtk) sekaligus.',how:['Serang satu musuh.','Tekan slot: dua elang mengeroyok sasaranmu.'],tip:'Lebih banyak serangan, tapi cooldown lebih lama.'},
+ {c:'sum',code:'4343',name:'Singa Rimba',kind:'lion',col:'#f0b45a',dmg:25,cd:24,d:'Singa darat (135 HP, 30 dtk) yang berlari menggigit musuh yang kamu serang.',how:['Serang satu musuh.','Tekan slot: singa mengejar dan menggigit, bisa juga menyerang elang atau singa musuh.'],tip:'Lawan terbaik di tanah, tidak bisa mengejar musuh yang terbang.'},
+ {c:'sum',code:'7294',name:'Elang Tunggangan',kind:'ride',col:'#ffe0b0',cd:60,d:'Menunggangi elang dan terbang selama 150 detik (70 HP tunggangan).',how:['Tekan slot untuk naik.','Lompat untuk naik tinggi, Selam (V) untuk turun.'],tip:'Serang dari atas, jauh dari jangkauan tebasan.'},
+ {c:'def',code:'918',name:'Patch Heal',kind:'heal',col:'#5dff9e',dmg:105,cd:16,d:'Langsung memulihkan 105 HP.',how:['Pakai saat HP rendah dan musuh sedang jauh.','Tekan slot, HP langsung terisi.'],tip:'Pakai setelah mundur, bukan di tengah serangan.'},
+ {c:'def',code:'9876',name:'Auto Backup',kind:'regen',col:'#8affc0',dmg:120,cd:24,d:'Memulihkan 120 HP bertahap selama 6 detik.',how:['Tekan slot lalu bertahan atau menghindar.','HP naik pelan sampai selesai.'],tip:'Kombinasikan dengan Tembok atau Firewall.'},
+ {c:'def',code:'2161',name:'Benteng Raksasa',kind:'ring',col:'#8fa8ff',cd:24,d:'Tembok melingkar raksasa radius 20 (200 HP per bagian, tinggi 4,5 m, bertahan 15 menit).',how:['Tekan slot di tengah medan.','Tiap bagian bisa dihancurkan musuh.'],tip:'Sangat luas, hampir seluas arena duel.'},
+ {c:'def',code:'246',name:'Firewall',kind:'shield',col:'#6cd4ff',cd:20,dur:4,d:'Perisai 4 detik yang mengurangi damage 70%.',how:['Tekan slot sebelum serangan besar datang.','Serang balik selagi perisai aktif.'],tip:'Pas dipakai saat lawan melepas teknik berat.'},
+ {c:'def',code:'777',name:'Tembok Kode',kind:'wall',col:'#b8a27a',cd:20,d:'Dinding 8 m di depanmu (120 HP, bertahan 5 menit) yang memblokir bola dan tebasan angin. Bisa dilompati.',how:['Hadap ke arah serangan musuh.','Tekan slot: dinding muncul 4,5 m di depanmu.'],tip:'Hilang saat ronde duel diulang.'},
+ {c:'def',code:'2159',name:'Tembok Pelindung',kind:'ring',col:'#9fb4d0',cd:24,d:'Tembok melingkar 360° di sekelilingmu (100 HP per bagian, bertahan 5 menit).',how:['Tekan slot saat dikepung.','Tiap bagian tembok bisa dihancurkan musuh.'],tip:'Aman dari semua arah, tapi kamu juga terkurung.'},
+ {c:'move',code:'753',name:'Lag Dash',kind:'dash',col:'#ffffff',cd:6,d:'Lesat cepat ke arah gerakmu (kiri ya ke kiri), kebal sesaat.',how:['Tahan arah gerak, lalu tekan slot.','Pakai untuk menghindar atau mendekat tiba-tiba.'],tip:'Kebal sesaat saat lesat.'},
+ {c:'move',code:'1357',name:'Overclock',kind:'haste',col:'#fff27a',cd:20,d:'Lari 1,6x lebih cepat selama 5 detik.',how:['Tekan slot sebelum kabur atau mengejar.','Tetap bergerak selama efeknya aktif.'],tip:'Bagus untuk memutus jarak atau kabur.'},
+ {c:'move',code:'8181',name:'Loncat Tinggi',kind:'jump',col:'#9dffb0',cd:12,d:'Loncat tinggi, bisa melompati dinding.',how:['Tekan slot: kamu meluncur ke atas.','Gerakkan arah selagi di udara.'],tip:'Menghindari orb dan melewati tembok.'},
+ {c:'move',code:'8182',name:'Loncat Super',kind:'jump',col:'#7dffb2',cd:10,sup:1,d:'Loncat sangat tinggi (daya 60).',how:['Tekan slot: kamu meluncur sangat tinggi.','Cocok dikombinasikan dengan serangan dari atas.'],tip:'Sangat tinggi; hati-hati saat mendarat.'},
+ {c:'move',code:'2929',name:'Kedip Teleport',kind:'blink',col:'#c79bff',cd:16,d:'Teleport 14 m ke depan.',how:['Hadap ke arah tujuan.','Tekan slot: kamu langsung berpindah.'],tip:'Menembus kepungan atau menghindar serangan.'},
+ {c:'move',code:'4141',name:'Kunci Lawan',kind:'face',col:'#ffe066',cd:0,d:'Langsung menghadap lawan terdekat (sampai 60 m), termasuk atas dan bawah. Tanpa cooldown.',how:['Tekan slot kapan saja.','Kamu langsung menghadap musuh, siap menembak.'],tip:'Pasang di slot dekat untuk membidik cepat.'}
+];
+
+/* ===== gambar ===== */
+var W=320,H=180,GY=138,PX=62,EX=258;
+function lerp(a,b,t){return a+(b-a)*t}
+function cl(x,a,b){return x<a?a:(x>b?b:x)}
+function seg(u,a,b){return cl((u-a)/(b-a),0,1)}
+function person(g,x,y,col,face,o){
+  o=o||{};var s=o.s||1;
+  g.save();g.translate(x,y);g.scale(face*s,s);
+  if(o.glow){g.shadowColor=o.glow;g.shadowBlur=14}
+  var body=o.flash?'#ffffff':col;
+  g.fillStyle='#1b2540';g.fillRect(-7,-9,5,9);g.fillRect(2,-9,5,9);   /* kaki */
+  g.fillStyle=body;g.fillRect(-9,-28,18,20);                           /* badan */
+  g.fillStyle=o.flash?'#fff':'#f1c9a0';g.fillRect(-7,-42,14,14);        /* kepala */
+  g.fillStyle='#101830';g.fillRect(-7,-42,14,5);
+  g.fillStyle=body;g.fillRect(8,-26,o.arm||11,5);                       /* lengan depan */
+  g.restore();
+  g.shadowBlur=0;
+}
+function hpbar(g,x,y,f,col){
+  g.fillStyle='#0a1226';g.fillRect(x-16,y,32,4);g.fillStyle=col||'#5dff9e';g.fillRect(x-16,y,32*cl(f,0,1),4);
+}
+function glowBall(g,x,y,r,col){
+  var gr=g.createRadialGradient(x,y,0,x,y,r*1.8);gr.addColorStop(0,'#fff');gr.addColorStop(.35,col);gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr;g.beginPath();g.arc(x,y,r*1.8,0,7);g.fill();
+}
+function boom(g,x,y,r,t,col){
+  if(t<=0||t>=1)return;g.globalAlpha=1-t;g.strokeStyle=col;g.lineWidth=3;g.beginPath();g.arc(x,y,r*t,0,7);g.stroke();
+  g.fillStyle=col;g.globalAlpha=(1-t)*.35;g.beginPath();g.arc(x,y,r*t,0,7);g.fill();g.globalAlpha=1;
+}
+function ring(g,x,y,r,col,a){g.globalAlpha=a;g.strokeStyle=col;g.lineWidth=3;g.beginPath();g.ellipse(x,y,r,r*.35,0,0,7);g.stroke();g.globalAlpha=1}
+function label(g,txt,x,y,col){g.font='600 11px sans-serif';g.textAlign='center';g.fillStyle=col||'#ffd84d';g.fillText(txt,x,y)}
+function dmgText(g,txt,x,y,t){if(t<=0||t>=1)return;g.globalAlpha=1-t;g.font='700 14px sans-serif';g.textAlign='center';g.fillStyle='#ffb84d';g.fillText(txt,x,y-t*22);g.globalAlpha=1}
+function eagle(g,x,y,col,f,sz){
+  sz=sz||1;var w=Math.sin(f*14)*7;g.save();g.translate(x,y);g.scale(sz,sz);g.fillStyle=col;g.strokeStyle='#5a3a10';g.lineWidth=1.5;
+  g.beginPath();g.moveTo(-16,-w);g.lineTo(0,-4);g.lineTo(16,-w);g.lineTo(6,4);g.lineTo(-6,4);g.closePath();g.fill();g.stroke();
+  g.fillStyle='#ffecc4';g.beginPath();g.arc(0,-5,4,0,7);g.fill();g.fillStyle='#ff9a3c';g.fillRect(3,-6,6,3);g.restore();
+}
+function lionDraw(g,x,y,col,f,bite){
+  g.save();g.translate(x,y);g.fillStyle=col;g.strokeStyle='#6a4416';g.lineWidth=1.5;
+  g.fillRect(-18,-18,32,14);g.strokeRect(-18,-18,32,14);
+  var lg=Math.sin(f*16)*4;g.fillStyle='#8a5a1c';g.fillRect(-16,-4,5,4+lg);g.fillRect(6,-4,5,4-lg);
+  g.fillStyle='#8a5a1c';g.beginPath();g.arc(18,-20,11,0,7);g.fill();g.fillStyle='#f6c777';g.beginPath();g.arc(20,-18,7,0,7);g.fill();
+  if(bite){g.fillStyle='#fff';g.fillRect(24,-16,3,4)}
+  g.fillStyle=col;g.fillRect(-26,-18,10,4);g.restore();
+}
+function ground(g){
+  var gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#0e1c3d');gr.addColorStop(.7,'#16305a');gr.addColorStop(1,'#101d38');
+  g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.fillStyle='#173056';g.fillRect(0,GY,W,H-GY);g.fillStyle='#2a4a80';g.fillRect(0,GY,W,2);
+  g.fillStyle='rgba(255,255,255,.05)';for(var i=0;i<6;i++)g.fillRect(i*58+((i*13)%20),30+(i%3)*18,26,2);
+}
+
+/* tiap teknik: fungsi (g, u 0..1, t detik, tk) menggambar satu siklus 5 detik */
+var DUR=5;
+function scene(g,tk,u,t){
+  var k=tk.kind,col=tk.col;
+  ground(g);
+  var px=PX,py=GY,ex=EX,ey=GY,pf=1,ef=-1;
+  var eFlash=0,eHp=1,pHp=1,pAir=0,eAir=0,extra=null;
+  var hit=function(a,b){return u>=a&&u<b?1:0};
+  g.textAlign='center';
+  if(k==='bolt'){
+    var n=tk.count||1,sp=tk.spread||0,r=tk.big?9:6;
+    label(g,u<.2?'Bidik ke musuh':(u<.28?'Tembak!':''),PX+30,30);
+    if(u<.2){g.strokeStyle='rgba(157,255,176,.55)';g.setLineDash([5,5]);g.beginPath();g.moveTo(PX+16,py-28);g.lineTo(EX,ey-28);g.stroke();g.setLineDash([])}
+    var f=seg(u,.28,.55);
+    for(var i=0;i<n;i++){
+      var o=(i-(n-1)/2)*sp*60,bx=lerp(PX+16,EX-8,f),by=py-28+o*f*(.9);
+      if(f>0&&f<1)glowBall(g,bx,by,r,col);
+    }
+    if(f>=1)boom(g,EX-8,py-28,28+(tk.big?10:0),seg(u,.55,.75),col);
+    if(u>.55&&u<.75)eFlash=1;
+    dmgText(g,'-'+tk.dmg*(n),EX,py-52,seg(u,.55,.85));
+    eHp=u>.55?1-.0:1;
+  }else if(k==='orb'){
+    label(g,u<.2?'Bidik, tembak':'',PX+30,30);
+    var f=seg(u,.25,.7),bx=lerp(PX+22,EX-14,f);
+    if(f>0&&f<1)glowBall(g,bx,py-34,17,col);
+    if(f>=1)boom(g,EX-10,py-34,60,seg(u,.7,.9),col);
+    if(u>.7&&u<.9)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-56,seg(u,.7,.95));
+  }else if(k==='nova'){
+    var f=seg(u,.2,.5);label(g,u<.2?'Musuh mendekat':'',PX+30,30);
+    var ex2=lerp(EX,PX+60,seg(u,0,.2));ex=ex2;
+    if(f>0&&f<1){g.globalAlpha=1-f;g.strokeStyle=col;g.lineWidth=4;g.beginPath();g.ellipse(PX,py-12,160*f,50*f,0,0,7);g.stroke();g.fillStyle=col;g.globalAlpha=(1-f)*.3;g.fill();g.globalAlpha=1}
+    if(u>.3&&u<.5)eFlash=1;dmgText(g,'-'+tk.dmg,ex,py-52,seg(u,.35,.7));
+    if(tk.stun&&u>.45&&u<.95){g.fillStyle='#aee6ff';g.globalAlpha=.55;g.fillRect(ex-14,py-46,28,46);g.globalAlpha=1;label(g,'BEKU',ex,py-52,'#aee6ff')}
+  }else if(k==='beam'){
+    label(g,u<.2?'Bidik lurus':'',PX+30,30);
+    var f=seg(u,.25,.3),fo=seg(u,.5,.6);
+    if(f>0&&fo<1){g.globalAlpha=1-fo;g.shadowColor=col;g.shadowBlur=18;g.strokeStyle='#fff';g.lineWidth=7;g.beginPath();g.moveTo(PX+16,py-28);g.lineTo(W,py-28);g.stroke();g.strokeStyle=col;g.lineWidth=3;g.stroke();g.shadowBlur=0;g.globalAlpha=1}
+    if(u>.3&&u<.55)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-52,seg(u,.3,.7));
+  }else if(k==='slam'){
+    var a=seg(u,.2,.55);py=GY-Math.sin(a*Math.PI)*70;px=lerp(PX,EX-62,a);
+    label(g,u<.2?'Bidik, tembak':'',PX+30,30);
+    boom(g,EX-62,GY,110,seg(u,.55,.8),col);if(u>.55&&u<.75)eFlash=1;dmgText(g,'-'+tk.dmg,EX,GY-52,seg(u,.55,.9));
+  }else if(k==='trap'){
+    var f=seg(u,.15,.2);label(g,u<.4?'Ranjau terpasang (tak terlihat)':'',W/2,30);
+    var walk=seg(u,.35,.62);ex=lerp(EX,190,walk);
+    if(u<.6){g.globalAlpha=u<.4?.5:.0;g.fillStyle=col;g.beginPath();g.ellipse(190,GY+3,10,4,0,0,7);g.fill();g.globalAlpha=1}
+    if(u>.15&&u<.6){g.strokeStyle='rgba(255,106,77,.5)';g.setLineDash([3,3]);g.beginPath();g.ellipse(190,GY+3,12,5,0,0,7);g.stroke();g.setLineDash([])}
+    boom(g,190,GY-4,60,seg(u,.62,.82),col);if(u>.62&&u<.8)eFlash=1;dmgText(g,'-'+tk.dmg,190,py-52,seg(u,.62,.95));
+    if(u>.62&&u<.95)ey=GY-Math.sin(seg(u,.62,.75)*Math.PI)*16;
+  }else if(k==='summon'){
+    var n=tk.count||1;label(g,u<.15?'Serang musuh dulu':'Elang mengejar sasaranmu',W/2,30);
+    var f=seg(u,.2,.55);
+    for(var i=0;i<n;i++){
+      var bx=lerp(PX+20,EX-16,f)+i*14*(1-f),by=lerp(py-70,py-28,f)-i*14*(1-f)+Math.sin(u*20+i*2)*4;
+      if(u>.18)eagle(g,bx,by,col,u+i*.1,1);
+    }
+    if(u>.55&&u<.9&&Math.floor((u-.55)*14)%2==0)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-52,seg(u,.55,.95));
+  }else if(k==='lion'){
+    label(g,u<.15?'Serang musuh dulu':'Singa menggigit sasaranmu',W/2,30);
+    var f=seg(u,.2,.6),lx=lerp(PX+24,EX-34,f);
+    if(u>.18)lionDraw(g,lx,GY,col,u,f>=1);
+    if(u>.62&&u<.95&&Math.floor((u-.62)*10)%2==0)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-52,seg(u,.6,.95));
+  }else if(k==='ride'){
+    var a=seg(u,.2,.9);px=lerp(PX,W-60,a);py=GY-10-Math.sin(a*Math.PI)*70;
+    label(g,u<.2?'Tekan slot untuk naik':'Lompat = naik, V = turun',W/2,30);
+    if(u>.18){eagle(g,px,py+8,col,u,1.5);}
+  }else if(k==='heal'){
+    pHp=lerp(.25,1,seg(u,.35,.55));label(g,u<.35?'HP rendah':'+'+tk.dmg+' HP',PX,30,'#5dff9e');
+    if(u>.35&&u<.8){for(var i=0;i<5;i++){var yy=py-10-((u*60+i*13)%48);g.fillStyle='#5dff9e';g.globalAlpha=.8;g.font='700 14px sans-serif';g.fillText('+',px-18+i*9,yy);g.globalAlpha=1}}
+    extra='hp';
+  }else if(k==='regen'){
+    pHp=lerp(.2,1,seg(u,.3,.85));label(g,'Pulih bertahap',PX,30,'#8affc0');
+    if(u>.3&&u<.85){var yy=py-12-((u*50)%40);g.fillStyle='#8affc0';g.font='700 13px sans-serif';g.fillText('+',px-6,yy);g.fillText('+',px+10,yy+10)}
+  }else if(k==='shield'){
+    var on=u>.15&&u<.75;if(on){g.shadowColor=col;g.shadowBlur=16;g.strokeStyle=col;g.lineWidth=3;g.globalAlpha=.85;g.beginPath();g.arc(px,py-22,34,0,7);g.stroke();g.fillStyle=col;g.globalAlpha=.15;g.fill();g.globalAlpha=1;g.shadowBlur=0}
+    var f=seg(u,.3,.5),bx=lerp(EX-20,PX+34,f);
+    if(f<1)glowBall(g,bx,py-26,6,'#ff7a5a');else if(u<.62){boom(g,PX+34,py-26,22,seg(u,.5,.62),col);label(g,'-70%',PX+10,py-64,col)}
+    label(g,on?'Damage berkurang 70%':'',W/2,30);
+    var ex0=EX;
+  }else if(k==='haste'){
+    var a=seg(u,.2,.8);px=lerp(PX,EX-80,a*a*(3-2*a));label(g,'Lari 1,6x lebih cepat',W/2,30);
+    if(u>.2&&u<.85){for(var i=0;i<6;i++){g.strokeStyle='rgba(255,242,122,'+(.7-i*.1)+')';g.lineWidth=2;g.beginPath();g.moveTo(px-14-i*10,py-34+i*5);g.lineTo(px-34-i*10,py-34+i*5);g.stroke()}}
+  }else if(k==='dash'){
+    var a=seg(u,.25,.4);px=lerp(PX,EX-50,a);label(g,u<.25?'Tahan arah + tekan slot':'Lesat, kebal sesaat',W/2,30);
+    if(a>0&&a<1){for(var i=1;i<5;i++){g.globalAlpha=.25-i*.045;person(g,px-i*18,py,'#ffffff',1)}g.globalAlpha=1}
+    if(u>.4&&u<.55)glowBall(g,px+10,py-28,8,'#fff');
+  }else if(k==='wall'){
+    var up=seg(u,.2,.32);label(g,u<.2?'Hadap ke arah serangan':'Memblokir bola dan tebasan',W/2,30);
+    if(u>.2){var wh=lerp(0,58,up);g.fillStyle=col;g.fillRect(PX+52,GY-wh,16,wh);g.fillStyle='rgba(0,0,0,.25)';for(var yy=GY;yy>GY-wh;yy-=10)g.fillRect(PX+52,yy-1,16,1);g.strokeStyle='#6e5d3a';g.strokeRect(PX+52,GY-wh,16,wh)}
+    var f=seg(u,.45,.65),bx=lerp(EX-12,PX+70,f);
+    if(f<1&&u>.45)glowBall(g,bx,py-28,6,'#ff7a5a');if(f>=1&&u<.8)boom(g,PX+70,py-28,24,seg(u,.65,.8),'#ffd0a0');
+  }else if(k==='jump'){
+    var a=seg(u,.2,.7);py=GY-Math.sin(a*Math.PI)*(tk.sup?110:76);label(g,tk.sup?'Daya 60, sangat tinggi':'Bisa melompati dinding',W/2,30);
+    g.fillStyle=col;g.fillRect(W/2-6,GY-34,12,34);g.fillStyle='#6a8a6a';g.fillRect(W/2-6,GY-34,12,3);
+    px=lerp(PX,W/2+70,a);
+    if(a>0&&a<1){for(var i=1;i<5;i++){g.globalAlpha=.2;g.fillStyle=col;g.beginPath();g.arc(px-i*9,py+4+i*3,6-i,0,7);g.fill()}g.globalAlpha=1}
+  }else if(k==='blink'){
+    var a=seg(u,.3,.36),b2=u>.36;label(g,'Teleport 14 m ke depan',W/2,30);
+    var nx=PX+110;
+    if(u<.3)px=PX;else px=nx;
+    if(u>.25&&u<.5){for(var i=0;i<10;i++){g.fillStyle=col;g.globalAlpha=.6*(1-seg(u,.3,.5));g.fillRect(PX-10+((i*37)%24),py-40+((i*53)%40),3,3);g.fillRect(nx-10+((i*29)%24),py-40+((i*41)%40),3,3)}g.globalAlpha=1}
+  }else if(k==='homing'){
+    label(g,'Bola membelok mengejar musuh',W/2,30);
+    var f=seg(u,.2,.65);
+    var ey2=GY-(f>0?Math.sin(u*10)*10:0);ey=ey2;
+    for(var i=0;i<2;i++){var s=i?1:-1,bx=lerp(PX+16,EX-10,f),by=py-28+s*Math.sin(f*Math.PI)*46*(1-f*.2);if(f>0&&f<1)glowBall(g,bx,by,6,col)}
+    if(f>=1)boom(g,EX-10,ey-28,34,seg(u,.65,.85),col);if(u>.65&&u<.8)eFlash=1;dmgText(g,'-'+tk.dmg*2,EX,py-52,seg(u,.65,.95));
+  }else if(k==='face'){
+    var f=seg(u,.25,.4);pf=u<.3?-1:1;label(g,'Langsung menghadap lawan',W/2,30);
+    if(u>.25&&u<.8){ring(g,EX,GY,26,col,1-seg(u,.5,.8)*.6);g.strokeStyle=col;g.globalAlpha=.7;g.setLineDash([4,4]);g.beginPath();g.moveTo(PX+16,py-28);g.lineTo(EX-10,GY-28);g.stroke();g.setLineDash([]);g.globalAlpha=1}
+  }else if(k==='meteor'){
+    var up=seg(u,.12,.3);py=GY-Math.sin(Math.min(up,1)*Math.PI*.5)*74*(u<.7?1:1-seg(u,.7,.85));
+    label(g,u<.12?'Tekan slot':'9 bola jatuh ke segala arah',W/2,30);
+    var n=9;
+    for(var i=0;i<n;i++){
+      var st=.3+i*.045,f=seg(u,st,st+.18);if(f<=0)continue;
+      var dx=(i-4)*30,bx=PX+30+dx+((i%3)-1)*12;if(bx<8)bx=8+i*3;if(bx>W-8)bx=W-8-i*3;
+      var by=lerp(30,GY-4,f);
+      if(f<1)glowBall(g,bx,by,5,col);else boom(g,bx,GY-2,30,seg(u,st+.18,st+.34),col);
+      if(Math.abs(bx-EX)<34&&u>st+.18&&u<st+.34)eFlash=1;
+    }
+    dmgText(g,'-'+tk.dmg,EX,GY-52,seg(u,.6,.95));
+  }else if(k==='spin'){
+    ex=PX+58;label(g,'Menebas semua musuh di sekitar',W/2,30);
+    var on=u>.2&&u<.55;if(on){var ang=(u-.2)*40;g.strokeStyle='#bfe9ff';g.lineWidth=3;g.shadowColor=col;g.shadowBlur=10;g.beginPath();g.arc(PX,py-26,34,ang,ang+4.2);g.stroke();g.beginPath();g.arc(PX,py-26,28,ang+3,ang+6);g.stroke();g.shadowBlur=0;eFlash=Math.floor((u-.2)*18)%2}
+    dmgText(g,'-'+tk.dmg,ex,py-52,seg(u,.25,.6));
+  }else if(k==='launch'){
+    ex=PX+46;label(g,u<.25?'Dekat ke musuh':'Terpental tinggi',W/2,30);
+    var a=seg(u,.3,.9);eAir=Math.sin(a*Math.PI)*100;
+    if(u>.25&&u<.4){g.strokeStyle=col;g.lineWidth=4;g.beginPath();g.arc(ex-4,GY-14,16,Math.PI,Math.PI*1.7);g.stroke()}
+    if(u>.3&&u<.4)eFlash=1;dmgText(g,'-'+tk.dmg,ex,GY-52-eAir*.5,seg(u,.35,.8));
+  }else if(k==='tnt'){
+    var f=seg(u,.12,.3),tx=lerp(PX+16,230,f),ty=lerp(py-28,GY-8,f)-Math.sin(f*Math.PI)*48;
+    label(g,u<.3?'TNT dilempar':(u<.7?'Sumbu menyala...':'BOOM!'),W/2,30);
+    if(u>.1&&u<.7){var bl=Math.floor(u*(u<.55?16:30))%2;g.fillStyle=bl?'#ffffff':col;g.fillRect(tx-6,ty-8,12,16);g.fillStyle='#222';g.fillRect(tx-6,ty-3,12,3);g.fillRect(tx-6,ty+3,12,3);g.strokeStyle='#ffd24d';g.beginPath();g.moveTo(tx,ty-8);g.lineTo(tx+3,ty-13);g.stroke()}
+    if(u>=.7)boom(g,230,GY-6,64,seg(u,.7,.9),col);if(u>.7&&u<.85)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-52,seg(u,.7,.95));
+  }else if(k==='bear'){
+    var f=seg(u,.12,.3),bx=lerp(PX+16,170,f),by=lerp(py-28,GY-14,f)-Math.sin(f*Math.PI)*44;
+    if(u>=.3){var m=seg(u,.38,.62);bx=lerp(170,EX-34,m);by=GY-14-Math.abs(Math.sin(u*40))*4}
+    label(g,u<.3?'Beruang dilempar':'Mengamuk, menyerang siapa saja',W/2,30);
+    if(u>.1){g.fillStyle='#7b4b27';g.beginPath();g.ellipse(bx,by,16,12,0,0,7);g.fill();g.beginPath();g.arc(bx+10,by-10,9,0,7);g.fill();g.fillStyle='#53311a';g.beginPath();g.arc(bx+6,by-17,3,0,7);g.arc(bx+14,by-17,3,0,7);g.fill();g.fillRect(bx-10,by+8,5,7);g.fillRect(bx+4,by+8,5,7)}
+    if(u>.64&&u<.95&&Math.floor((u-.64)*10)%2==0)eFlash=1;dmgText(g,'-'+tk.dmg,EX,py-52,seg(u,.62,.95));
+  }else if(k==='ring'){
+    label(g,u<.2?'Saat dikepung':'Tembok 360° mengelilingimu',W/2,30);
+    var f=seg(u,.2,.3),n=14;
+    if(u>.2){for(var i=0;i<n;i++){var a2=i/n*Math.PI*2,sx=PX+Math.cos(a2)*(40*f),sz=Math.sin(a2)*(40*f)*.35,sh=22*f;var broken=(i===1&&u>.55);if(broken)continue;g.fillStyle=col;g.fillRect(sx-5,GY-8+sz-sh,10,sh);g.strokeStyle='#5d6e88';g.strokeRect(sx-5,GY-8+sz-sh,10,sh)}}
+    var b=seg(u,.4,.55),bx=lerp(EX-12,PX+44,b);
+    if(b<1&&u>.4)glowBall(g,bx,py-26,6,'#ff7a5a');if(b>=1&&u<.7)boom(g,PX+44,py-26,22,seg(u,.55,.7),'#ffd0a0');
+  }
+  /* musuh dan pemain */
+  var airE=eAir;
+  if(k!=='trap')ey=ey;
+  if(k==='haste'||k==='blink'||k==='jump'||k==='dash'||k==='ride'||k==='slam'||k==='meteor'||k==='heal'||k==='regen'||k==='shield'||k==='wall'||k==='ring'||k==='summon'){}
+  if(k!=='jump'&&k!=='ride')person(g,ex,ey-airE,'#d84a4a',-1,{flash:eFlash,s:1});
+  else if(k==='jump')person(g,EX,GY,'#d84a4a',-1,{});
+  if(k==='ride'){person(g,px,py-18,'#2f8fff',1,{});}else if(k==='blink'&&u>.3&&u<.34){}else person(g,px,py,'#2f8fff',pf,{glow:u>.12&&u<.3?col:null});
+  if(k==='heal'||k==='regen'){hpbar(g,px,py-52,pHp,'#5dff9e')}
+  if(k==='ride'){g.fillStyle='rgba(0,0,0,0)';}
+  if(k!=='ride'&&k!=='jump'){hpbar(g,ex,ey-airE-54,1-(eFlash||u>.6&&u<.95&&k!=='shield'&&k!=='heal'&&k!=='regen'&&k!=='haste'&&k!=='dash'&&k!=='blink'&&k!=='face'&&k!=='wall'&&k!=='ring'?.25:0),'#ff6a6a')}
+  if(k==='jump'||k==='ride')hpbar(g,EX,GY-54,1,'#ff6a6a');
+}
+
+/* ===== UI ===== */
+var grid=document.getElementById('grid'),tabsEl=document.getElementById('tabs'),cur='all',cards=[];
+CATS.forEach(function(c){var b=document.createElement('button');b.className='tab'+(c[0]==='all'?' on':'');b.textContent=c[1];b.onclick=function(){cur=c[0];[].forEach.call(tabsEl.children,function(x){x.classList.toggle('on',x===b)});render()};tabsEl.appendChild(b)});
+function chip(txt,cls){var s=document.createElement('span');s.className='chip'+(cls?' '+cls:'');s.textContent=txt;return s}
+function render(){
+  grid.innerHTML='';cards=[];
+  T.filter(function(t){return cur==='all'||t.c===cur}).forEach(function(t){
+    var card=document.createElement('div');card.className='card';
+    var cv=document.createElement('canvas');cv.width=W*2;cv.height=H*2;card.appendChild(cv);
+    var cb=document.createElement('div');cb.className='cb';
+    var top=document.createElement('div');top.className='ct';var h=document.createElement('h3');h.textContent=t.name;var cd=document.createElement('span');cd.className='code';cd.textContent=t.code;top.appendChild(h);top.appendChild(cd);cb.appendChild(top);
+    var meta=document.createElement('div');meta.className='meta';
+    meta.appendChild(chip(t.cd?('Cooldown '+t.cd+' dtk'):'Tanpa cooldown'));
+    if(t.dmg&&t.kind!=='heal'&&t.kind!=='regen')meta.appendChild(chip('Damage '+t.dmg+(t.count>1?' x'+t.count:'')));
+    if(t.kind==='heal'||t.kind==='regen')meta.appendChild(chip('Pulih '+t.dmg+' HP'));
+    meta.appendChild(chip(t.aim?'Bidik dulu':'Langsung aktif',t.aim?'aim':''));
+    cb.appendChild(meta);
+    var p=document.createElement('p');p.className='desc';p.textContent=t.d;cb.appendChild(p);
+    var how=document.createElement('div');how.className='how';how.innerHTML='<b>Cara pakai</b><ol>'+t.how.map(function(x){return'<li>'+x+'</li>'}).join('')+'</ol>';cb.appendChild(how);
+    var tip=document.createElement('div');tip.className='tip';tip.textContent='Tips: '+t.tip;cb.appendChild(tip);
+    card.appendChild(cb);grid.appendChild(card);
+    var g=cv.getContext('2d');g.scale(2,2);
+    cards.push({cv:cv,g:g,t:t,vis:true,off:Math.random()*DUR});
+  });
+  io&&cards.forEach(function(c){io.observe(c.cv)});
+}
+var io=window.IntersectionObserver?new IntersectionObserver(function(es){es.forEach(function(e){cards.forEach(function(c){if(c.cv===e.target)c.vis=e.isIntersecting})})},{rootMargin:'80px'}):null;
+render();
+var start=performance.now();
+function frame(now){
+  var s=(now-start)/1000;
+  for(var i=0;i<cards.length;i++){var c=cards[i];if(!c.vis)continue;var tt=(s+c.off)%DUR;c.g.save();try{scene(c.g,c.t,tt/DUR,tt)}catch(e){}c.g.restore()}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
