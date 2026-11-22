@@ -556,7 +556,7 @@ function damagePlayer(room, victim, dmg, attacker, kx, kz, opt) {
   } else if (opt.stun) {
     victim.stunUntil = t + opt.stun * 1000;
     if (victim.guarding) setGuard(room, victim, false);
-    broadcast(room, { t: 'stun', id: victim.id, ms: Math.round(opt.stun * 1000) });
+    broadcast(room, { t: 'stun', id: victim.id, ms: Math.round(opt.stun * 1000), by: attacker ? attacker.id : 0, bn: attacker && attacker.name ? attacker.name : '' });
   }
 }
 
@@ -5580,7 +5580,7 @@ function onMsg(m){
       else{const o=others.get(m.id);if(o){o.dead=false;o.hp=MAXHP;o.tx=o.x=m.x;o.tz=o.z=m.z;o.ty=o.y=0;drawLabel(o);}}break;}
     case 'guard':{if(m.id===me.id){guarding=!!m.on;$('btnGuard').classList.toggle('on',!!m.on);}else{const o=others.get(m.id);if(o){o.guard=!!m.on;if(m.on)sfxAt('shield',o.x,o.z);}}break;}
     case 'gbreak':{if(m.id===me.id){gbT=2.5;guarding=false;guardLatch=false;$('btnGuard').classList.remove('on');toast('Tameng pecah!',3);sfx.gbreak();shake=Math.max(shake,0.3);}else{const o=others.get(m.id);if(o){o.guard=false;floatText(o.x,o.y+2.4,o.z,'PECAH!','#ffb84d');sfxAt('gbreak',o.x,o.z);}}break;}
-    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku!',3);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
+    case 'stun':{if(m.id===me.id){stunT=m.ms/1000;setGuard(false);toast('Kamu membeku'+(m.bn?' oleh '+m.bn:'')+'!',3);}else{const o=others.get(m.id);if(o)o.stunT=m.ms/1000;}break;}
     case 'mob':addMob(m);break;
     case 'mobx':{const o=mobs.get(m.id);if(o&&m.dead){floatText(o.x,o.y+1.2,o.z,'KO','#ffd84d');sfxAt('soldierDie',o.x,o.z);}removeMob(m.id);break;}
     case 'mh':{const o=mobs.get(m.id);if(o){showHitbox(o,0,0);o.hp=m.hp;drawMobLabel(o);o.flash=0.2;floatText(o.x,o.y+1.4,o.z,'-'+m.dmg,'#ffd84d');sfxAt('hit',o.x,o.z);burst(o.x,o.y,o.z,'#ffe9c0',6,3);}break;}
