@@ -4502,7 +4502,7 @@ function endPtr(e){
   if(e.pointerId===look.id){if(aiming>=0&&e.pointerType==='mouse'&&Math.hypot(e.clientX-look.sx,e.clientY-look.sy)<6)fireAim();look.id=null;}
 }
 window.addEventListener('pointerup',endPtr);window.addEventListener('pointercancel',endPtr);
-canvas.addEventListener('wheel',e=>{cam.distT=clamp(cam.distT+e.deltaY*0.01,7,24);e.preventDefault();},{passive:false});
+canvas.addEventListener('wheel',e=>{if(RPM&&RP.ready){RP.baseDist=clamp(RP.baseDist+e.deltaY*0.01,7,24);}else cam.distT=clamp(cam.distT+e.deltaY*0.01,7,24);e.preventDefault();},{passive:false});
 function bindBtn(el,down,up){
   el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();el.classList.add('down');try{el.setPointerCapture(e.pointerId);}catch(_){}if(started)down();});
   const rel=e=>{el.classList.remove('down');up&&up();};
@@ -6111,12 +6111,12 @@ function update(dt){
 /* ---------- PEMUTAR REPLAY (halaman /replay) ----------
    Replay = kondisi awal (pesan welcome untuk penonton) + daftar [waktu_ms, pesan_server]. Diputar dengan memasukkan pesan yang sama
    ke onMsg(), jadi tampilannya memakai kode game yang sama persis. Kamera bebas: seret untuk memutar, roda mouse untuk zoom. */
-const RP={d:null,i:0,t:0,play:false,spd:1,follow:0,ready:false,init:false,drag:false};
+const RP={baseDist:17,d:null,i:0,t:0,play:false,spd:1,follow:0,ready:false,init:false,drag:false};
 const rpFmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 function rpReset(){
   const c={y:cam.yawT,p:cam.pitchT,d:cam.distT};
   onMsg(RP.d.snap);RP.i=0;RP.t=0;
-  if(RP.init){cam.yawT=cam.yaw=c.y;cam.pitchT=c.p;cam.distT=c.d;}else{RP.init=true;cam.pitchT=0.55;cam.distT=17;}
+  if(RP.init){cam.yawT=cam.yaw=c.y;cam.pitchT=c.p;cam.distT=c.d;}else{RP.init=true;cam.pitchT=0.55;RP.baseDist=17;cam.distT=17;}
 }
 function rpFeed(ms){const ev=RP.d.ev;while(RP.i<ev.length&&ev[RP.i][0]<=ms){try{onMsg(ev[RP.i][1]);}catch(e){}RP.i++;}}
 function rpSeek(ms){
@@ -6131,12 +6131,14 @@ function rpStep(dt){
   keys.clear();joy.x=joy.y=0;playerRoot.visible=false;pShadow.visible=false;
   if(RP.play){RP.t+=dt*1000*RP.spd;if(RP.t>=RP.d.dur){RP.t=RP.d.dur;RP.play=false;}rpFeed(RP.t);}
   const fl=[...others.values()].filter(o=>!o.dead).sort((a,b)=>a.id-b.id);
-  let tx=ARENA.x,tz=ARENA.z;
+  let tx=ARENA.x,tz=ARENA.z,ty=0;
   if(fl.length){
-    if(RP.follow===0){tx=0;tz=0;fl.forEach(o=>{tx+=o.x;tz+=o.z;});tx/=fl.length;tz/=fl.length;}
-    else{const o=fl[(RP.follow-1)%fl.length];tx=o.x;tz=o.z;}
+    if(RP.follow===0){tx=0;tz=0;let ymax=0;fl.forEach(o=>{tx+=o.x;tz+=o.z;ymax=Math.max(ymax,o.y||0);});tx/=fl.length;tz/=fl.length;ty=ymax*0.75;}   /* kamera tengah ikut naik saat ada yang loncat tinggi */
+    else{const o=fl[(RP.follow-1)%fl.length];tx=o.x;tz=o.z;ty=o.y||0;}
   }
-  pos.set(tx,0,tz);vel.set(0,0,0);
+  pos.set(tx,ty,tz);vel.set(0,0,0);
+  /* kalau ada yang tinggi di udara, mundurkan kamera supaya tetap kelihatan */
+  {let ymax=0;fl.forEach(o=>{ymax=Math.max(ymax,o.y||0);});cam.distT=clamp(RP.baseDist+Math.max(0,ymax-3)*0.9,7,32);}
   $('rpPlay').textContent=RP.play?'⏸':(RP.t>=RP.d.dur?'↺':'▶');
   if(!RP.drag)$('rpSeek').value=Math.round(RP.t/Math.max(1,RP.d.dur)*1000);
   $('rpTime').textContent=rpFmt(RP.t)+' / '+rpFmt(RP.d.dur);
