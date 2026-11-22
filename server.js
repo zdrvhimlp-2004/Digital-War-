@@ -2040,7 +2040,7 @@ body.playing #slots{display:flex}
 @keyframes rd{0%{filter:brightness(2)}100%{filter:none}}
 #book{position:fixed;inset:0;background:rgba(0,0,10,.68);display:none;align-items:center;justify-content:center;z-index:25;touch-action:manipulation}
 #book.show{display:flex}
-#bk{position:relative;width:min(96vw,780px);height:min(88vh,560px);background:linear-gradient(#6b4528,#46301a);border-radius:14px;padding:12px 12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.75),inset 0 0 0 2px #8a5e38}
+#bk{box-sizing:border-box;position:relative;width:min(92vw,780px);height:min(88vh,560px);background:linear-gradient(#6b4528,#46301a);border-radius:14px;padding:12px 12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.75),inset 0 0 0 2px #8a5e38}
 #bkPages{display:flex;height:100%;border-radius:4px;overflow:hidden;box-shadow:0 3px 0 #d3c08c,0 6px 0 #bda877,0 9px 0 #a8935f,0 14px 18px rgba(0,0,0,.55)}
 .pg{flex:1;min-width:0;padding:14px 16px 28px;color:#3a2a14;font-family:Georgia,"Times New Roman",serif;overflow:hidden;position:relative}
 .pg.left{background:linear-gradient(to right,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
@@ -2067,7 +2067,7 @@ body.playing #lcol.hud{display:flex!important}
 body.playing #chatFeed.hud{display:flex!important}
 #chatFeed div{background:rgba(5,10,22,.55);padding:3px 10px;border-radius:10px;animation:fd 9s forwards;text-shadow:0 1px 2px #000}
 #chatFeed b,#chatList b{color:#4db8ff}
-#chatPanel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:70px;width:min(92vw,360px);max-height:52vh;display:none;flex-direction:column;background:rgba(5,10,22,.94);border:2px solid #1c3a66;border-radius:16px;z-index:12;touch-action:manipulation;-webkit-user-select:text;user-select:text}
+#chatPanel{box-sizing:border-box;position:fixed;left:max(10px,env(safe-area-inset-left));bottom:70px;width:min(92vw,360px);max-height:52vh;display:none;flex-direction:column;background:rgba(5,10,22,.94);border:2px solid #1c3a66;border-radius:16px;z-index:12;touch-action:manipulation;-webkit-user-select:text;user-select:text}
 #chatPanel.show{display:flex}
 #chatHead{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 6px 14px;border-bottom:1px solid #1c3a66;font-weight:700;font-size:13px;color:#9fd0ff}
 #chatX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
@@ -2111,7 +2111,7 @@ body.pickmode #pickBox{display:grid}
 body.pickmode #mrow{grid-template-columns:1fr}
 #modal{position:fixed;inset:0;background:rgba(0,0,10,.6);display:none;align-items:center;justify-content:center;z-index:20;touch-action:manipulation}
 #modal.show{display:flex}
-#mcard{width:min(92vw,320px);background:#141b34;border:2px solid #4de1ff55;border-radius:22px;padding:16px;box-shadow:0 12px 50px rgba(0,0,0,.6),0 0 40px #4de1ff33;text-align:center}
+#mcard{box-sizing:border-box;width:min(92vw,320px);background:#141b34;border:2px solid #4de1ff55;border-radius:22px;padding:16px;box-shadow:0 12px 50px rgba(0,0,0,.6),0 0 40px #4de1ff33;text-align:center}
 #mcard h3{margin:0 0 2px;font-size:17px;color:#4de1ff;letter-spacing:1px}
 #mcard p{margin:0 0 8px;font-size:12px;opacity:.7}
 #codeBox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;letter-spacing:5px;min-height:44px;line-height:44px;background:#0a0f20;border-radius:12px;border:2px solid #2a3560;margin-bottom:6px;color:#fff;overflow:hidden}
@@ -2131,7 +2131,7 @@ body.pickmode #mrow{grid-template-columns:1fr}
 /* start screen */
 #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,rgba(14,50,120,.78),rgba(2,4,10,.94));z-index:10;overflow:auto;touch-action:pan-y}
 #start.hide{display:none}
-#card{background:rgba(5,10,22,.95);border:2px solid #4db8ff66;border-radius:24px;padding:24px 22px;width:min(92vw,460px);text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4de1ff22;margin:auto}
+#card{box-sizing:border-box;background:rgba(5,10,22,.95);border:2px solid #4db8ff66;border-radius:24px;padding:24px 22px;width:min(92vw,460px);text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.5),0 0 60px #4de1ff22;margin:auto}
 #card h1{margin:0;font-size:40px;letter-spacing:3px;color:#fff;text-shadow:0 2px 0 #4db8ff,0 4px 0 #1e6fff,0 6px 0 #0a2a66,0 10px 18px rgba(30,111,255,.55);font-weight:700}
 #card .sub{font-size:12px;opacity:.65;margin:2px 0 12px}
 #lore{font-size:15px;line-height:1.6;min-height:150px;text-align:left;color:#d8e6ff;white-space:pre-wrap}
@@ -2189,7 +2189,7 @@ body.playing.dbg #dbgBox{display:flex}
 @keyframes dbgf{0%,80%{opacity:1}100%{opacity:0}}
 #duelHelp{display:none;position:fixed;inset:0;z-index:60;background:rgba(2,6,18,.78);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
 #duelHelp.show{display:flex}
-#duelHelp .card{width:min(92vw,460px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:18px 20px 16px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#duelHelp .card{box-sizing:border-box;width:min(92vw,460px);background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:18px 20px 16px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
 #duelHelp h3{margin:0 0 10px;font-size:18px;color:#6cd4ff}
 #duelHelp ol{margin:0;padding-left:20px;font-size:14px;line-height:1.55;color:#dfeaff}
 #duelHelp li{margin-bottom:8px}
@@ -2197,7 +2197,7 @@ body.playing.dbg #dbgBox{display:flex}
 #duelHelp button{margin-top:6px;width:100%;border:0;border-radius:12px;background:linear-gradient(90deg,#1e6fff,#4db8ff);color:#fff;font:700 15px Poppins,system-ui,sans-serif;padding:11px;cursor:pointer}
 #setBox{display:none;position:fixed;inset:0;z-index:55;background:rgba(2,6,18,.7);align-items:center;justify-content:center;font-family:Poppins,system-ui,sans-serif}
 #setBox.show{display:flex}
-#setBox .card{width:min(92vw,440px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 8px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
+#setBox .card{box-sizing:border-box;width:min(92vw,440px);max-height:88vh;overflow:auto;background:#0b1430;border:1px solid rgba(120,190,255,.4);border-radius:18px;padding:14px 18px 8px;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.6)}
 #setBox .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 #setBox h3{margin:0;font-size:18px;color:#6cd4ff}
 #setX{width:34px;height:34px;border-radius:50%;border:1.5px solid #3a5f95;background:#10264a;color:#e6f2ff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
