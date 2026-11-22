@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 18;
+const TECH_VERSION = 19;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -102,7 +102,7 @@ const DEFAULT_TECHS = [
   { code: '4242', name: 'Fork Bomb',     kind: 'bolt',   color: '#ff9a3c', damage: 14, cd: 12,   speed: 26, life: 1.4, count: 5, spread: 0.16, size: 1.0, boom: 2.2 },
   { code: '858', name: 'Bola Biru',      kind: 'orb',    color: '#2f8fff', damage: 150, cd: 20,   speed: 11, life: 4, radius: 5.5 },
   { code: '519', name: 'Overflow Nova',  kind: 'nova',   color: '#ffd84d', damage: 30, cd: 12,   radius: 6 },
-  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   color: '#aee6ff', damage: 8,  cd: 20,   radius: 11, stun: 2 },
+  { code: '5551', name: 'Freeze Frame',  kind: 'nova',   color: '#aee6ff', damage: 8,  cd: 20,   radius: 8, stun: 2 },
   { code: '3735', name: 'Laser Beam',    kind: 'beam',   color: '#ff4de1', damage: 30, cd: 12,   range: 45, w: 3 },
   { code: '2718', name: 'Stack Overflow', kind: 'slam',  color: '#ffb84d', damage: 40, cd: 16,   radius: 5 },
   { code: '1618', name: 'Landmine',      kind: 'trap',   color: '#ff6a4d', damage: 35, cd: 12,   radius: 2.2, stun: 0.6 },
@@ -238,6 +238,7 @@ function loadDB() {
         for (const t of j.techniques) if (t.code === '2160' && !j.techniques.some(x => x.code === '2161')) t.code = '2161';
         for (const d of DEFAULT_TECHS) if (d.code === '2161' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       }
+      if (ver < 19) for (const t of j.techniques) if (t.code === '5551' && [5.5, 11].includes(Number(t.radius))) t.radius = 8;   /* Freeze Frame radius 8 */
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
