@@ -91,7 +91,7 @@ const SPAWN_POINTS = Array.from({ length: 8 }, (_, k) => {
   return { x: Math.cos(a) * SPAWN_RADIUS, z: Math.sin(a) * SPAWN_RADIUS };
 });
 
-const TECH_VERSION = 19;
+const TECH_VERSION = 20;
 const OLD_CODE_MAP = {"6373828": "637", "3141592": "314", "8472916": "8472", "4242424": "4242", "5192837": "519", "5551234": "5551", "3735928": "3735", "2718281": "2718", "1618339": "1618", "4815162": "481", "1928374": "1928", "7294816": "7294", "9182736": "918", "9876543": "9876", "2468135": "246", "1357913": "1357", "7531946": "753"};
 /* cooldown bawaan lama (v4) -> dipercepat di v5 */
 const OLD_CD = { '637': 1, '314': 4, '8472': 5, '4242': 7, '519': 6, '5551': 11, '3735': 7, '2718': 9, '1618': 8, '481': 16, '1928': 24, '7294': 25, '918': 10, '9876': 14, '246': 12, '1357': 12, '753': 3 };
@@ -127,7 +127,7 @@ const DEFAULT_TECHS = [
   { code: '2161', name: 'Benteng Raksasa', kind: 'ring', color: '#8fa8ff', cd: 24, dur: 900, radius: 20, hp: 200, h: 4.5 },
   { code: '4828', name: 'Pedang Putar Raksasa', kind: 'spin', color: '#9fd8ff', damage: 35, cd: 30, dur: 3, radius: 6 },
   { code: '5317', name: 'Pukul Ke Langit', kind: 'launch', color: '#ffb02e', damage: 60, cd: 20, range: 4.2, lift: 60 },
-  { code: '3939', name: 'Lempar Beruang Marah', kind: 'bear', color: '#8b5a2b', damage: 35, cd: 30, dur: 12, speed: 8, hp: 150 },
+  { code: '3939', name: 'Lempar Beruang Marah', kind: 'bear', color: '#8b5a2b', damage: 70, cd: 30, dur: 12, speed: 8, hp: 450 },
   { code: '9111', name: 'Lempar TNT', kind: 'tnt', color: '#e0402a', damage: 80, cd: 18, radius: 5, fuse: 3 },
   { code: '753', name: 'Lag Dash',       kind: 'dash',   color: '#ffffff', speed: 60,  cd: 6 }
 ];
@@ -239,6 +239,7 @@ function loadDB() {
         for (const d of DEFAULT_TECHS) if (d.code === '2161' && !j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       }
       if (ver < 19) for (const t of j.techniques) if (t.code === '5551' && [5.5, 11].includes(Number(t.radius))) t.radius = 8;   /* Freeze Frame radius 8 */
+      if (ver < 20) for (const t of j.techniques) if (t.code === '3939' && t.kind === 'bear') { if (Number(t.hp) === 150) t.hp = 450; if (Number(t.damage) === 35) t.damage = 70; }   /* beruang: HP 3x, serangan 2x */
       if (ver < 3) for (const d of DEFAULT_TECHS) if (!j.techniques.some(t => t.code === d.code)) j.techniques.push(Object.assign({}, d));
       j.techVersion = TECH_VERSION;
       DB = j; saveDBNow();
