@@ -3033,7 +3033,7 @@ body.playing #slots{display:flex}
 #book{position:fixed;inset:0;background:rgba(0,0,10,.68);display:none;align-items:center;justify-content:center;z-index:25;touch-action:manipulation}
 #book.show{display:flex}
 #bk{box-sizing:border-box;display:flex;flex-direction:column;gap:8px;position:relative;width:min(calc(100vw - 2*var(--gx)),780px);height:min(88vh,560px);background:linear-gradient(#6b4528,#46301a);border-radius:14px;padding:12px 12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.75),inset 0 0 0 2px #8a5e38}
-#bkTabs{display:flex;gap:6px;overflow-x:auto;flex:none;padding:2px 36px 2px 2px;scrollbar-width:none}#bkTabs::-webkit-scrollbar{display:none}
+#bkTabs{display:flex;gap:6px;overflow-x:auto;flex:none;padding:2px 42px 2px 2px;scrollbar-width:none}#bkTabs::-webkit-scrollbar{display:none}
 #bkTabs button{flex:none;border:2px solid #8a5e38;background:#5a3b21;color:#f3e2b8;border-radius:999px;padding:5px 13px;font:600 12.5px Poppins,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
 #bkTabs button.on{background:#f3e2b8;color:#4a2c12;border-color:#f3e2b8}
 #bkPages{display:flex;flex:1;min-height:0;border-radius:4px;overflow:hidden;box-shadow:0 3px 0 #d3c08c,0 6px 0 #bda877,0 9px 0 #a8935f,0 14px 18px rgba(0,0,0,.55)}
@@ -3050,7 +3050,7 @@ body.playing #slots{display:flex}
 .pn{text-align:center;font-size:11px;opacity:.6;padding-top:8px}
 .bkb{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:56px;border:0;border-radius:8px;background:rgba(40,25,10,.75);color:#f3e2b8;font-size:16px;cursor:pointer;padding:0;z-index:2}
 #bkPrev{left:-4px}#bkNext{right:-4px}
-#bkX{display:flex;align-items:center;justify-content:center;line-height:0;position:absolute;top:-10px;right:-8px;width:32px;height:32px;border-radius:50%;border:2px solid #f3e2b8;background:#46301a;color:#f3e2b8;font-size:14px;cursor:pointer;padding:0;z-index:3}
+#bkX{display:flex;align-items:center;justify-content:center;line-height:0;position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;border:2px solid #f3e2b8;background:#46301a;color:#f3e2b8;font-size:14px;cursor:pointer;padding:0;z-index:30}
 #lcol{position:fixed;left:max(var(--gx),env(safe-area-inset-left));top:calc(max(10px,env(safe-area-inset-top)) + 168px);display:flex;flex-direction:column;gap:6px;z-index:4}
 body.playing #lcol.hud{display:flex!important}
 #lcol button{position:relative;width:36px;height:34px;border-radius:12px;border:0;background:rgba(10,16,32,.55);color:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
