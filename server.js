@@ -3040,6 +3040,8 @@ body.playing #slots{display:flex}
 .pg{flex:1;min-width:0;padding:14px 16px 14px;color:#3a2a14;font-family:Georgia,"Times New Roman",serif;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;position:relative}
 .pg.left{background:linear-gradient(to right,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
 .pg.right{background:linear-gradient(to left,#f8edd2 0%,#f2e3c0 78%,#d6c192 100%)}
+#bk.one #pgR,#bk.one .spine{display:none}
+#bk.one{height:min(90vh,820px)}
 .spine{width:5px;background:linear-gradient(to right,#a89462,#6f5c36,#a89462)}
 .pg h3{margin:0 0 6px;min-height:42px;display:flex;align-items:center;justify-content:center;font-size:15px;text-align:center;color:#6a3a14;border-bottom:2px double #a88a52;padding-bottom:5px;letter-spacing:.5px}
 .te{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #bda070}
@@ -4683,9 +4685,10 @@ function renderBookTabs(){
     const b=document.createElement('button');b.type='button';b.textContent=c[1]+' ('+n+')';if(c[0]===bookCat)b.className='on';
     b.addEventListener('click',()=>{bookCat=c[0];bookPage=0;renderBook();sfx.plop();});bx.appendChild(b);});
 }
-function bookPer(){return innerHeight<400?2:(innerHeight<500?3:(innerWidth<520?4:5));}
+function bookOne(){return innerWidth<520&&innerHeight>=innerWidth;}   /* HP potret: satu halaman lebar saja, bukan dua halaman sempit */
+function bookPer(){return bookOne()?(innerHeight>=760?6:(innerHeight>=640?4:3)):(innerHeight<400?2:(innerHeight<500?3:(innerWidth<520?4:5)));}
 function renderBook(){
-  const per=bookPer(),lst=bookList(),spreads=Math.max(1,Math.ceil(lst.length/(per*2)));renderBookTabs();
+  const per=bookPer(),one=bookOne(),lst=bookList(),spreads=Math.max(1,Math.ceil(lst.length/(one?per:per*2)));renderBookTabs();$('bk').classList.toggle('one',one);
   bookPage=clamp(bookPage,0,spreads-1);
   const fill=(el,items,no,title)=>{
     el.innerHTML='';const h=document.createElement('h3');h.innerHTML=title;el.appendChild(h);
@@ -4697,9 +4700,9 @@ function renderBook(){
       bx.appendChild(b);bx.appendChild(cd);bx.appendChild(sm);d.appendChild(ic);d.appendChild(bx);el.appendChild(d);});
     const n=document.createElement('div');n.className='pn';n.textContent=no;el.appendChild(n);
   };
-  const base=bookPage*per*2;
-  fill($('pgL'),lst.slice(base,base+per),bookPage*2+1,svg('book',null,'bki')+'Buku Teknik Digital');
-  fill($('pgR'),lst.slice(base+per,base+per*2),bookPage*2+2,'Kode dan kekuatan');
+  const base=bookPage*(one?per:per*2);
+  fill($('pgL'),lst.slice(base,base+per),one?bookPage+1:bookPage*2+1,svg('book',null,'bki')+'Buku Teknik Digital');
+  if(!one)fill($('pgR'),lst.slice(base+per,base+per*2),bookPage*2+2,'Kode dan kekuatan');
   $('bkPrev').style.visibility=bookPage>0?'visible':'hidden';$('bkNext').style.visibility=bookPage<spreads-1?'visible':'hidden';
 }
 function openBook(){
@@ -5848,6 +5851,7 @@ function resize(){
   cam.baseFov=w/h<1.3?Math.min(78,50+(1.3-w/h)*34):50;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>{resize();setTimeout(resize,250);setTimeout(resize,700);});
+window.addEventListener('resize',()=>{if(typeof bookOpen!=='undefined'&&bookOpen&&$('book').classList.contains('show'))renderBook();});
 if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
 /* iOS: cegah scroll/zoom/pantul halaman */
 (function(){
