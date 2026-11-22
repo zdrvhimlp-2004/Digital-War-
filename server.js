@@ -2160,7 +2160,7 @@ body.cine #cine{display:block}
 #cine .bar{position:absolute;left:0;right:0;height:9vh;background:#000}
 #cine .bar.t{top:0}#cine .bar.b{bottom:0}
 #cineSkip{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 4px);right:max(14px,env(safe-area-inset-right));pointer-events:auto;border:1px solid rgba(160,210,255,.45);background:rgba(10,18,40,.7);color:#e8f3ff;font:600 13px Poppins,system-ui,sans-serif;padding:9px 16px;border-radius:999px;cursor:pointer}
-#cineBox{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100vw - 28px));pointer-events:auto;background:rgba(8,14,34,.9);border:1px solid rgba(120,190,255,.4);border-radius:16px;padding:14px 18px 12px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;cursor:pointer}
+#cineBox{box-sizing:border-box;position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(620px,calc(100vw - 28px));pointer-events:auto;background:rgba(8,14,34,.9);border:1px solid rgba(120,190,255,.4);border-radius:16px;padding:14px 18px 12px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;cursor:pointer}
 #cine.talk #cineBox{display:block}
 #cineName{display:block;color:#6cd4ff;font-weight:700;font-size:14px;margin-bottom:4px}
 #cineTxt{margin:0;font-size:15px;line-height:1.5;min-height:3em}
