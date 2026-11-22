@@ -3304,7 +3304,7 @@ body.cine #setBox{display:none!important}
 <div id="duelBox"></div><div id="duelTimer" class="hud"></div><div id="duelBig"></div><div id="leaveBox"><div class="card"><h3>Keluar dari room?</h3><p id="leaveTxt">Kamu bisa kembali lewat link yang sama.</p><div class="rb"><button id="leaveNo" type="button">Batal</button><button id="leaveYes" class="go" type="button">Keluar</button></div></div></div>
 <div id="rpLoad"><div class="card"><h2>Replay Tersimpan</h2><p id="rpMsg">Replay duel tersimpan otomatis di browser ini. Maksimal 3 terakhir.</p><div id="rpList"></div><label id="rpPick">📂 Buka file replay (.dwreplay)<input id="rpFile" type="file" accept=".dwreplay,.gz,application/octet-stream"></label><p id="rpErr"></p></div></div>
 <div id="rpBar"><button id="rpPlay" type="button">⏸</button><input id="rpSeek" type="range" min="0" max="1000" value="0"><span id="rpTime">0:00 / 0:00</span><button id="rpSpd" type="button">1x</button><button id="rpCam" type="button">Kamera: Tengah</button><button id="rpOpen" type="button">Daftar replay</button></div>
-<div id="recBox" title="Replay pertandingan tersimpan otomatis di browser ini (maksimal 3 terakhir), tidak di server."><button id="recPlay" class="go" type="button">▶ Putar ulang<small id="recS"></small></button><button id="recX" type="button" aria-label="Tutup">×</button></div>
+<div id="recBox" title="Unduh replay pertandingan ini. Tombol hilang setelah diunduh atau ditutup. Replay juga tersimpan di browser (maksimal 3) dan bisa ditonton di halaman /replay."><button id="recGo" class="go" type="button">⬇ Unduh replay<small id="recS"></small></button><button id="recX" type="button" aria-label="Tutup">×</button></div>
 <div id="netRep"><button class="nx" id="netX" aria-label="Tutup">×</button><div class="nh">Jaringan saat bertarung</div><div class="nq" id="netQ"></div><div class="nl" id="netL"></div><div class="nb"></div></div><div id="dbgBox"></div><div id="dbgBox"></div>
 <div id="duelHelp"><div class="card"><h3>Cara main Arena</h3><ol><li><b>Menang lanjut, kalah antri.</b> Dua pemain (atau dua tim di mode 2v2/3v3) bertarung di ring. Kalau kurang pemain, komputer mengisi. Yang menang tetap bertahan dan melawan penantang berikutnya, yang kalah antri di paling belakang.</li><li><b>Tebas dan tahan.</b> Tombol Serang untuk menebas. Tombol Tahan (perisai) menangkis serangan dari depan, dan bola yang kena perisai dipantulkan balik ke penembaknya.</li><li><b>Teknik.</b> Isi slot dengan kode dari buku (tombol buku). Teknik hanya bisa dipakai saat giliranmu bertarung, setelah hitungan mundur selesai.</li><li><b>Penonton</b> tidak bisa terkena serangan dan tidak bisa masuk ring. Tunggu namamu dipanggil dari antrian di atas layar.</li></ol><button id="duelHelpOk">Mengerti</button></div></div>
 <button id="uiShow" aria-label="Tampilkan tombol"><span data-ico="hideui"></span><b>Tampilkan tombol</b></button>
@@ -6323,20 +6323,29 @@ const RPDB={
   async put(rec){const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('r','readwrite');t.objectStore('r').put(rec);t.oncomplete=res;t.onerror=()=>rej(t.error);});const all=await this.all();for(const o of all.slice(RP_KEEP))await this.del(o.id);},
   async del(id){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('r','readwrite');t.objectStore('r').delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error);});}
 };
-let rpLastId=0;
+let rpPending=null;   /* replay yang menunggu diunduh (hilang setelah diunduh atau ditutup) */
 async function rpReceive(m){
   if(m.none||!m.z)return;
   try{
     const bin=atob(m.z),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
     const rec={id:m.at||Date.now(),at:m.at||Date.now(),dur:m.dur|0,title:m.title||'Duel',win:m.win||'',room:roomInfo.name||'',size:u.length,bytes:u.buffer};
-    await RPDB.put(rec);rpLastId=rec.id;
-  }catch(e){toast('Replay tidak bisa disimpan di browser ini',3);return;}
+    rpPending={bytes:u,at:rec.at};
+    try{await RPDB.put(rec);}catch(e){}   /* simpanan di browser bersifat tambahan; unduhan tetap tersedia */
+  }catch(e){return;}
   const sec=Math.round((m.dur|0)/1000),p2=n=>String(n).padStart(2,'0');
-  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60);
+  $('recS').textContent=Math.floor(sec/60)+':'+p2(sec%60)+' · '+Math.max(1,Math.round(rpPending.bytes.length/1024))+' KB';
   $('recBox').classList.add('show');
 }
-$('recPlay').addEventListener('click',()=>{if(rpLastId)window.open('/replay#'+rpLastId,'_blank');});
-$('recX').addEventListener('click',()=>$('recBox').classList.remove('show'));
+function rpDismiss(){rpPending=null;$('recBox').classList.remove('show');}
+$('recGo').addEventListener('click',()=>{
+  if(!rpPending)return;
+  const d=new Date(rpPending.at),p2=n=>String(n).padStart(2,'0'),nm=String(roomInfo.name||'duel').replace(/[^A-Za-z0-9_-]+/g,'_').slice(0,30);
+  const url=URL.createObjectURL(new Blob([rpPending.bytes],{type:'application/octet-stream'}));
+  const a=document.createElement('a');a.href=url;a.download='digital-war-'+nm+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.dwreplay';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
+  rpDismiss();   /* sekali unduh, lalu tombol hilang */
+});
+$('recX').addEventListener('click',rpDismiss);
 $('recBox').addEventListener('pointerdown',e=>e.stopPropagation());
 /* ---------- catatan jaringan saat bertarung di ring ---------- */
 const NET_STALL_MS=600;   /* tidak ada pesan dari server selama ini = jaringan nyandet */
