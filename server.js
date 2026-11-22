@@ -1698,7 +1698,7 @@ function duelBotStep(room, bot, enemies, dt, t) {
       const cast = (code, d2) => { const a = botAim(bot, A, ai, BALL_SPEED); botCast(room, bot, code, a.ax, a.ay, a.az); };
       if (bot.hp < MAXHP * 0.42 && botReady(bot, '918', t) && dist > 4) botCast(room, bot, '918', nx, 0, nz);
       else if (botReady(bot, '481', t) && room.mobs.filter(m => m.o === bot.id).length < 1) botCast(room, bot, '481', nx, 0, nz);
-      else if (dist < 10.5 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
+      else if (dist < 5.6 && botReady(bot, '5551', t) && A.stunUntil < t && Math.random() < 0.25) botCast(room, bot, '5551', nx, 0, nz);
       else if (dist > 5 && dist < 24 && botReady(bot, '8472', t) && Math.random() < 0.3) cast('8472');
       else if (dist > 4 && botReady(bot, '637', t) && Math.random() < (ai.style === 'ranged' ? 0.5 : 0.2)) cast('637');
       else if (bot.hp < MAXHP * 0.35 && dist < 5 && botReady(bot, '2929', t)) botCast(room, bot, '2929', -nx, 0, -nz);   /* kabur dengan teleport */
